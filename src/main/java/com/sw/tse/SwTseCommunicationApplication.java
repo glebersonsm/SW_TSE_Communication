@@ -9,5 +9,5 @@ public class SwTseCommunicationApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(SwTseCommunicationApplication.class, args);
 	}
-
 }
+	
