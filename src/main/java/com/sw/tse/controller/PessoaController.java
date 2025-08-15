@@ -5,8 +5,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.sw.tse.domain.model.api.request.PessoaApiRequest;
-import com.sw.tse.domain.service.impl.PessoaApiService;
+import com.sw.tse.controller.model.HospedeDto;
+import com.sw.tse.domain.service.interfaces.PessoaService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -15,11 +15,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PessoaController {
 
-	private final PessoaApiService pessoaApiService;
+	private final PessoaService pessoaService;
 	
 	@PostMapping
-	public String salvar(@RequestBody PessoaApiRequest request) {
-		Long idPessoa = request.idPessoa() == null ? 0 : request.idPessoa();
-		return pessoaApiService.salvarPessoa(idPessoa, request);
+	public Long salvar(@RequestBody HospedeDto request) {
+		return pessoaService.salvar(request);
 	}
 }
