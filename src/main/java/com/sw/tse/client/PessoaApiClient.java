@@ -1,4 +1,4 @@
-package com.sw.tse.domain.service.interfaces;
+package com.sw.tse.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;

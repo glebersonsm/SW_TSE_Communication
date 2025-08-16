@@ -67,7 +67,7 @@ public class PessoaConverter {
     }
 
     private List<EnderecoPessoaDto> construirListaEnderecos(HospedeDto dto) {
-        if (StringUtils.hasText(dto.logradouro())) {
+        if (!StringUtils.hasText(dto.logradouro())) {
             return Collections.emptyList();
         }
 
@@ -82,9 +82,9 @@ public class PessoaConverter {
                 dto.complemento(), // COMPLENTO
                 dto.bairro(), // BAIRRO
                 dto.numero(), // NUMERO
-                1058, //ID PAIS (DEFINIR PADRÃO)
+                30, //ID PAIS (DEFINIR PADRÃO)
                 null, // ID CIDADE
-                null, // NOME CIDADE
+                "Olímpia", // NOME CIDADE
                 null, // ID UF
                 tryParseInt(dto.cep()), // CEP
                 true  // USAR CORRESPONDECIA PADRÃO TRUE
@@ -94,14 +94,14 @@ public class PessoaConverter {
     }
 
     private List<EnderecoEmailDto> construirListaEmails(HospedeDto dto) {
-        if (StringUtils.hasText(dto.email())) {
+        if (!StringUtils.hasText(dto.email())) {
             return Collections.emptyList();
         }
         return List.of(new EnderecoEmailDto(null, dto.email(), "Email Principal"));
     }
 
     private List<ContatoTelefonicoDto> construirListaContatos(HospedeDto dto) {
-        if (StringUtils.hasText(dto.telefone())) {
+        if (!StringUtils.hasText(dto.telefone())) {
             return Collections.emptyList();
         }
 

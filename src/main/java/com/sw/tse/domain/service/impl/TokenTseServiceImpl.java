@@ -11,6 +11,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.model.api.CachedToken;
 import com.sw.tse.domain.model.api.request.TokenApiResponse;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
@@ -77,7 +78,7 @@ public class TokenTseServiceImpl implements TokenTseService{
                     .block();
 
             if (response == null || response.accessToken() == null) {
-                throw new IllegalStateException("A resposta da API de token foi inválida.");
+                throw new ApiTseException("A resposta da API de token foi inválida ao obter o token.");
             }
             Instant expirationTime = Instant.now().plusSeconds(12 * 3600);
             
@@ -85,7 +86,7 @@ public class TokenTseServiceImpl implements TokenTseService{
 
         } catch (WebClientResponseException e) {
             log.error("Erro HTTP ao solicitar novo token: Status {}, Corpo {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new RuntimeException("Não foi possível obter o token de acesso da API.", e);
+            throw new ApiTseException("Não foi possível obter o token de acesso da API do tse" , e);
         }
     }
 

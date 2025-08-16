@@ -1,4 +1,4 @@
-package com.sw.tse.core;
+package com.sw.tse.core.config;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;

@@ -5,12 +5,12 @@ import java.util.Optional;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
+import com.sw.tse.client.PessoaApiClient;
 import com.sw.tse.controller.model.HospedeDto;
 import com.sw.tse.domain.converter.PessoaConverter;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.model.api.request.PessoaApiRequest;
 import com.sw.tse.domain.model.api.response.PessoaCpfApiResponse;
-import com.sw.tse.domain.service.interfaces.PessoaApiClient;
 import com.sw.tse.domain.service.interfaces.PessoaService;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
 
@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Service
 @ConditionalOnProperty(name = "database.enabled", havingValue = "false", matchIfMissing = true)
-public class PessoaApiService implements PessoaService {
+public class PessoaApiServiceImpl implements PessoaService {
 	
 	private final PessoaApiClient pessoaApiClient;
 	private final TokenTseService tokenTseService;
