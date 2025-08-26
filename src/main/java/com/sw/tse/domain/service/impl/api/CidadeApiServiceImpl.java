@@ -1,4 +1,4 @@
-package com.sw.tse.domain.service.impl;
+package com.sw.tse.domain.service.impl.api;
 
 import java.util.Arrays;
 import java.util.List;
@@ -51,7 +51,7 @@ public class CidadeApiServiceImpl implements CidadeService{
 	private CidadeDto buscarCidadeTse(BuscaCepBrasilApiResponse buscaCep) {
 
 		if(idRelatorioCidade == null || idRelatorioCidade.equals(0L)) {
-			throw new ApiTseException("Relatório customizado pra cidade não parametrizaod");
+			throw new ApiTseException("Relatório customizado pra cidade não parametrizao");
 		}
 		
 		FiltroRelatorioCustomizado nomeCidade = FiltroRelatorioCustomizado.builder()

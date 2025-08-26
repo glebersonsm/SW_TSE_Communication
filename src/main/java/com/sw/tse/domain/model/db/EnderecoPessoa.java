@@ -1,0 +1,86 @@
+package com.sw.tse.domain.model.db;
+
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
+
+
+
+public class EnderecoPessoa {
+	
+	 	@Id
+	    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seqenderecopessoa")
+	    @SequenceGenerator(name = "seqenderecopessoa", sequenceName = "seqenderecopessoa", allocationSize = 1)
+	    @Column(name = "idenderecopessoa")
+	    private Long id;
+
+	    @CreationTimestamp
+	    @Column(name = "datacadastro", updatable = false)
+	    private LocalDateTime dataCadastro;
+
+	    @UpdateTimestamp
+	    @Column(name = "dataalteracao", insertable =  false)
+	    private LocalDateTime dataAlteracao;
+
+	    @Column(name = "descricaoendereco")
+	    private String descricaoEndereco;
+
+	    @Column(name = "logradouro")
+	    private String logradouro;
+
+	    @Column(name = "numero")
+	    private String numero;
+
+	    @Column(name = "complemento")
+	    private String complemento;
+
+	    @Column(name = "bairro")
+	    private String bairro;
+
+	    @Column(name = "uf")
+	    private String uf;
+
+	    @Column(name = "cep")
+	    private String cep;
+
+	    @Column(name = "enderecoparacorrespondencia")
+	    private Boolean paraCorrespondencia;
+
+	    @Column(name = "idimportacao", columnDefinition = "TEXT")
+	    private String idImportacao;
+
+
+	    @ManyToOne()
+	    @JoinColumn(name = "idpessoa")
+	    private Pessoa pessoa;
+
+	    @ManyToOne()
+	    @JoinColumn(name = "idtipoendereco")
+	    private TipoEnderecoPessoa tipoEndereco;
+
+	    @ManyToOne()
+	    @JoinColumn(name = "idtipologradouro")
+	    private TipoLogradouro tipoLogradouro;
+
+
+	    @ManyToOne()
+	    @JoinColumn(name = "idcidade")
+	    private Cidade cidade;
+
+	    @ManyToOne()
+	    @JoinColumn(name = "idrespcadastro")
+	    private OperadorSistema responsavelCadastro;
+
+	    @ManyToOne()
+	    @JoinColumn(name = "idrespalteracao")
+	    private OperadorSistema responsavelAlteracao;
+}

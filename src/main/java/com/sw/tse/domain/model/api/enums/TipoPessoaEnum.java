@@ -6,8 +6,8 @@ import lombok.Getter;
 
 public enum TipoPessoaEnum {
 
-	FISICA(0, "Pessoa física"),
-	JURIDICA(1, "Pessoa jurídica");
+	FISICA(0, "PessoaDbServiceImpl física"),
+	JURIDICA(1, "PessoaDbServiceImpl jurídica");
 	
 
     private final int codigo;

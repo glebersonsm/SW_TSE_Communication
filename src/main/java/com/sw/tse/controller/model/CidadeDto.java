@@ -18,7 +18,7 @@ public class CidadeDto {
 	@JsonProperty("idcidade") private Long idCidade;
 	@JsonProperty("nome") private String nome;
 	@JsonProperty("codigoibge") private String codigoIbege;
-	@JsonProperty("idcountrystate") private String idEstado;
+	@JsonProperty("idcountrystate") private Long idEstado;
 	@JsonProperty("uf") private String uf;
 	@JsonProperty("idcountry") private Long idPais;
 }

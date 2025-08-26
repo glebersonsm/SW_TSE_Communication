@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public record EnderecoPessoaDto(
 		@JsonProperty("IdEndereco") Long idEndereco,
 	    @JsonProperty("DescricaoEndereco") String descricaoEndereco,
-	    @JsonProperty("IdTipoEndereco") Integer idTipoEndereco,
+	    @JsonProperty("IdTipoEndereco") Long idTipoEndereco,
 	    @JsonProperty("TipoEndereco") String tipoEndereco,
 	    @JsonProperty("IdTipoLogradouro") Integer idTipoLogradouro,
 	    @JsonProperty("TipoLogradouro") String tipoLogradouro,
