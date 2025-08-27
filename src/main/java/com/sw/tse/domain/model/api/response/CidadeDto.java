@@ -1,4 +1,4 @@
-package com.sw.tse.controller.model;
+package com.sw.tse.domain.model.api.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

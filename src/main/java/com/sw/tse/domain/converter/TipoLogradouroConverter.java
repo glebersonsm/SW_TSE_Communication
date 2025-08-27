@@ -7,25 +7,27 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Controller;
 
 import com.sw.tse.domain.model.api.response.TipoEnderecoDto;
+import com.sw.tse.domain.model.api.response.TipoLogradouroDto;
 import com.sw.tse.domain.model.db.TipoEnderecoPessoa;
+import com.sw.tse.domain.model.db.TipoLogradouro;
 
 @Controller
-public class TipoEnderecoConverter {
+public class TipoLogradouroConverter {
 
 	
-	 public TipoEnderecoDto toDto(TipoEnderecoPessoa entidade) {
+	 public TipoLogradouroDto toDto(TipoLogradouro entidade) {
         if (entidade == null) {
             return null;
         }
 
-        return new TipoEnderecoDto(
+        return new TipoLogradouroDto(
                 entidade.getId(),
-                entidade.getDecricao()
+                entidade.getDescricao()
         );
 	 }
 	 
 	 
-	 public List<TipoEnderecoDto> toDtoList(List<TipoEnderecoPessoa> listaDeEntidades) {
+	 public List<TipoLogradouroDto> toDtoList(List<TipoLogradouro> listaDeEntidades) {
 	        if (listaDeEntidades == null || listaDeEntidades.isEmpty()) {
 	            return Collections.emptyList();
 	        }

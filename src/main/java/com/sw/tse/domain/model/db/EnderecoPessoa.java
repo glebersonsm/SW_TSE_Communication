@@ -6,15 +6,26 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 
 
+@Entity
+@Table(name = "enderecopessoa")	
+@Setter(value =  AccessLevel.PRIVATE)
+@Getter()
+@NoArgsConstructor(access = AccessLevel.PACKAGE)
 public class EnderecoPessoa {
 	
 	 	@Id
@@ -58,7 +69,7 @@ public class EnderecoPessoa {
 	    @Column(name = "idimportacao", columnDefinition = "TEXT")
 	    private String idImportacao;
 
-
+	    @Getter(value = AccessLevel.PRIVATE)
 	    @ManyToOne()
 	    @JoinColumn(name = "idpessoa")
 	    private Pessoa pessoa;
@@ -83,4 +94,19 @@ public class EnderecoPessoa {
 	    @ManyToOne()
 	    @JoinColumn(name = "idrespalteracao")
 	    private OperadorSistema responsavelAlteracao;
+	    
+	    static EnderecoPessoa novoEndereco(String descricaoEndereco, String logradouro, String numero, String complemento, String Bairro, String cep, Cidade cidade,
+	    		boolean correspondencia, TipoEnderecoPessoa tipoEndereco, TipoLogradouro tipoLogradouro, OperadorSistema respCadastro, Pessoa pessoa) {
+	    	EnderecoPessoa enderecoPessoa = new EnderecoPessoa();
+	    	enderecoPessoa.setTipoEndereco(tipoEndereco);
+	    	enderecoPessoa.setTipoLogradouro(tipoLogradouro);
+	    	enderecoPessoa.setLogradouro(logradouro);
+	    	enderecoPessoa.setNumero(numero);
+	    	enderecoPessoa.setComplemento(complemento);
+	    	enderecoPessoa.setBairro(Bairro);
+	    	enderecoPessoa.setCep(cep);
+	    	enderecoPessoa.setCidade(cidade);
+	    	enderecoPessoa.setPessoa(pessoa);
+	    	return enderecoPessoa;
+	    }
 }

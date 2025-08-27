@@ -5,12 +5,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import com.sw.tse.client.BuscaCepBrasilApiClient;
-import com.sw.tse.controller.model.CidadeDto;
 import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.BrasilApiException;
 import com.sw.tse.domain.expection.CidadeNotFoundException;
 import com.sw.tse.domain.model.api.response.BuscaCepBrasilApiResponse;
+import com.sw.tse.domain.model.api.response.CidadeDto;
 import com.sw.tse.domain.model.db.Cidade;
 import com.sw.tse.domain.repository.CidadeRepository;
 import com.sw.tse.domain.service.interfaces.CidadeService;

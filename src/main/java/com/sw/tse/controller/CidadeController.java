@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.sw.tse.controller.model.CidadeDto;
+import com.sw.tse.domain.model.api.response.CidadeDto;
 import com.sw.tse.domain.service.interfaces.CidadeService;
 
 import lombok.RequiredArgsConstructor;

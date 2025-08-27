@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service;
 
 import com.sw.tse.client.LookupApiClient;
 import com.sw.tse.domain.expection.BrasilApiException;
-import com.sw.tse.domain.model.api.response.TipoEnderecoDto;
-import com.sw.tse.domain.service.interfaces.TipoEnderecoService;
+import com.sw.tse.domain.model.api.response.TipoLogradouroDto;
+import com.sw.tse.domain.service.interfaces.TipoLogradouroService;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
 
 import feign.FeignException;
@@ -19,18 +19,18 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-public class TipoEnderecoApiServiceImpl implements TipoEnderecoService {
+public class TipoLogradouroApiServiceImpl implements TipoLogradouroService {
 	
 
 	private final LookupApiClient lookupApiClient;
 	private final TokenTseService tokenTseService;
 
 	@Override
-	public List<TipoEnderecoDto> listarTiposEndereco() {
+	public List<TipoLogradouroDto> listarTiposLogradouro() {
 		
 		String bearerToken = "Bearer " + tokenTseService.gerarToken();
 		try {
-			return lookupApiClient.listarTiposEndereco(bearerToken);
+			return lookupApiClient.listarTiposLogradouro(bearerToken);
 		} catch (FeignException e) {
             log.error("Erro ao consultar os tipos de endereços");
             if (e.status() == 401 || e.status() == 403) {

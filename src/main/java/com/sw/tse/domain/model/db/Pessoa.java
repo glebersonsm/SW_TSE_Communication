@@ -2,10 +2,14 @@ package com.sw.tse.domain.model.db;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -13,6 +17,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -61,4 +66,26 @@ public class Pessoa {
     @ManyToOne()
     @JoinColumn(name = "idrespalteracao", insertable = false, updatable = true)
 	private OperadorSistema operadorAlteracao;
+    
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "pessoa")
+	private List<EnderecoPessoa> enderecos = new ArrayList<>();
+    
+    
+    public List<EnderecoPessoa> getEnderecos(){
+    	return Collections.unmodifiableList(this.enderecos);
+    }
+
+    public void adicionarEndereco(String descricaoEndereco, String logradouro, String numero, String complemento, String Bairro, String cep, Cidade cidade,
+	    		boolean correspondencia, TipoEnderecoPessoa tipoEndereco, TipoLogradouro tipoLogradouro, OperadorSistema respCadastro) {
+    	
+    	EnderecoPessoa novoEndereco = EnderecoPessoa.novoEndereco(descricaoEndereco, logradouro, numero, complemento, Bairro, 
+    			cep, cidade, correspondencia, tipoEndereco, tipoLogradouro, respCadastro,this);
+    	enderecos.add(novoEndereco);
+    }
+    
+    public void removerEndereco(Long idEndereco) {
+    	enderecos.removeIf(endereco -> endereco.getId().equals(idEndereco));
+    }
+    
+    
 }

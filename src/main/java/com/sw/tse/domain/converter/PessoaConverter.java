@@ -7,12 +7,10 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import com.sw.tse.controller.model.CidadeDto;
 import com.sw.tse.controller.model.HospedeDto;
-import com.sw.tse.controller.model.TipoEnderecoDto;
 import com.sw.tse.core.config.CadastroPessoaPropertiesCustom;
 import com.sw.tse.core.util.StringUtil;
-import com.sw.tse.domain.expection.ApiTseException;
+import com.sw.tse.domain.expection.ValorPadraoNaoConfiguradoException;
 import com.sw.tse.domain.model.api.enums.SexoEnum;
 import com.sw.tse.domain.model.api.enums.TipoPessoaEnum;
 import com.sw.tse.domain.model.api.enums.TipoTelefone;
@@ -20,8 +18,18 @@ import com.sw.tse.domain.model.api.request.ContatoTelefonicoDto;
 import com.sw.tse.domain.model.api.request.EnderecoEmailDto;
 import com.sw.tse.domain.model.api.request.EnderecoPessoaDto;
 import com.sw.tse.domain.model.api.request.PessoaApiRequest;
+import com.sw.tse.domain.model.api.response.CidadeDto;
+import com.sw.tse.domain.model.api.response.TipoEnderecoDto;
+import com.sw.tse.domain.model.api.response.TipoLogradouroDto;
+import com.sw.tse.domain.model.db.Cidade;
+import com.sw.tse.domain.model.db.OperadorSistema;
+import com.sw.tse.domain.model.db.Pessoa;
+import com.sw.tse.domain.model.db.TipoEnderecoPessoa;
+import com.sw.tse.domain.model.db.TipoLogradouro;
+import com.sw.tse.domain.service.impl.api.CidadeApiServiceImpl;
 import com.sw.tse.domain.service.interfaces.CidadeService;
 import com.sw.tse.domain.service.interfaces.TipoEnderecoService;
+import com.sw.tse.domain.service.interfaces.TipoLogradouroService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -29,9 +37,17 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PessoaConverter {
 
+    private final CidadeApiServiceImpl cidadeApiServiceImpl;
+
 	private final CidadeService cidadeService;
 	private final TipoEnderecoService tipoEnderecoService;
+	private final TipoLogradouroService tipoLogradouroService;
 	private final CadastroPessoaPropertiesCustom cadastroPessoaPropertiesCustom;
+
+
+    PessoaConverter(CidadeApiServiceImpl cidadeApiServiceImpl) {
+        this.cidadeApiServiceImpl = cidadeApiServiceImpl;
+    }
 	
 	
 	public PessoaApiRequest toPessoaApiHospedeDto(HospedeDto hospedeDto) {
@@ -161,18 +177,49 @@ public class PessoaConverter {
     
     private TipoEnderecoDto validarTipoEnderecoPadrao() {
     	if(cadastroPessoaPropertiesCustom.getTipoendereco() == null) {
-    		throw new ApiTseException("Tipo endereço padrão não configurado");
+    		throw new ValorPadraoNaoConfiguradoException("Tipo endereço padrão não configurado");
     	}
     	
     	List<TipoEnderecoDto> listaTipoEndereco = tipoEnderecoService.listarTiposEndereco();
 		
 		
 		if(!listaTipoEndereco.stream()
-                .anyMatch(endereco -> cadastroPessoaPropertiesCustom.getTipoendereco().equals(endereco.id()))){
-    		throw new ApiTseException("Tipo endereço padrão configurar nãoe existe no tse");
+                .anyMatch(tipoEndereco -> cadastroPessoaPropertiesCustom.getTipoendereco().equals(tipoEndereco.id()))){
+    		throw new ValorPadraoNaoConfiguradoException("Tipo endereço padrão configurar não existe no TSE");
     	}
     	
     	return listaTipoEndereco.stream().findFirst().get();
     }
+    
+    private TipoLogradouroDto validarTipoLogradouroPadrao() {
+    	if(cadastroPessoaPropertiesCustom.getTipoLogradouro() == null) {
+    		throw new ValorPadraoNaoConfiguradoException("Tipo logradouro padrão não configurado");
+    	}
+    	
+    	List<TipoLogradouroDto> listaTipoLogradouro = tipoLogradouroService.listarTiposLogradouro();
+    	
+    	if(!listaTipoLogradouro.stream()
+    			.anyMatch(tipoLogradouro -> cadastroPessoaPropertiesCustom.getTipoLogradouro().equals(tipoLogradouro.id()))) {
+    		throw new ValorPadraoNaoConfiguradoException("Tipo logradouro padrão configurado não existe no TSE");
+    	}
+    	
+    	return listaTipoLogradouro.stream().findFirst().get();
+    }
+
+	public Pessoa hospedeDtoToPessoa(HospedeDto hospedeDto, Pessoa pessoa) {
+		String cep = StringUtil.removerMascaraCep(hospedeDto.cep());
+        CidadeDto cidadeDto = cidadeService.buscarPorCep(cep);
+        Cidade cidade = new Cidade();
+        cidade.setId(cidadeDto.getIdCidade());
+	
+        
+		if(StringUtils.hasText(hospedeDto.cep())){
+			/*String descricaoEndereco, String logradouro, String numero, String complemento, String Bairro, String cep, Cidade cidade,
+    		boolean correspondencia, TipoEnderecoPessoa tipoEndereco, TipoLogradouro tipoLogradouro, OperadorSistema respCadastro*/
+			pessoa.adicionarEndereco("Endereço padrão", hospedeDto.logradouro(), hospedeDto.numero(), hospedeDto.complemento(), hospedeDto.bairro(), hospedeDto.cep(),
+					cidade, true, validarTipoEnderecoPadrao(), validarTipoLogradouroPadrao(), new OperadorSistema());
+		}
+		return pessoa;
+	}
 	
 }

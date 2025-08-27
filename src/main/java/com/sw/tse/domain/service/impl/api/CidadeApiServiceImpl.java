@@ -10,13 +10,13 @@ import org.springframework.util.StringUtils;
 
 import com.sw.tse.client.BuscaCepBrasilApiClient;
 import com.sw.tse.client.RelatorioCustomizadoApiClient;
-import com.sw.tse.controller.model.CidadeDto;
 import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.BrasilApiException;
 import com.sw.tse.domain.model.api.enums.TipoValorRelatorioCustomizado;
 import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizado;
 import com.sw.tse.domain.model.api.response.BuscaCepBrasilApiResponse;
+import com.sw.tse.domain.model.api.response.CidadeDto;
 import com.sw.tse.domain.service.interfaces.CidadeService;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
 

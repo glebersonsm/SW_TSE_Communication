@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-import com.sw.tse.controller.model.CidadeDto;
 import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizado;
+import com.sw.tse.domain.model.api.response.CidadeDto;
 
 @FeignClient(name = "relatorioCustomizado", url = "${api.tse.url}")
 public interface RelatorioCustomizadoApiClient {
