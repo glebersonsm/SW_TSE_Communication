@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record HospedeDto (	
@@ -15,7 +16,12 @@ public record HospedeDto (
 	@JsonProperty("principal") String principal,
 	@NotNull
 	@JsonProperty("nome") String nome,
-	@JsonProperty("cpf") String cpf,
+	
+	@NotNull
+	@NotBlank
+	@JsonProperty("tipoDocumento") String tipoDocumento,
+	@JsonProperty("cpf") String numeroDocumento,
+	
 	@NotNull
 	@JsonProperty("dataNascimento") LocalDate dataNascimento,
 	@JsonProperty("email") String email,
@@ -23,7 +29,6 @@ public record HospedeDto (
 	@JsonProperty("sexo") String sexo,
 	@JsonProperty("codigoIbge") String codigoIbge,
 	
-
 	@JsonProperty("logradouro") String logradouro,
 	@JsonProperty("numero") String numero,
 	@JsonProperty("bairro") String bairro,

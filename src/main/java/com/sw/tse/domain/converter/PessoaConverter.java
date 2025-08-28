@@ -26,7 +26,6 @@ import com.sw.tse.domain.model.db.OperadorSistema;
 import com.sw.tse.domain.model.db.Pessoa;
 import com.sw.tse.domain.model.db.TipoEnderecoPessoa;
 import com.sw.tse.domain.model.db.TipoLogradouro;
-import com.sw.tse.domain.service.impl.api.CidadeApiServiceImpl;
 import com.sw.tse.domain.service.interfaces.CidadeService;
 import com.sw.tse.domain.service.interfaces.TipoEnderecoService;
 import com.sw.tse.domain.service.interfaces.TipoLogradouroService;
@@ -36,19 +35,14 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class PessoaConverter {
-
-    private final CidadeApiServiceImpl cidadeApiServiceImpl;
-
+	
 	private final CidadeService cidadeService;
 	private final TipoEnderecoService tipoEnderecoService;
 	private final TipoLogradouroService tipoLogradouroService;
 	private final CadastroPessoaPropertiesCustom cadastroPessoaPropertiesCustom;
-
-
-    PessoaConverter(CidadeApiServiceImpl cidadeApiServiceImpl) {
-        this.cidadeApiServiceImpl = cidadeApiServiceImpl;
-    }
-	
+	private final TipoLogradouroConverter tipoLogradouroConverter;
+	private final TipoEnderecoConverter tipoEnderecoConverter;
+	private final CidadeConverter cidadeConverter;
 	
 	public PessoaApiRequest toPessoaApiHospedeDto(HospedeDto hospedeDto) {
         if (hospedeDto == null) {
@@ -205,21 +199,24 @@ public class PessoaConverter {
     	
     	return listaTipoLogradouro.stream().findFirst().get();
     }
-
+    
 	public Pessoa hospedeDtoToPessoa(HospedeDto hospedeDto, Pessoa pessoa) {
 		String cep = StringUtil.removerMascaraCep(hospedeDto.cep());
         CidadeDto cidadeDto = cidadeService.buscarPorCep(cep);
-        Cidade cidade = new Cidade();
-        cidade.setId(cidadeDto.getIdCidade());
+        Cidade cidade = cidadeConverter.toEntity(cidadeDto);
 	
+        TipoEnderecoPessoa tipoEndereco = tipoEnderecoConverter.toEntity(validarTipoEnderecoPadrao());
+        TipoLogradouro tipoLogradouro = tipoLogradouroConverter.toEntity(validarTipoLogradouroPadrao());
         
-		if(StringUtils.hasText(hospedeDto.cep())){
-			/*String descricaoEndereco, String logradouro, String numero, String complemento, String Bairro, String cep, Cidade cidade,
-    		boolean correspondencia, TipoEnderecoPessoa tipoEndereco, TipoLogradouro tipoLogradouro, OperadorSistema respCadastro*/
+        boolean enderecoExiste = pessoa.getEnderecos().stream().anyMatch(
+        		endereco -> StringUtil.removerMascaraCep(endereco.getCep()).equals(cep));
+        
+        if (!enderecoExiste) {
 			pessoa.adicionarEndereco("Endereço padrão", hospedeDto.logradouro(), hospedeDto.numero(), hospedeDto.complemento(), hospedeDto.bairro(), hospedeDto.cep(),
-					cidade, true, validarTipoEnderecoPadrao(), validarTipoLogradouroPadrao(), new OperadorSistema());
+					cidade, true, tipoEndereco, tipoLogradouro, new OperadorSistema());
 		}
+		
 		return pessoa;
 	}
-	
 }
+
