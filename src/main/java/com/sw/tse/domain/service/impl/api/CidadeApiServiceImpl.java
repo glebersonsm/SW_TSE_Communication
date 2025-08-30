@@ -32,8 +32,7 @@ public class CidadeApiServiceImpl implements CidadeService{
 
 	
 	private final BuscaCepBrasilApiClient brasilApiBuscaCep;
-	private final RelatorioCustomizadoApiClient relatorioCustomizado;
-	private final TokenTseService tokenTseService;
+	private final RelatorioCustomizadoApiService relatorioCustomizado;
 	
 	 @Value("${api.tse.relatorios.cidade}")
 	 private Long idRelatorioCidade;
@@ -70,10 +69,8 @@ public class CidadeApiServiceImpl implements CidadeService{
 		
 		List<FiltroRelatorioCustomizado> filtros = Arrays.asList(nomeCidade,uf);
 		
-		String bearerToken = "Bearer " + tokenTseService.gerarToken();
-		
 		try {
-			List<CidadeDto> cidadeDto = relatorioCustomizado.BuscarCidadePorCep(idRelatorioCidade, bearerToken, filtros);
+			List<CidadeDto> cidadeDto = relatorioCustomizado.buscarRelatorioGenerico(idRelatorioCidade, filtros, CidadeDto.class);
 			return cidadeDto.stream().findFirst().orElseThrow(
 					() -> new ApiTseException(String.format("Não encontrado a cidade %s para o estado %s", buscaCep.cidade(), buscaCep.uf())));
 		} catch (FeignException e) {

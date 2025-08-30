@@ -9,25 +9,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
 import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizado;
-import com.sw.tse.domain.model.api.response.CidadeDto;
+
+import feign.Response;
 
 @FeignClient(name = "relatorioCustomizado", url = "${api.tse.url}")
 public interface RelatorioCustomizadoApiClient {
 
 	@PostMapping("/api/Relatorios/ObterJsonDadosRelatorioComParametros/{id}")
-	public List<CidadeDto> BuscarCidadePorCep(
+	Response obterDadosRelatorioRaw(
 			@PathVariable Long id,
 			@RequestHeader("Authorization") String token,
 			@RequestBody List<FiltroRelatorioCustomizado> filtros
 	);
-
-	@PostMapping("/api/Relatorios/ObterJsonDadosRelatorioComParametros/{id}")
-	public List<CidadeDto> listarTipoDocumentoPessoa(
-			@PathVariable Long id,
-			@RequestHeader("Authorization") String token,
-			@RequestBody List<FiltroRelatorioCustomizado> filtros
-	);
-
 
 }
 

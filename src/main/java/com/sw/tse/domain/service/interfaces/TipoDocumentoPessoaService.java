@@ -1,5 +1,12 @@
 package com.sw.tse.domain.service.interfaces;
 
-public class TipoDocumentoPessoaService {
+import java.util.List;
 
+import com.sw.tse.domain.model.api.response.TipoDocumentoPessoaDto;
+
+
+public interface TipoDocumentoPessoaService {
+
+    List<TipoDocumentoPessoaDto> listarTiposDocumento();
+    
 }
