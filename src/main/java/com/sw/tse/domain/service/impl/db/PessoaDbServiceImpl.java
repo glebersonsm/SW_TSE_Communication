@@ -1,5 +1,6 @@
 package com.sw.tse.domain.service.impl.db;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -28,11 +29,17 @@ public class PessoaDbServiceImpl implements PessoaService {
 	public Long salvar(HospedeDto hospedeDto) {
 		Pessoa pessoa = new Pessoa();
 		
-		if()
-		
-		if(StringUtils.hasText(hospedeDto.cpf())) {
-			String cpf = com.sw.tse.core.util.StringUtil.removeMascaraCpf(hospedeDto.cpf());
-			List<Pessoa> listaPessoa = pessoaRepository.findFirstByCpfCnpjOrderByIdPessoa(cpf);
+		if(StringUtils.hasText(hospedeDto.numeroDocumento())) {
+			String numeroDocumento = com.sw.tse.core.util.StringUtil.removeMascaraCpf(hospedeDto.numeroDocumento());
+			List<Pessoa> listaPessoa = new ArrayList<>();
+			
+			if(hospedeDto.tipoDocumento() == null || hospedeDto.tipoDocumento().equals("CPF")) {
+				listaPessoa = pessoaRepository.findFirstByCpfCnpjOrderByIdPessoa(numeroDocumento);
+			} else {
+				
+			}
+			
+			
 			if(!listaPessoa.isEmpty()) {
 				pessoa = listaPessoa.get(0);
 			}

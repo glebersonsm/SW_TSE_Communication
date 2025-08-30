@@ -21,6 +21,13 @@ public interface RelatorioCustomizadoApiClient {
 			@RequestBody List<FiltroRelatorioCustomizado> filtros
 	);
 
+	@PostMapping("/api/Relatorios/ObterJsonDadosRelatorioComParametros/{id}")
+	public List<CidadeDto> listarTipoDocumentoPessoa(
+			@PathVariable Long id,
+			@RequestHeader("Authorization") String token,
+			@RequestBody List<FiltroRelatorioCustomizado> filtros
+	);
+
 
 }
 

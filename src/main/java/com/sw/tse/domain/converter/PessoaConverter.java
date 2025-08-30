@@ -55,7 +55,7 @@ public class PessoaConverter {
         String razaoSocial = hospedeDto.nome();
         String nomeFantasia = hospedeDto.nome();
         LocalDate dataNascimento = hospedeDto.dataNascimento();
-        String cpfCnpj = hospedeDto.cpf();
+        String documento = hospedeDto.numeroDocumento();
         SexoEnum sexo;
         if(hospedeDto.sexo().equals("M")) {
         	sexo = SexoEnum.MASCULINO;
@@ -75,7 +75,7 @@ public class PessoaConverter {
                 razaoSocial,
                 nomeFantasia,
                 dataNascimento,
-                cpfCnpj,
+                documento,
                 null, // RG NUMERO
                 null, // RG ORGÃO EXPEDITOR
                 null, // RG UH
@@ -97,6 +97,7 @@ public class PessoaConverter {
         }
         
         TipoEnderecoDto tipoEnderecoPadrao = validarTipoEnderecoPadrao();
+        TipoLogradouroDto tipoLogradouroPadrao = validarTipoLogradouroPadrao();
         
         String cep = StringUtil.removerMascaraCep(dto.cep());
         CidadeDto cidadeDto = cidadeService.buscarPorCep(cep);
@@ -106,8 +107,8 @@ public class PessoaConverter {
                 "Endereço Principal",  // DECRICAO DO ENDERECO
                 cadastroPessoaPropertiesCustom.getTipoendereco() , // ID TIPO DE ENDERECO
                 "Residencial", //DESCRICAO TIPO ENDERECO
-                1, // ID TIPO LOGRADOURO
-                "Rua", // TIPO LOGRADOURO
+                tipoLogradouroPadrao.id().intValue(), // ID TIPO LOGRADOURO
+                tipoLogradouroPadrao.descricao(), // TIPO LOGRADOURO
                 dto.logradouro(), // LOGRADOURO
                 dto.complemento(), // COMPLENTO
                 dto.bairro(), // BAIRRO
@@ -153,7 +154,7 @@ public class PessoaConverter {
                 tryParseInt(numero), // NUMERO
                 null, // RAMAL
                 "Telefone Principal", // DESCRICAO
-                false // CONTEM WHATS
+                true // CONTEM WHATS
         );
         return List.of(contato);
     }
