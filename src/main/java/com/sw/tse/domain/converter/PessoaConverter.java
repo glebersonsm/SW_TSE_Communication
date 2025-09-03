@@ -3,6 +3,7 @@ package com.sw.tse.domain.converter;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -142,21 +143,28 @@ public class PessoaConverter {
         	tipoPadrao = cadastroPessoaPropertiesCustom.getTipotefone();
         }
         
-        String telefoneNumeros = dto.telefone().replaceAll("\\D", "");
-        String ddi = telefoneNumeros.length() >= 12 ? telefoneNumeros.substring(0, 2) : "55";
-        String ddd = telefoneNumeros.length() >= 10 ? telefoneNumeros.substring(2, 4) : "";
-        String numero = telefoneNumeros.length() >= 8 ? telefoneNumeros.substring(4) : telefoneNumeros;
+        
+        
 
-        ContatoTelefonicoDto contato = new ContatoTelefonicoDto(
-        		tipoPadrao, // TIPO CONTADO TELEFONE
-                tryParseInt(ddi), // DDI
-                tryParseInt(ddd), // DDD
-                tryParseInt(numero), // NUMERO
-                null, // RAMAL
-                "Telefone Principal", // DESCRICAO
-                true // CONTEM WHATS
-        );
-        return List.of(contato);
+        if(StringUtils.hasText(dto.telefone())) {
+        
+        	String ddi = dto.ddi() != null ? dto.ddi().trim() : null;
+            String ddd = dto.ddd() != null ? dto.ddi().trim() : null;
+            String numeroTelefone = StringUtil.removerMascaraTelefone(dto.telefone());
+            
+	        ContatoTelefonicoDto contato = new ContatoTelefonicoDto(
+	        		tipoPadrao, // TIPO CONTADO TELEFONE
+	                tryParseInt(ddi), // DDI
+	                tryParseInt(ddd), // DDD
+	                tryParseInt(numeroTelefone), // NUMERO
+	                null, // RAMAL
+	                "Telefone Principal", // DESCRICAO
+	                true // CONTEM WHATS
+	        );
+	        return List.of(contato);
+        }
+        
+        return null;
     }
 
     private Integer tryParseInt(String value) {
@@ -201,7 +209,7 @@ public class PessoaConverter {
     	return listaTipoLogradouro.stream().findFirst().get();
     }
     
-	public Pessoa hospedeDtoToPessoa(HospedeDto hospedeDto, Pessoa pessoa) {
+	public Pessoa hospedeDtoToPessoa(HospedeDto hospedeDto, Pessoa pessoa, OperadorSistema responsavelCadastro) {
 		String cep = StringUtil.removerMascaraCep(hospedeDto.cep());
         CidadeDto cidadeDto = cidadeService.buscarPorCep(cep);
         Cidade cidade = cidadeConverter.toEntity(cidadeDto);
@@ -214,9 +222,33 @@ public class PessoaConverter {
         
         if (!enderecoExiste) {
 			pessoa.adicionarEndereco("Endereço padrão", hospedeDto.logradouro(), hospedeDto.numero(), hospedeDto.complemento(), hospedeDto.bairro(), hospedeDto.cep(),
-					cidade, true, tipoEndereco, tipoLogradouro, new OperadorSistema());
+					cidade, true, tipoEndereco, tipoLogradouro, responsavelCadastro);
 		}
+        
+        boolean telefoneExiste = pessoa.getTelefones().stream()
+                .filter(Objects::nonNull) 
+                .anyMatch(telefoneDaLista -> {
+                    
+                    boolean dddIgual = Objects.equals(telefoneDaLista.getDdd(), hospedeDto.ddd());
+                    boolean numeroIgual = Objects.equals(telefoneDaLista.getNumero(), hospedeDto.telefone());
+                    
+                    return dddIgual && numeroIgual;
+                });
 		
+        if(!telefoneExiste && StringUtils.hasText(hospedeDto.ddd()) && StringUtils.hasText(hospedeDto.telefone())){
+        	
+        	pessoa.adicionarContatoTelefonico("Telefone padrão", TipoTelefone.CELULAR.getCodigo(), hospedeDto.ddi(), hospedeDto.ddd(), hospedeDto.telefone(), null,
+        			true, null, responsavelCadastro);
+        }
+        
+        
+        boolean emailExiste = pessoa.getEmails().stream()
+        		.allMatch(email -> email.getEmail().equals(hospedeDto.email()));
+        
+        if(!emailExiste && StringUtils.hasText(hospedeDto.email())) {
+        	pessoa.adicionarEmail("Email padrão", hospedeDto.email(), null, responsavelCadastro);
+        }
+        
 		return pessoa;
 	}
 }

@@ -70,9 +70,24 @@ public class Pessoa {
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "pessoa")
 	private List<EnderecoPessoa> enderecos = new ArrayList<>();
     
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "pessoa")
+    private List<ContatoTelefonico> telefones = new ArrayList<>();
+    
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "pessoa")
+    private List<EnderecoEmail> emails = new ArrayList<>();
+    
+    
     
     public List<EnderecoPessoa> getEnderecos(){
     	return Collections.unmodifiableList(this.enderecos);
+    }
+    
+    public List<ContatoTelefonico> getTelefones(){
+    	return Collections.unmodifiableList(telefones);
+    }
+    
+    public List<EnderecoEmail> getEmails(){
+    	return Collections.unmodifiableList(emails);
     }
 
     public void adicionarEndereco(String descricaoEndereco, String logradouro, String numero, String complemento, String Bairro, String cep, Cidade cidade,
@@ -87,5 +102,26 @@ public class Pessoa {
     	enderecos.removeIf(endereco -> endereco.getId().equals(idEndereco));
     }
     
+    
+    public void adicionarContatoTelefonico(String descricaoContato, Integer tipoContatoTelefonico, String ddi, String ddd, String numero, String ramal, 
+    		boolean whatsApp, String idImportacao, OperadorSistema responsavelCadastro) {
+    	ContatoTelefonico contatoTelefonico = ContatoTelefonico.novoContatoTelefonico(descricaoContato, tipoContatoTelefonico, ddi, ddd, numero, ramal,
+    			whatsApp, idImportacao, responsavelCadastro, this);
+    	
+    	telefones.add(contatoTelefonico);
+    }
+    
+    public void removerContatoTelefonico(Long idContatoTelefonico){
+    	telefones.removeIf(telefone -> telefone.getId().equals(idContatoTelefonico));
+    }
+    
+    public void adicionarEmail(String Descricao, String email, String idImportacao, OperadorSistema responsavelCadastro) {
+    	EnderecoEmail novoEmail = EnderecoEmail.novoEnderecoEmail(Descricao, email, idImportacao, responsavelCadastro, this);
+    	emails.add(novoEmail);
+    }
+    
+    public void removerEmail(Long idEnderecoEmail) {
+    	emails.removeIf(email -> email.getId().equals(idEnderecoEmail));
+    }
     
 }

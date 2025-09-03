@@ -22,4 +22,6 @@ public class TipoDocumentoPessoa {
 	private Long id;
 	@Column(name = "")
 	private String decricao;
+	@Column(name = "sysid")
+	private String sysId;
 }

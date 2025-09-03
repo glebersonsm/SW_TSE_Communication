@@ -25,6 +25,8 @@ public record HospedeDto (
 	@NotNull
 	@JsonProperty("dataNascimento") LocalDate dataNascimento,
 	@JsonProperty("email") String email,
+	@JsonProperty("ddi") String ddi,
+	@JsonProperty("ddd") String ddd,
 	@JsonProperty("telefone") String telefone,
 	@JsonProperty("sexo") String sexo,
 	@JsonProperty("codigoIbge") String codigoIbge,

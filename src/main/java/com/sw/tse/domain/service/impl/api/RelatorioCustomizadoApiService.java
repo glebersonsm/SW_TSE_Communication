@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JavaType;
@@ -18,6 +19,8 @@ import feign.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+
+@ConditionalOnProperty(name = "database.enabled", havingValue = "false", matchIfMissing = true)
 @Service
 @RequiredArgsConstructor
 @Slf4j
