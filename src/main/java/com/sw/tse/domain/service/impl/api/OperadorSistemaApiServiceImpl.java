@@ -7,7 +7,9 @@ import org.springframework.stereotype.Service;
 
 import com.sw.tse.client.LookupApiClient;
 import com.sw.tse.domain.expection.BrasilApiException;
+import com.sw.tse.domain.expection.OperadorSistemaNotFoundException;
 import com.sw.tse.domain.model.api.response.OperadorSistemaDto;
+import com.sw.tse.domain.model.db.OperadorSistema;
 import com.sw.tse.domain.service.interfaces.OperadorSistemaService;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
 
@@ -39,5 +41,22 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
             throw new BrasilApiException("Erro de comunicação de busca cep", e);
 		}
 	}
+
+	@Override
+	public OperadorSistemaDto buscarPorId(Long idOperadorSistema) {
+	
+		return this.listarTodos()
+				.stream().filter(operador -> operador.id().equals(idOperadorSistema))
+				.findFirst().orElseThrow(() -> new OperadorSistemaNotFoundException(String.format("Não existe operador sistema com id %d", idOperadorSistema)));
+		
+	}
+
+	@Override
+	public OperadorSistema operadorSistemaPadraoCadastro() {
+		throw new UnsupportedOperationException("Operação não suportada na implementação API");
+	}
+	
+	
+	
 
 }

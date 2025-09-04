@@ -2,7 +2,6 @@ package com.sw.tse.domain.service.impl.api;
 import java.time.Instant;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -22,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "database.enabled", havingValue = "false", matchIfMissing = true)
 public class TokenTseServiceImpl implements TokenTseService{
 
 	private WebClient webClient;

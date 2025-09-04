@@ -26,6 +26,11 @@ public interface PessoaApiClient {
 			@RequestHeader("Authorization") String token
 	);
 
+	@GetMapping("/api/cadastros/GetPessoa/{id}")
+	public PessoaApiRequest buscarPorId(
+			@PathVariable Long id,
+			@RequestHeader("Authorization") String token
+	);
 
 }
 

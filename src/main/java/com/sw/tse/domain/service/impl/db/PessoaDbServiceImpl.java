@@ -9,10 +9,13 @@ import org.springframework.util.StringUtils;
 
 import com.sw.tse.controller.model.HospedeDto;
 import com.sw.tse.domain.converter.PessoaConverter;
+import com.sw.tse.domain.model.db.OperadorSistema;
 import com.sw.tse.domain.model.db.Pessoa;
 import com.sw.tse.domain.repository.PessoaRepository;
+import com.sw.tse.domain.service.interfaces.OperadorSistemaService;
 import com.sw.tse.domain.service.interfaces.PessoaService;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,6 +28,11 @@ public class PessoaDbServiceImpl implements PessoaService {
 	private final PessoaConverter pessoaConverter;
 	private final PessoaRepository pessoaRepository;
 	
+	private final OperadorSistemaService operadorSistemaService;
+	
+	
+
+	@Transactional
 	@Override
 	public Long salvar(HospedeDto hospedeDto) {
 		Pessoa pessoa = new Pessoa();
@@ -39,15 +47,20 @@ public class PessoaDbServiceImpl implements PessoaService {
 				
 			}
 			
-			
 			if(!listaPessoa.isEmpty()) {
 				pessoa = listaPessoa.get(0);
 			}
 			
 		}
 		
-		pessoa = pessoaConverter.hospedeDtoToPessoa(hospedeDto,pessoa);
-		return null;
+		OperadorSistema responsavelCadastro = operadorSistemaService.operadorSistemaPadraoCadastro();
+		
+		pessoa = pessoaConverter.hospedeDtoToPessoa(hospedeDto, pessoa , responsavelCadastro);
+		
+		pessoaRepository.save(pessoa);
+		
+		return pessoa.getIdPessoa();
 	}
+
 
 }

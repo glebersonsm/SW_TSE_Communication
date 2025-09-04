@@ -24,6 +24,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import com.sw.tse.core.util.GenericCryptoStringConverter;
+import com.sw.tse.core.util.GenericCryptoLocalDateConverter;
+import jakarta.persistence.Convert;
+
 @Entity
 @Table(name = "pessoa")
 @Getter
@@ -43,15 +47,15 @@ public class Pessoa {
 	private LocalDateTime dataAlteracao;
 	@Column(name = "razaosocial")
 	private String nome;
-	//@Convert(converter = GenericCryptoStringConverter.class)
+	@Convert(converter = GenericCryptoStringConverter.class)
 	@Column(name ="cpfcnpj")
 	private String cpfCnpj;
-	//@Convert(converter = GenericCryptoLocalDateConverter.class)
 	 @ManyToOne()
     @JoinColumn(name = "idtipodocumentoidentidade")
 	private TipoDocumentoPessoa tipoDocumento;
 	@Column(name = "rginscricaoestadual")
 	private String numeroDocumento;
+	@Convert(converter = GenericCryptoLocalDateConverter.class)
 	@Column(name ="datanascimento")
 	private LocalDate dataNascimento;
 	@Column(name = "sexo")

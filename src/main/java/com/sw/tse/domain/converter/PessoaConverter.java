@@ -210,6 +210,10 @@ public class PessoaConverter {
     }
     
 	public Pessoa hospedeDtoToPessoa(HospedeDto hospedeDto, Pessoa pessoa, OperadorSistema responsavelCadastro) {
+		
+		if(pessoa.getIdPessoa() == null) {
+			pessoa = novaPessoa(hospedeDto, pessoa, responsavelCadastro);
+		}
 		String cep = StringUtil.removerMascaraCep(hospedeDto.cep());
         CidadeDto cidadeDto = cidadeService.buscarPorCep(cep);
         Cidade cidade = cidadeConverter.toEntity(cidadeDto);
@@ -249,6 +253,22 @@ public class PessoaConverter {
         	pessoa.adicionarEmail("Email padrão", hospedeDto.email(), null, responsavelCadastro);
         }
         
+		return pessoa;
+	}
+
+	private Pessoa novaPessoa(HospedeDto hospedeDto, Pessoa pessoa, OperadorSistema responsavelCadastro) {
+		pessoa.setNome(hospedeDto.nome().toUpperCase());
+		if(hospedeDto.tipoDocumento() == null || hospedeDto.tipoDocumento().equals("CPF")) {
+			String numeroDocumento = StringUtil.removeMascaraCpf(hospedeDto.numeroDocumento());
+			pessoa.setCpfCnpj(numeroDocumento);
+		} else {
+			pessoa.setNumeroDocumento(hospedeDto.numeroDocumento());
+		}
+		pessoa.setDataNascimento(hospedeDto.dataNascimento());
+		Integer sexo = hospedeDto.sexo().equals("M") ? 0 : 1;
+		pessoa.setSexo(sexo);
+		pessoa.setOperadorCadastro(responsavelCadastro);
+		
 		return pessoa;
 	}
 }
