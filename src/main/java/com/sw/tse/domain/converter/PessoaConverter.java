@@ -221,35 +221,18 @@ public class PessoaConverter {
         TipoEnderecoPessoa tipoEndereco = tipoEnderecoConverter.toEntity(validarTipoEnderecoPadrao());
         TipoLogradouro tipoLogradouro = tipoLogradouroConverter.toEntity(validarTipoLogradouroPadrao());
         
-        boolean enderecoExiste = pessoa.getEnderecos().stream().anyMatch(
-        		endereco -> StringUtil.removerMascaraCep(endereco.getCep()).equals(cep));
-        
-        if (!enderecoExiste) {
+       
+        if (!verificarSeCepExiste(pessoa, cep)) {
 			pessoa.adicionarEndereco("Endereço padrão", hospedeDto.logradouro(), hospedeDto.numero(), hospedeDto.complemento(), hospedeDto.bairro(), hospedeDto.cep(),
 					cidade, true, tipoEndereco, tipoLogradouro, responsavelCadastro);
 		}
-        
-        boolean telefoneExiste = pessoa.getTelefones().stream()
-                .filter(Objects::nonNull) 
-                .anyMatch(telefoneDaLista -> {
-                    
-                    boolean dddIgual = Objects.equals(telefoneDaLista.getDdd(), hospedeDto.ddd());
-                    boolean numeroIgual = Objects.equals(telefoneDaLista.getNumero(), hospedeDto.telefone());
-                    
-                    return dddIgual && numeroIgual;
-                });
 		
-        if(!telefoneExiste && StringUtils.hasText(hospedeDto.ddd()) && StringUtils.hasText(hospedeDto.telefone())){
-        	
+        if(!verificarSeTelefoneExiste(pessoa, hospedeDto.ddd(), hospedeDto.telefone())){
         	pessoa.adicionarContatoTelefonico("Telefone padrão", TipoTelefone.CELULAR.getCodigo(), hospedeDto.ddi(), hospedeDto.ddd(), hospedeDto.telefone(), null,
         			true, null, responsavelCadastro);
         }
         
-        
-        boolean emailExiste = pessoa.getEmails().stream()
-        		.allMatch(email -> email.getEmail().equals(hospedeDto.email()));
-        
-        if(!emailExiste && StringUtils.hasText(hospedeDto.email())) {
+        if(!vericarSeEmailExiste(pessoa, hospedeDto.email())) {
         	pessoa.adicionarEmail("Email padrão", hospedeDto.email(), null, responsavelCadastro);
         }
         
@@ -270,6 +253,54 @@ public class PessoaConverter {
 		pessoa.setOperadorCadastro(responsavelCadastro);
 		
 		return pessoa;
+	}
+	
+	
+	public boolean verificarSeCepExiste(Pessoa pessoa, String cepParaBuscar) {
+	    if (cepParaBuscar == null || cepParaBuscar.isBlank()) {
+	        return false;
+	    }
+	    
+	    boolean pessoaComEndereco = pessoa.getEnderecos().size() > 0;
+
+	    return pessoa.getEnderecos().stream()
+	        .anyMatch(endereco -> {
+
+	            String cepDoEndereco = endereco.getCep();
+	            if (cepDoEndereco == null || cepDoEndereco.isBlank()) {
+	                return false; 
+	            }
+	            
+	            String cepLimpoDoEndereco = StringUtil.removerMascaraCep(cepDoEndereco);
+	            return cepLimpoDoEndereco.equals(cepParaBuscar);
+	        });
+	}
+	
+	public boolean verificarSeTelefoneExiste(Pessoa pessoa, String ddd, String numero) {	
+		if(!StringUtils.hasText(ddd) && !StringUtils.hasText(numero)) {
+			return false;
+		}
+		
+		return pessoa.getTelefones().stream()
+        .filter(Objects::nonNull) 
+        .anyMatch(telefoneDaLista -> {
+            
+            boolean dddIgual = Objects.equals(telefoneDaLista.getDdd(), numero);
+            boolean numeroIgual = Objects.equals(telefoneDaLista.getNumero(), numero);
+            
+            return dddIgual && numeroIgual;
+        });
+
+	}
+	
+	public boolean vericarSeEmailExiste(Pessoa pessoa, String email) {	
+		if(!StringUtils.hasText(email)) {
+			return false;
+		}
+		
+		return pessoa.getEmails().isEmpty() && pessoa.getEmails().stream()
+		.allMatch(enderecoEmail -> enderecoEmail.getEmail().equals(email));
+
 	}
 }
 

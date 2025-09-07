@@ -6,7 +6,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.util.StringUtils;
 
+import com.sw.tse.core.util.GenericCryptoStringConverter;
+
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -48,12 +51,15 @@ public class ContatoTelefonico {
     @Column(name = "tipocontatotelefonico")
     private Integer tipoContatoTelefonico;
 
+    @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "ddi", length = 128)
     private String ddi;
 
+    @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "ddd", length = 128)
     private String ddd;
 
+    @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "numero", length = 128)
     private String numero;
 

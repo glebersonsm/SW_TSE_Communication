@@ -28,9 +28,9 @@ import lombok.Setter;
 public class EnderecoEmail {
 
  	@Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seqcontatotelefonico")
-    @SequenceGenerator(name = "seqcontatotelefonico", sequenceName = "seqcontatotelefonico", allocationSize = 1)
- 	@Column(name = "idcontatotelefonico")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seqenderecoemail")
+    @SequenceGenerator(name = "seqenderecoemail", sequenceName = "seqenderecoemail", allocationSize = 1)
+ 	@Column(name = "idenderecoemail")
 	private Long id;
  	
  	@CreationTimestamp

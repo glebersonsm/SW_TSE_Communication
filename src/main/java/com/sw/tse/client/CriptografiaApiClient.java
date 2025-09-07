@@ -11,14 +11,14 @@ public interface CriptografiaApiClient {
 
     @GetMapping("/api/cadastros/CriptografarDadosString/{texto}")
     String criptografarString(
-            @PathVariable("texto") String texto,
+    		@PathVariable("texto") String texto,
             @RequestHeader("Authorization") String token
     );
 
 
     @GetMapping("/api/cadastros/CriptografarDadosString/{data}")
     String criptografarData(
-            String data,
+            @PathVariable("data") String data,
             @RequestHeader("Authorization") String token
     );
 

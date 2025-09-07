@@ -1,5 +1,6 @@
 package com.sw.tse.core.util;
 
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -41,7 +42,17 @@ public class CriptografiaService {
 
     public String criptografarValor(String valor) {
     	String bearerToken = "Bearer " + tokenTseService.gerarToken();
-    	return criptografiaApiClient.criptografarString(valor.toString(), bearerToken);
+    	
+    	String textoCriptografar = URLEncoder.encode(valor, StandardCharsets.UTF_8);
+   
+    	
+    	String textoEncriptado = criptografiaApiClient.criptografarString(textoCriptografar, bearerToken).replaceAll("^\"|\"$", "");
+    	
+    	if(textoEncriptado == null){
+    		return null;
+    	}
+    	
+    	return textoEncriptado;
     }
     
     

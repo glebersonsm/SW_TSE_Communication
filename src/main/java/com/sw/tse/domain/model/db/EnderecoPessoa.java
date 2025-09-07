@@ -5,7 +5,10 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.sw.tse.core.util.GenericCryptoStringConverter;
+
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -45,21 +48,26 @@ public class EnderecoPessoa {
 	    @Column(name = "descricaoendereco")
 	    private String descricaoEndereco;
 
+	    @Convert(converter = GenericCryptoStringConverter.class)
 	    @Column(name = "logradouro")
 	    private String logradouro;
 
+	    @Convert(converter = GenericCryptoStringConverter.class)
 	    @Column(name = "numero")
 	    private String numero;
 
+	    @Convert(converter = GenericCryptoStringConverter.class)
 	    @Column(name = "complemento")
 	    private String complemento;
 
+	    @Convert(converter = GenericCryptoStringConverter.class)
 	    @Column(name = "bairro")
 	    private String bairro;
 
 	    @Column(name = "uf")
 	    private String uf;
 
+	    @Convert(converter = GenericCryptoStringConverter.class)
 	    @Column(name = "cep")
 	    private String cep;
 
@@ -98,15 +106,18 @@ public class EnderecoPessoa {
 	    static EnderecoPessoa novoEndereco(String descricaoEndereco, String logradouro, String numero, String complemento, String Bairro, String cep, Cidade cidade,
 	    		boolean correspondencia, TipoEnderecoPessoa tipoEndereco, TipoLogradouro tipoLogradouro, OperadorSistema respCadastro, Pessoa pessoa) {
 	    	EnderecoPessoa enderecoPessoa = new EnderecoPessoa();
-	    	enderecoPessoa.setTipoEndereco(tipoEndereco);
-	    	enderecoPessoa.setTipoLogradouro(tipoLogradouro);
+	    	enderecoPessoa.setDescricaoEndereco(descricaoEndereco);
 	    	enderecoPessoa.setLogradouro(logradouro);
 	    	enderecoPessoa.setNumero(numero);
 	    	enderecoPessoa.setComplemento(complemento);
 	    	enderecoPessoa.setBairro(Bairro);
 	    	enderecoPessoa.setCep(cep);
 	    	enderecoPessoa.setCidade(cidade);
-	    	enderecoPessoa.setPessoa(pessoa);
+	    	enderecoPessoa.setParaCorrespondencia(correspondencia);
+	    	enderecoPessoa.setTipoEndereco(tipoEndereco);
+	    	enderecoPessoa.setTipoLogradouro(tipoLogradouro);
+	    	enderecoPessoa.setResponsavelCadastro(respCadastro);
+	    	enderecoPessoa.setPessoa(pessoa);    
 	    	return enderecoPessoa;
 	    }
 }

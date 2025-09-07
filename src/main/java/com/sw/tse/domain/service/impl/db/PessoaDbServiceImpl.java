@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import com.sw.tse.controller.model.HospedeDto;
+import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.converter.PessoaConverter;
 import com.sw.tse.domain.model.db.OperadorSistema;
 import com.sw.tse.domain.model.db.Pessoa;
@@ -38,7 +39,7 @@ public class PessoaDbServiceImpl implements PessoaService {
 		Pessoa pessoa = new Pessoa();
 		
 		if(StringUtils.hasText(hospedeDto.numeroDocumento())) {
-			String numeroDocumento = com.sw.tse.core.util.StringUtil.removeMascaraCpf(hospedeDto.numeroDocumento());
+			String numeroDocumento = StringUtil.removeMascaraCpf(hospedeDto.numeroDocumento());
 			List<Pessoa> listaPessoa = new ArrayList<>();
 			
 			if(hospedeDto.tipoDocumento() == null || hospedeDto.tipoDocumento().equals("CPF")) {

@@ -12,6 +12,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -71,27 +72,27 @@ public class Pessoa {
     @JoinColumn(name = "idrespalteracao", insertable = false, updatable = true)
 	private OperadorSistema operadorAlteracao;
     
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "pessoa")
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "pessoa", fetch =  FetchType.EAGER)
 	private List<EnderecoPessoa> enderecos = new ArrayList<>();
     
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "pessoa")
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "pessoa", fetch =  FetchType.EAGER)
     private List<ContatoTelefonico> telefones = new ArrayList<>();
     
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "pessoa")
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "pessoa", fetch =  FetchType.EAGER)
     private List<EnderecoEmail> emails = new ArrayList<>();
     
     
     
     public List<EnderecoPessoa> getEnderecos(){
-    	return Collections.unmodifiableList(this.enderecos);
+    	return Collections.unmodifiableList(this.enderecos != null ? this.enderecos : Collections.emptyList());
     }
     
     public List<ContatoTelefonico> getTelefones(){
-    	return Collections.unmodifiableList(telefones);
+    	return Collections.unmodifiableList(this.telefones != null ? this.telefones : Collections.emptyList());
     }
     
     public List<EnderecoEmail> getEmails(){
-    	return Collections.unmodifiableList(emails);
+    	return Collections.unmodifiableList(this.emails != null ? this.emails : Collections.emptyList());
     }
 
     public void adicionarEndereco(String descricaoEndereco, String logradouro, String numero, String complemento, String Bairro, String cep, Cidade cidade,
