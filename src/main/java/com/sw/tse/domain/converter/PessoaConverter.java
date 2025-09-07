@@ -222,7 +222,7 @@ public class PessoaConverter {
         TipoLogradouro tipoLogradouro = tipoLogradouroConverter.toEntity(validarTipoLogradouroPadrao());
         
        
-        if (!verificarSeCepExiste(pessoa, cep)) {
+        if (!verificarSeEnderecoExiste(pessoa, cep)) {
 			pessoa.adicionarEndereco("Endereço padrão", hospedeDto.logradouro(), hospedeDto.numero(), hospedeDto.complemento(), hospedeDto.bairro(), hospedeDto.cep(),
 					cidade, true, tipoEndereco, tipoLogradouro, responsavelCadastro);
 		}
@@ -256,14 +256,12 @@ public class PessoaConverter {
 	}
 	
 	
-	public boolean verificarSeCepExiste(Pessoa pessoa, String cepParaBuscar) {
+	public boolean verificarSeEnderecoExiste(Pessoa pessoa, String cepParaBuscar) {
 	    if (cepParaBuscar == null || cepParaBuscar.isBlank()) {
 	        return false;
 	    }
 	    
-	    boolean pessoaComEndereco = pessoa.getEnderecos().size() > 0;
-
-	    return pessoa.getEnderecos().stream()
+	  	return pessoa.getEnderecos().stream()
 	        .anyMatch(endereco -> {
 
 	            String cepDoEndereco = endereco.getCep();
@@ -285,7 +283,7 @@ public class PessoaConverter {
         .filter(Objects::nonNull) 
         .anyMatch(telefoneDaLista -> {
             
-            boolean dddIgual = Objects.equals(telefoneDaLista.getDdd(), numero);
+            boolean dddIgual = Objects.equals(telefoneDaLista.getDdd(), ddd);
             boolean numeroIgual = Objects.equals(telefoneDaLista.getNumero(), numero);
             
             return dddIgual && numeroIgual;
@@ -298,9 +296,14 @@ public class PessoaConverter {
 			return false;
 		}
 		
-		return pessoa.getEmails().isEmpty() && pessoa.getEmails().stream()
-		.allMatch(enderecoEmail -> enderecoEmail.getEmail().equals(email));
-
+		return pessoa.getEmails().stream()
+				.anyMatch(enderecoEmail -> {
+					String emailSalvo = enderecoEmail.getEmail();
+					if(emailSalvo == null || emailSalvo.isBlank()) {
+						return false;
+					}
+					return email.equals(emailSalvo);
+				});
 	}
 }
 

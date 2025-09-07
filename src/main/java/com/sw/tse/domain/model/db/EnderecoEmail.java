@@ -5,7 +5,10 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.sw.tse.core.util.GenericCryptoStringConverter;
+
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -41,6 +44,7 @@ public class EnderecoEmail {
     @Column(name = "dataalteracao")
     private LocalDateTime dataAlteracao;
 
+    @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "email", length = 1024)
     private String email;
 

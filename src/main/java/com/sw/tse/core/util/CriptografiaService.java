@@ -1,11 +1,11 @@
 package com.sw.tse.core.util;
 
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 
+import org.springframework.web.util.UriUtils;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
@@ -43,10 +43,11 @@ public class CriptografiaService {
     public String criptografarValor(String valor) {
     	String bearerToken = "Bearer " + tokenTseService.gerarToken();
     	
-    	String textoCriptografar = URLEncoder.encode(valor, StandardCharsets.UTF_8);
-   
+    	String valorSemBarra = valor.replace("/", " ");
     	
-    	String textoEncriptado = criptografiaApiClient.criptografarString(textoCriptografar, bearerToken).replaceAll("^\"|\"$", "");
+    	String textoCodificado = UriUtils.encode(valorSemBarra, StandardCharsets.UTF_8);
+    	
+    	String textoEncriptado = criptografiaApiClient.criptografarString(textoCodificado, bearerToken).replaceAll("^\"|\"$", "");
     	
     	if(textoEncriptado == null){
     		return null;
@@ -95,7 +96,7 @@ public class CriptografiaService {
     
     public boolean isEncriptado(@NonNull String texto) {
     	boolean encriptado = false;
-    	if((texto != null || "".equalsIgnoreCase(texto)) && texto.length() > 24) {
+    	if((texto != null && !"".equalsIgnoreCase(texto)) && texto.length() > 24) {
     		encriptado = texto.substring(0, 24).equalsIgnoreCase("Z3/C5pzz41ZOUt5rKjeQcQ==");
     	}
     	return encriptado;
