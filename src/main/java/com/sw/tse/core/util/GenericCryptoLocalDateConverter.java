@@ -1,6 +1,8 @@
 package com.sw.tse.core.util;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -35,14 +37,29 @@ public class GenericCryptoLocalDateConverter implements AttributeConverter<Local
         }
         
         try {
-            CriptografiaService service = getCriptografiaService();
-            if (service != null) {
-                String dataCripotograda = service.criptografarData(attribute.toString());
-                return LocalDate.parse(dataCripotograda);
+        	CriptografiaService service = getCriptografiaService();
+            if (service == null) {
+                log.warn("CriptografiaService não está disponível. A data não será transformada.");
+                return attribute; 
             }
-            return attribute;
+
+
+            String dataFormatadaParaApi = attribute.format(DateTimeFormatter.ISO_LOCAL_DATE);
+            
+            String dataTransformadaComAspas = service.criptografarData(dataFormatadaParaApi);
+
+            if (dataTransformadaComAspas == null || dataTransformadaComAspas.length() < 2) {
+                log.error("API de criptografia retornou uma data inválida: {}", dataTransformadaComAspas);
+                throw new IllegalStateException("Resposta inválida da API de transformação de data.");
+            }
+            String dataLimpa = dataTransformadaComAspas.replaceAll("^\"|\"$", "");
+
+            OffsetDateTime odt = OffsetDateTime.parse(dataLimpa);
+
+            return odt.toLocalDate();
+
         } catch (Exception e) {
-            log.error("Erro ao criptografar data para o banco de dados: {}", e.getMessage(), e);
+        	log.error("Erro ao transformar a data '{}' para o banco de dados.", attribute, e);
             return attribute;
         }
     }

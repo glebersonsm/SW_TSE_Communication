@@ -1,11 +1,11 @@
-package com.sw.tse.controller;
+package com.sw.tse.api.controller;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.sw.tse.controller.model.HospedeDto;
+import com.sw.tse.api.dto.HospedeDto;
 import com.sw.tse.domain.converter.PessoaConverter;
 import com.sw.tse.domain.model.api.request.PessoaApiRequest;
 import com.sw.tse.domain.service.interfaces.PessoaService;

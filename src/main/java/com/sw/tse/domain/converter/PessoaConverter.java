@@ -8,7 +8,7 @@ import java.util.Objects;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import com.sw.tse.controller.model.HospedeDto;
+import com.sw.tse.api.dto.HospedeDto;
 import com.sw.tse.core.config.CadastroPessoaPropertiesCustom;
 import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.expection.ValorPadraoNaoConfiguradoException;
@@ -53,10 +53,12 @@ public class PessoaConverter {
         Long idPessoa = hospedeDto.idHospede(); 
         LocalDate dataCadastro = LocalDate.now(); 
         TipoPessoaEnum tipoPessoa = TipoPessoaEnum.FISICA; 
-        String razaoSocial = hospedeDto.nome();
-        String nomeFantasia = hospedeDto.nome();
+        String razaoSocial = hospedeDto.nome().toUpperCase();
         LocalDate dataNascimento = hospedeDto.dataNascimento();
-        String documento = hospedeDto.numeroDocumento();
+        String documento = "";
+        if(hospedeDto.tipoDocumento() == null || hospedeDto.tipoDocumento().equals("CPF")) {
+        	documento = StringUtils.hasText(hospedeDto.numeroDocumento()) ? StringUtil.removeMascaraCpf(hospedeDto.numeroDocumento()) : "";
+        }
         SexoEnum sexo;
         if(hospedeDto.sexo().equals("M")) {
         	sexo = SexoEnum.MASCULINO;
@@ -74,7 +76,7 @@ public class PessoaConverter {
                 dataCadastro,
                 tipoPessoa,
                 razaoSocial,
-                nomeFantasia,
+                null,
                 dataNascimento,
                 documento,
                 null, // RG NUMERO
@@ -248,7 +250,7 @@ public class PessoaConverter {
 			pessoa.setNumeroDocumento(hospedeDto.numeroDocumento());
 		}
 		pessoa.setDataNascimento(hospedeDto.dataNascimento());
-		Integer sexo = hospedeDto.sexo().equals("M") ? 0 : 1;
+		SexoEnum sexo = hospedeDto.sexo().equals("M") ? SexoEnum.MASCULINO : SexoEnum.FEMININO;
 		pessoa.setSexo(sexo);
 		pessoa.setOperadorCadastro(responsavelCadastro);
 		

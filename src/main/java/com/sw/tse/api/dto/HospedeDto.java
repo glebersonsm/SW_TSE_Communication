@@ -1,4 +1,4 @@
-package com.sw.tse.controller.model;
+package com.sw.tse.api.dto;
 
 import java.time.LocalDate;
 

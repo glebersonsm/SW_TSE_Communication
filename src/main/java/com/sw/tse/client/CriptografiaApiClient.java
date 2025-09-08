@@ -16,7 +16,7 @@ public interface CriptografiaApiClient {
     );
 
 
-    @GetMapping("/api/cadastros/CriptografarDadosString/{data}")
+    @GetMapping("/api/cadastros/CriptografarDadosDate/{data}")
     String criptografarData(
             @PathVariable("data") String data,
             @RequestHeader("Authorization") String token

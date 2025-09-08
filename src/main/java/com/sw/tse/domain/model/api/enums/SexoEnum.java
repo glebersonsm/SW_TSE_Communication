@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum SexoEnum {
 
-	FEMININO(0, "Feminino"),
-    MASCULINO(1, "Masculino");
+	FEMININO(1, "Feminino"),
+    MASCULINO(0, "Masculino");
 
     private final int codigo;
     private final String descricao;

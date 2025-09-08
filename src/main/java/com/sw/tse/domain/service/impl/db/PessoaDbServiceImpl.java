@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import com.sw.tse.controller.model.HospedeDto;
+import com.sw.tse.api.dto.HospedeDto;
 import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.converter.PessoaConverter;
 import com.sw.tse.domain.model.db.OperadorSistema;

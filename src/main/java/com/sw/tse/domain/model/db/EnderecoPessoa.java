@@ -106,12 +106,12 @@ public class EnderecoPessoa {
 	    static EnderecoPessoa novoEndereco(String descricaoEndereco, String logradouro, String numero, String complemento, String Bairro, String cep, Cidade cidade,
 	    		boolean correspondencia, TipoEnderecoPessoa tipoEndereco, TipoLogradouro tipoLogradouro, OperadorSistema respCadastro, Pessoa pessoa) {
 	    	EnderecoPessoa enderecoPessoa = new EnderecoPessoa();
-	    	enderecoPessoa.setDescricaoEndereco(descricaoEndereco);
-	    	enderecoPessoa.setLogradouro(logradouro);
-	    	enderecoPessoa.setNumero(numero);
-	    	enderecoPessoa.setComplemento(complemento);
-	    	enderecoPessoa.setBairro(Bairro);
-	    	enderecoPessoa.setCep(cep);
+	    	enderecoPessoa.setDescricaoEndereco(descricaoEndereco.toUpperCase());
+	    	enderecoPessoa.setLogradouro(logradouro.toUpperCase());
+	    	enderecoPessoa.setNumero(numero.toUpperCase());
+	    	enderecoPessoa.setComplemento(complemento.toUpperCase());
+	    	enderecoPessoa.setBairro(Bairro.toUpperCase());
+	    	enderecoPessoa.setCep(cep.toUpperCase());
 	    	enderecoPessoa.setCidade(cidade);
 	    	enderecoPessoa.setParaCorrespondencia(correspondencia);
 	    	enderecoPessoa.setTipoEndereco(tipoEndereco);

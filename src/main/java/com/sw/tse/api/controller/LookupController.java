@@ -1,4 +1,4 @@
-package com.sw.tse.controller;
+package com.sw.tse.api.controller;
 
 import java.util.List;
 

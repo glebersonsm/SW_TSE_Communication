@@ -27,6 +27,8 @@ import lombok.Setter;
 
 import com.sw.tse.core.util.GenericCryptoStringConverter;
 import com.sw.tse.core.util.GenericCryptoLocalDateConverter;
+import com.sw.tse.core.util.SexoEnumConverter;
+import com.sw.tse.domain.model.api.enums.SexoEnum;
 import jakarta.persistence.Convert;
 
 @Entity
@@ -59,8 +61,9 @@ public class Pessoa {
 	@Convert(converter = GenericCryptoLocalDateConverter.class)
 	@Column(name ="datanascimento")
 	private LocalDate dataNascimento;
+	@Convert(converter = SexoEnumConverter.class)
 	@Column(name = "sexo")
-	private Integer sexo;
+	private SexoEnum sexo;
 	@Column(name ="idnacionalidade")
 	private Integer nacionalidade = 30;
 	@Column(name = "tipopessoa")

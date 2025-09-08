@@ -60,7 +60,7 @@ public class CidadeDbServiceImpl implements CidadeService {
 		cep = StringUtil.removerMascaraCep(cep);
 		
 		if(cep.length() != 8) {
-			throw new ApiTseException(String.format("O Cep % não possui exatamente 8 caracteres", cep));
+			throw new ApiTseException(String.format("O Cep %s não possui exatamente 8 caracteres", cep));
 		}
 		
 		try {
