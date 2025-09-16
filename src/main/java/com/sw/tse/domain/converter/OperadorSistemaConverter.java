@@ -34,7 +34,8 @@ public class OperadorSistemaConverter {
 	             dto.id(),
 	             dto.login(),
 	             dto.nome(),
-	             dto.habilitado()
+	             dto.habilitado(),
+	             null
 	     );
 	 }
 	 

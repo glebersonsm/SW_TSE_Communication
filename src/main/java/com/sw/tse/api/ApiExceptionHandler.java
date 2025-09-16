@@ -20,6 +20,8 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.ValidationErrorResposeDto;
+import com.sw.tse.domain.expection.ApiTseException;
+import com.sw.tse.domain.expection.BrasilApiException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -72,6 +74,22 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR.value(), false, null, ex.getMessage()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    
+    @ExceptionHandler(ApiTseException.class)
+    public ResponseEntity<ApiResponseDto<?>> handleApiTseException(ApiTseException ex, WebRequest request){
+    	ApiResponseDto<?> errorResponse = new ApiResponseDto<>(
+                HttpStatus.BAD_REQUEST.value() , false, null, ex.getMessage()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+    
+    @ExceptionHandler(BrasilApiException.class)
+    public ResponseEntity<ApiResponseDto<?>> handleApiTseException(BrasilApiException ex, WebRequest request){
+    	ApiResponseDto<?> errorResponse = new ApiResponseDto<>(
+                HttpStatus.BAD_REQUEST.value() , false, null, ex.getMessage()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
     
     @Override
