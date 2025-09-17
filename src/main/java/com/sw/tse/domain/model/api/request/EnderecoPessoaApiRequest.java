@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record EnderecoPessoaDto(
+public record EnderecoPessoaApiRequest(
 		@JsonProperty("IdEndereco") Long idEndereco,
 	    @JsonProperty("DescricaoEndereco") String descricaoEndereco,
 	    @JsonProperty("IdTipoEndereco") Long idTipoEndereco,

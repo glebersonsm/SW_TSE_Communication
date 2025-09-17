@@ -6,26 +6,26 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import com.sw.tse.domain.model.api.response.TipoEnderecoDto;
+import com.sw.tse.domain.model.api.response.TipoEnderecoApiResponse;
 import com.sw.tse.domain.model.db.TipoEnderecoPessoa;
 
 @Component
 public class TipoEnderecoConverter {
 
 
-	 public TipoEnderecoDto toDto(TipoEnderecoPessoa entidade) {
+	 public TipoEnderecoApiResponse toDto(TipoEnderecoPessoa entidade) {
         if (entidade == null) {
             return null;
         }
 
-        return new TipoEnderecoDto(
+        return new TipoEnderecoApiResponse(
                 entidade.getId(),
                 entidade.getDecricao()
         );
 	 }
 	 
 
-	 public TipoEnderecoPessoa toEntity(TipoEnderecoDto dto) {
+	 public TipoEnderecoPessoa toEntity(TipoEnderecoApiResponse dto) {
 	     if (dto == null) {
 	         return null;
 	     }
@@ -38,7 +38,7 @@ public class TipoEnderecoConverter {
 	 }
 	 
 
-	 public List<TipoEnderecoDto> toDtoList(List<TipoEnderecoPessoa> listaDeEntidades) {
+	 public List<TipoEnderecoApiResponse> toDtoList(List<TipoEnderecoPessoa> listaDeEntidades) {
 	        if (listaDeEntidades == null || listaDeEntidades.isEmpty()) {
 	            return Collections.emptyList();
 	        }
@@ -49,7 +49,7 @@ public class TipoEnderecoConverter {
 	}
 	
 
-	 public List<TipoEnderecoPessoa> toEntityList(List<TipoEnderecoDto> listaDeDtos) {
+	 public List<TipoEnderecoPessoa> toEntityList(List<TipoEnderecoApiResponse> listaDeDtos) {
 	        if (listaDeDtos == null || listaDeDtos.isEmpty()) {
 	            return Collections.emptyList();
 	        }

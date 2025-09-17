@@ -1,8 +1,8 @@
 package com.sw.tse.domain.service.interfaces;
 
-import com.sw.tse.domain.model.api.response.CidadeDto;
+import com.sw.tse.domain.model.api.response.CidadeApiResponse;
 
 public interface CidadeService {
 
-	public CidadeDto buscarPorCep(String cep);
+	public CidadeApiResponse buscarPorCep(String cep);
 }

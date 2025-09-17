@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sw.tse.domain.model.api.enums.TipoTelefone;
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record ContatoTelefonicoDto (
+public record ContatoTelefonicoApiRequest (
 		//@JsonProperty("IdContatoTelefonico") Long idContatoTefonico,
 	    @JsonProperty("IdTipo") TipoTelefone idTipo,
 	    @JsonProperty("Ddi") Integer ddi,

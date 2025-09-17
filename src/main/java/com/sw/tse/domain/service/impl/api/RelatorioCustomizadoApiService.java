@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sw.tse.client.RelatorioCustomizadoApiClient;
 import com.sw.tse.domain.expection.ApiTseException;
-import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizado;
+import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizadoApiRequest;
 import com.sw.tse.domain.service.interfaces.RelatorioCustomizadoService;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
 
@@ -31,7 +31,7 @@ public class RelatorioCustomizadoApiService implements RelatorioCustomizadoServi
 	private final ObjectMapper objectMapper;
 
 	@Override
-	public <T> List<T> buscarRelatorioGenerico(Long idRelatorio, List<FiltroRelatorioCustomizado> filtros,
+	public <T> List<T> buscarRelatorioGenerico(Long idRelatorio, List<FiltroRelatorioCustomizadoApiRequest> filtros,
 			Class<T> tipoDoElemento) {
 		String bearerToken = "Bearer " + tokenTseService.gerarToken();
 		

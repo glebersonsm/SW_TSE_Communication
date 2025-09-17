@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 
 import com.sw.tse.client.RelatorioCustomizadoApiClient;
 import com.sw.tse.domain.expection.ApiTseException;
-import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizado;
-import com.sw.tse.domain.model.api.response.TipoDocumentoPessoaDto;
+import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizadoApiRequest;
+import com.sw.tse.domain.model.api.response.TipoDocumentoPessoaApiResponse;
 import com.sw.tse.domain.service.interfaces.TipoDocumentoPessoaService;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
 
@@ -29,15 +29,15 @@ public class TipoDocumentoPessoaApiServiceImpl implements TipoDocumentoPessoaSer
     private Long idRelatorioTipoDocumentoPessoa;
 
     @Override
-    public List<TipoDocumentoPessoaDto> listarTiposDocumento() {
+    public List<TipoDocumentoPessoaApiResponse> listarTiposDocumento() {
         
         if (idRelatorioTipoDocumentoPessoa == null || idRelatorioTipoDocumentoPessoa.equals(0L)) {
             throw new ApiTseException("Relatório customizado para tipo documento pessoa não parametrizado");
         }
                 
         try {
-            List<FiltroRelatorioCustomizado> filtros = List.of();
-            return relatorioCustomizado.buscarRelatorioGenerico(idRelatorioTipoDocumentoPessoa, filtros, TipoDocumentoPessoaDto.class);
+            List<FiltroRelatorioCustomizadoApiRequest> filtros = List.of();
+            return relatorioCustomizado.buscarRelatorioGenerico(idRelatorioTipoDocumentoPessoa, filtros, TipoDocumentoPessoaApiResponse.class);
             
         } catch (FeignException e) {
             log.error("Erro ao chamar a api de tipos de documento pessoa: {}", e.getMessage());

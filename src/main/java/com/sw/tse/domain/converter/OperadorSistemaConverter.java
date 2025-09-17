@@ -6,18 +6,18 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import com.sw.tse.domain.model.api.response.OperadorSistemaDto;
+import com.sw.tse.domain.model.api.response.OperadorSistemaListaApiResponse;
 import com.sw.tse.domain.model.db.OperadorSistema;
 
 @Component
 public class OperadorSistemaConverter {
 
-	 public OperadorSistemaDto toDto(OperadorSistema entidade) {
+	 public OperadorSistemaListaApiResponse toDto(OperadorSistema entidade) {
         if (entidade == null) {
             return null;
         }
 
-        return new OperadorSistemaDto(
+        return new OperadorSistemaListaApiResponse(
                 entidade.getId(),
                 entidade.getLogin(),
                 entidade.getNome(),
@@ -25,7 +25,7 @@ public class OperadorSistemaConverter {
         );
 	 }
 	 
-	 public OperadorSistema toEntity(OperadorSistemaDto dto) {
+	 public OperadorSistema toEntity(OperadorSistemaListaApiResponse dto) {
 	     if (dto == null) {
 	         return null;
 	     }
@@ -39,7 +39,7 @@ public class OperadorSistemaConverter {
 	     );
 	 }
 	 
-	 public List<OperadorSistemaDto> toDtoList(List<OperadorSistema> listaDeEntidades) {
+	 public List<OperadorSistemaListaApiResponse> toDtoList(List<OperadorSistema> listaDeEntidades) {
 	        if (listaDeEntidades == null || listaDeEntidades.isEmpty()) {
 	            return Collections.emptyList();
 	        }
@@ -49,7 +49,7 @@ public class OperadorSistemaConverter {
 	            .collect(Collectors.toList()); 
 	}
 	
-	 public List<OperadorSistema> toEntityList(List<OperadorSistemaDto> listaDeDtos) {
+	 public List<OperadorSistema> toEntityList(List<OperadorSistemaListaApiResponse> listaDeDtos) {
 	        if (listaDeDtos == null || listaDeDtos.isEmpty()) {
 	            return Collections.emptyList();
 	        }

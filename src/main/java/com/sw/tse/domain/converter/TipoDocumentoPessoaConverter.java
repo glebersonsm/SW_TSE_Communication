@@ -6,25 +6,25 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import com.sw.tse.domain.model.api.response.TipoDocumentoPessoaDto;
+import com.sw.tse.domain.model.api.response.TipoDocumentoPessoaApiResponse;
 import com.sw.tse.domain.model.db.TipoDocumentoPessoa;
 
 @Component
 public class TipoDocumentoPessoaConverter {
 
-	 public TipoDocumentoPessoaDto toDto(TipoDocumentoPessoa entidade) {
+	 public TipoDocumentoPessoaApiResponse toDto(TipoDocumentoPessoa entidade) {
         if (entidade == null) {
             return null;
         }
 
-        return new TipoDocumentoPessoaDto(
+        return new TipoDocumentoPessoaApiResponse(
                 entidade.getId(),
                 entidade.getDecricao(),
                 entidade.getSysId()
         );
 	 }
 	 
-	 public TipoDocumentoPessoa toEntity(TipoDocumentoPessoaDto dto) {
+	 public TipoDocumentoPessoa toEntity(TipoDocumentoPessoaApiResponse dto) {
 	     if (dto == null) {
 	         return null;
 	     }
@@ -36,7 +36,7 @@ public class TipoDocumentoPessoaConverter {
 	     );
 	 }
 	 
-	 public List<TipoDocumentoPessoaDto> toDtoList(List<TipoDocumentoPessoa> listaDeEntidades) {
+	 public List<TipoDocumentoPessoaApiResponse> toDtoList(List<TipoDocumentoPessoa> listaDeEntidades) {
 	        if (listaDeEntidades == null || listaDeEntidades.isEmpty()) {
 	            return Collections.emptyList();
 	        }
@@ -46,7 +46,7 @@ public class TipoDocumentoPessoaConverter {
 	            .collect(Collectors.toList()); 
 	}
 	
-	 public List<TipoDocumentoPessoa> toEntityList(List<TipoDocumentoPessoaDto> listaDeDtos) {
+	 public List<TipoDocumentoPessoa> toEntityList(List<TipoDocumentoPessoaApiResponse> listaDeDtos) {
 	        if (listaDeDtos == null || listaDeDtos.isEmpty()) {
 	            return Collections.emptyList();
 	        }

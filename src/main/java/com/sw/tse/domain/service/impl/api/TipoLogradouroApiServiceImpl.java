@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.sw.tse.client.LookupApiClient;
 import com.sw.tse.domain.expection.BrasilApiException;
-import com.sw.tse.domain.model.api.response.TipoLogradouroDto;
+import com.sw.tse.domain.model.api.response.TipoLogradouroApiResponse;
 import com.sw.tse.domain.service.interfaces.TipoLogradouroService;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
 
@@ -26,7 +26,7 @@ public class TipoLogradouroApiServiceImpl implements TipoLogradouroService {
 	private final TokenTseService tokenTseService;
 
 	@Override
-	public List<TipoLogradouroDto> listarTiposLogradouro() {
+	public List<TipoLogradouroApiResponse> listarTiposLogradouro() {
 		
 		String bearerToken = "Bearer " + tokenTseService.gerarToken();
 		try {

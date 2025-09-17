@@ -15,13 +15,13 @@ import com.sw.tse.domain.expection.ValorPadraoNaoConfiguradoException;
 import com.sw.tse.domain.model.api.enums.SexoEnum;
 import com.sw.tse.domain.model.api.enums.TipoPessoaEnum;
 import com.sw.tse.domain.model.api.enums.TipoTelefone;
-import com.sw.tse.domain.model.api.request.ContatoTelefonicoDto;
-import com.sw.tse.domain.model.api.request.EnderecoEmailDto;
-import com.sw.tse.domain.model.api.request.EnderecoPessoaDto;
+import com.sw.tse.domain.model.api.request.ContatoTelefonicoApiRequest;
+import com.sw.tse.domain.model.api.request.EnderecoEmailApiRequest;
+import com.sw.tse.domain.model.api.request.EnderecoPessoaApiRequest;
 import com.sw.tse.domain.model.api.request.PessoaApiRequest;
-import com.sw.tse.domain.model.api.response.CidadeDto;
-import com.sw.tse.domain.model.api.response.TipoEnderecoDto;
-import com.sw.tse.domain.model.api.response.TipoLogradouroDto;
+import com.sw.tse.domain.model.api.response.CidadeApiResponse;
+import com.sw.tse.domain.model.api.response.TipoEnderecoApiResponse;
+import com.sw.tse.domain.model.api.response.TipoLogradouroApiResponse;
 import com.sw.tse.domain.model.db.Cidade;
 import com.sw.tse.domain.model.db.OperadorSistema;
 import com.sw.tse.domain.model.db.Pessoa;
@@ -66,9 +66,9 @@ public class PessoaConverter {
         	sexo = SexoEnum.FEMININO;
         }
 
-        List<EnderecoPessoaDto> enderecos = construirListaEnderecos(hospedeDto);
-        List<EnderecoEmailDto> emails = construirListaEmails(hospedeDto);
-        List<ContatoTelefonicoDto> contatos = construirListaContatos(hospedeDto);
+        List<EnderecoPessoaApiRequest> enderecos = construirListaEnderecos(hospedeDto);
+        List<EnderecoEmailApiRequest> emails = construirListaEmails(hospedeDto);
+        List<ContatoTelefonicoApiRequest> contatos = construirListaContatos(hospedeDto);
 
 
         return new PessoaApiRequest(
@@ -94,18 +94,18 @@ public class PessoaConverter {
         );
     }
 
-    private List<EnderecoPessoaDto> construirListaEnderecos(HospedeDto dto) {
+    private List<EnderecoPessoaApiRequest> construirListaEnderecos(HospedeDto dto) {
         if (!StringUtils.hasText(dto.logradouro())) {
             return Collections.emptyList();
         }
         
-        TipoEnderecoDto tipoEnderecoPadrao = validarTipoEnderecoPadrao();
-        TipoLogradouroDto tipoLogradouroPadrao = validarTipoLogradouroPadrao();
+        TipoEnderecoApiResponse tipoEnderecoPadrao = validarTipoEnderecoPadrao();
+        TipoLogradouroApiResponse tipoLogradouroPadrao = validarTipoLogradouroPadrao();
         
         String cep = StringUtil.removerMascaraCep(dto.cep());
-        CidadeDto cidadeDto = cidadeService.buscarPorCep(cep);
+        CidadeApiResponse cidadeDto = cidadeService.buscarPorCep(cep);
 
-        EnderecoPessoaDto endereco = new EnderecoPessoaDto(
+        EnderecoPessoaApiRequest endereco = new EnderecoPessoaApiRequest(
         		tipoEnderecoPadrao.id(), // ID ENDERECO
                 "Endereço Principal",  // DECRICAO DO ENDERECO
                 cadastroPessoaPropertiesCustom.getTipoendereco() , // ID TIPO DE ENDERECO
@@ -127,14 +127,14 @@ public class PessoaConverter {
         return List.of(endereco);
     }
 
-    private List<EnderecoEmailDto> construirListaEmails(HospedeDto dto) {
+    private List<EnderecoEmailApiRequest> construirListaEmails(HospedeDto dto) {
         if (!StringUtils.hasText(dto.email())) {
             return Collections.emptyList();
         }
-        return List.of(new EnderecoEmailDto(null, dto.email(), "Email Principal"));
+        return List.of(new EnderecoEmailApiRequest(null, dto.email(), "Email Principal"));
     }
 
-    private List<ContatoTelefonicoDto> construirListaContatos(HospedeDto dto) {
+    private List<ContatoTelefonicoApiRequest> construirListaContatos(HospedeDto dto) {
         if (!StringUtils.hasText(dto.telefone())) {
             return Collections.emptyList();
         }
@@ -154,7 +154,7 @@ public class PessoaConverter {
             String ddd = dto.ddd() != null ? dto.ddi().trim() : null;
             String numeroTelefone = StringUtil.removerMascaraTelefone(dto.telefone());
             
-	        ContatoTelefonicoDto contato = new ContatoTelefonicoDto(
+	        ContatoTelefonicoApiRequest contato = new ContatoTelefonicoApiRequest(
 	        		tipoPadrao, // TIPO CONTADO TELEFONE
 	                tryParseInt(ddi), // DDI
 	                tryParseInt(ddd), // DDD
@@ -180,12 +180,12 @@ public class PessoaConverter {
         }
     }
     
-    private TipoEnderecoDto validarTipoEnderecoPadrao() {
+    private TipoEnderecoApiResponse validarTipoEnderecoPadrao() {
     	if(cadastroPessoaPropertiesCustom.getTipoendereco() == null) {
     		throw new ValorPadraoNaoConfiguradoException("Tipo endereço padrão não configurado");
     	}
     	
-    	List<TipoEnderecoDto> listaTipoEndereco = tipoEnderecoService.listarTiposEndereco();
+    	List<TipoEnderecoApiResponse> listaTipoEndereco = tipoEnderecoService.listarTiposEndereco();
 		
 		
 		if(!listaTipoEndereco.stream()
@@ -196,12 +196,12 @@ public class PessoaConverter {
     	return listaTipoEndereco.stream().findFirst().get();
     }
     
-    private TipoLogradouroDto validarTipoLogradouroPadrao() {
+    private TipoLogradouroApiResponse validarTipoLogradouroPadrao() {
     	if(cadastroPessoaPropertiesCustom.getTipoLogradouro() == null) {
     		throw new ValorPadraoNaoConfiguradoException("Tipo logradouro padrão não configurado");
     	}
     	
-    	List<TipoLogradouroDto> listaTipoLogradouro = tipoLogradouroService.listarTiposLogradouro();
+    	List<TipoLogradouroApiResponse> listaTipoLogradouro = tipoLogradouroService.listarTiposLogradouro();
     	
     	if(!listaTipoLogradouro.stream()
     			.anyMatch(tipoLogradouro -> cadastroPessoaPropertiesCustom.getTipoLogradouro().equals(tipoLogradouro.id()))) {
@@ -217,7 +217,7 @@ public class PessoaConverter {
 			pessoa = novaPessoa(hospedeDto, pessoa, responsavelCadastro);
 		}
 		String cep = StringUtil.removerMascaraCep(hospedeDto.cep());
-        CidadeDto cidadeDto = cidadeService.buscarPorCep(cep);
+        CidadeApiResponse cidadeDto = cidadeService.buscarPorCep(cep);
         Cidade cidade = cidadeConverter.toEntity(cidadeDto);
 	
         TipoEnderecoPessoa tipoEndereco = tipoEnderecoConverter.toEntity(validarTipoEnderecoPadrao());

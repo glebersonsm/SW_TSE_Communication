@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sw.tse.api.dto.ApiResponseDto;
-import com.sw.tse.domain.model.api.response.CidadeDto;
+import com.sw.tse.domain.model.api.response.CidadeApiResponse;
 import com.sw.tse.domain.service.interfaces.CidadeService;
 
 import lombok.RequiredArgsConstructor;
@@ -21,10 +21,10 @@ public class CidadeController {
 	private final CidadeService cidadeService;
 	
 	@GetMapping("/{cep}")
-	public ResponseEntity<ApiResponseDto<CidadeDto>> buscarPorCep(@PathVariable String cep) {
-		CidadeDto cidadeDto = cidadeService.buscarPorCep(cep);
+	public ResponseEntity<ApiResponseDto<CidadeApiResponse>> buscarPorCep(@PathVariable String cep) {
+		CidadeApiResponse cidadeDto = cidadeService.buscarPorCep(cep);
 	
-		ApiResponseDto<CidadeDto> responseApi = new ApiResponseDto<>(
+		ApiResponseDto<CidadeApiResponse> responseApi = new ApiResponseDto<>(
 		    HttpStatus.OK.value(),  
 		    true,                       
 		    cidadeDto,  

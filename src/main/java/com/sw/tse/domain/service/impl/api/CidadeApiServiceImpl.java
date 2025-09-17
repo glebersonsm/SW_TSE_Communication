@@ -14,9 +14,9 @@ import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.BrasilApiException;
 import com.sw.tse.domain.model.api.enums.TipoValorRelatorioCustomizado;
-import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizado;
+import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizadoApiRequest;
 import com.sw.tse.domain.model.api.response.BuscaCepBrasilApiResponse;
-import com.sw.tse.domain.model.api.response.CidadeDto;
+import com.sw.tse.domain.model.api.response.CidadeApiResponse;
 import com.sw.tse.domain.service.interfaces.CidadeService;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
 
@@ -38,39 +38,39 @@ public class CidadeApiServiceImpl implements CidadeService{
 	 private Long idRelatorioCidade;
 
 	@Override
-	public CidadeDto buscarPorCep(String cep) {
+	public CidadeApiResponse buscarPorCep(String cep) {
 		
 		BuscaCepBrasilApiResponse buscaCep = buscarCepApiBrasil(cep);
 		
-		CidadeDto cidadeDto = buscarCidadeTse(buscaCep);
+		CidadeApiResponse cidadeDto = buscarCidadeTse(buscaCep);
 		
 		return cidadeDto;
 	}
 
-	private CidadeDto buscarCidadeTse(BuscaCepBrasilApiResponse buscaCep) {
+	private CidadeApiResponse buscarCidadeTse(BuscaCepBrasilApiResponse buscaCep) {
 
 		if(idRelatorioCidade == null || idRelatorioCidade.equals(0L)) {
 			throw new ApiTseException("Relatório customizado pra cidade não parametrizao");
 		}
 		
-		FiltroRelatorioCustomizado nomeCidade = FiltroRelatorioCustomizado.builder()
+		FiltroRelatorioCustomizadoApiRequest nomeCidade = FiltroRelatorioCustomizadoApiRequest.builder()
 				.nomeParametro("nome")
 				.valor(buscaCep.cidade())
 				.tipo(TipoValorRelatorioCustomizado.STRING)
 				.criptografar(false)
 				.build();
 		
-		FiltroRelatorioCustomizado uf = FiltroRelatorioCustomizado.builder()
+		FiltroRelatorioCustomizadoApiRequest uf = FiltroRelatorioCustomizadoApiRequest.builder()
 				.nomeParametro("uf")
 				.valor(buscaCep.uf())
 				.tipo(TipoValorRelatorioCustomizado.STRING)
 				.criptografar(false)
 				.build();
 		
-		List<FiltroRelatorioCustomizado> filtros = Arrays.asList(nomeCidade,uf);
+		List<FiltroRelatorioCustomizadoApiRequest> filtros = Arrays.asList(nomeCidade,uf);
 		
 		try {
-			List<CidadeDto> cidadeDto = relatorioCustomizado.buscarRelatorioGenerico(idRelatorioCidade, filtros, CidadeDto.class);
+			List<CidadeApiResponse> cidadeDto = relatorioCustomizado.buscarRelatorioGenerico(idRelatorioCidade, filtros, CidadeApiResponse.class);
 			return cidadeDto.stream().findFirst().orElseThrow(
 					() -> new ApiTseException(String.format("Não encontrado a cidade %s para o estado %s", buscaCep.cidade(), buscaCep.uf())));
 		} catch (FeignException e) {

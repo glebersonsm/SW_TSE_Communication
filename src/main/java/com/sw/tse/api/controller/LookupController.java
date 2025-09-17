@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.sw.tse.domain.model.api.response.TipoDocumentoPessoaDto;
+import com.sw.tse.domain.model.api.response.TipoDocumentoPessoaApiResponse;
 import com.sw.tse.domain.service.interfaces.TipoDocumentoPessoaService;
 
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ public class LookupController {
 	
 
 	@GetMapping("TiposDocumentoPessoa")
-	public List<TipoDocumentoPessoaDto> listarTiposDocumento(){
+	public List<TipoDocumentoPessoaApiResponse> listarTiposDocumento(){
 		return tipoDocumentoPessoaService.listarTiposDocumento();
 	}
 	

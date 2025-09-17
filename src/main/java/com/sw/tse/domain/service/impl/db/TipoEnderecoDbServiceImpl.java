@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import com.sw.tse.domain.converter.TipoEnderecoConverter;
-import com.sw.tse.domain.model.api.response.TipoEnderecoDto;
+import com.sw.tse.domain.model.api.response.TipoEnderecoApiResponse;
 import com.sw.tse.domain.model.db.TipoEnderecoPessoa;
 import com.sw.tse.domain.repository.TipoEnderecoRepository;
 import com.sw.tse.domain.service.interfaces.TipoEnderecoService;
@@ -25,7 +25,7 @@ public class TipoEnderecoDbServiceImpl implements TipoEnderecoService {
 	private final TipoEnderecoConverter tipoEnderecoConverter;
 
 	@Override
-	public List<TipoEnderecoDto> listarTiposEndereco() {
+	public List<TipoEnderecoApiResponse> listarTiposEndereco() {
 		List<TipoEnderecoPessoa> listaEnderecos = tipoEnderecoRepository.findAll();
 		return tipoEnderecoConverter.toDtoList(listaEnderecos);
 	}

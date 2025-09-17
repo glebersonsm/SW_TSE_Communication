@@ -1,10 +1,13 @@
 package com.sw.tse.api.controller;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.HospedeDto;
 import com.sw.tse.domain.converter.PessoaConverter;
 import com.sw.tse.domain.model.api.request.PessoaApiRequest;
@@ -21,8 +24,15 @@ public class PessoaController {
 	private final PessoaConverter pessoaConverter;
 	
 	@PostMapping
-	public Long salvar(@RequestBody HospedeDto request) {
-		return pessoaService.salvar(request);
+	public ResponseEntity<ApiResponseDto<Long>> salvar(@RequestBody HospedeDto request) {
+		Long idPessoaSalva = pessoaService.salvar(request);
+		ApiResponseDto<Long> respostaApi = new ApiResponseDto<>(
+            HttpStatus.OK.value(),      
+            true,                       
+            idPessoaSalva,              
+            "Pessoa salva com sucesso." 
+        );
+		return ResponseEntity.ok(respostaApi);
 	}
 	
 	

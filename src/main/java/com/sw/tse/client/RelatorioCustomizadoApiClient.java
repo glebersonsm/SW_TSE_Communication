@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizado;
+import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizadoApiRequest;
 
 import feign.Response;
 
@@ -19,7 +19,7 @@ public interface RelatorioCustomizadoApiClient {
 	Response obterDadosRelatorioRaw(
 			@PathVariable Long id,
 			@RequestHeader("Authorization") String token,
-			@RequestBody List<FiltroRelatorioCustomizado> filtros
+			@RequestBody List<FiltroRelatorioCustomizadoApiRequest> filtros
 	);
 
 }

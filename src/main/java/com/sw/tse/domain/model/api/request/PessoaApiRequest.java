@@ -31,8 +31,8 @@ public record PessoaApiRequest(
 	    @JsonProperty("IdRegimeCasamento") Integer idRegimeCasamento,
 	    @JsonProperty("IdNacionalidade") Integer idNacionalidade,
 	    @JsonProperty("IdIdioma") Integer idIdioma,
-	    @JsonProperty("EnderecosPessoa") List<EnderecoPessoaDto> enderecosPessoa,
-	    @JsonProperty("EnderecosEmail") List<EnderecoEmailDto> enderecosEmail,
-	    @JsonProperty("ContatosTelefonicos") List<ContatoTelefonicoDto> contatosTelefonicos
+	    @JsonProperty("EnderecosPessoa") List<EnderecoPessoaApiRequest> enderecosPessoa,
+	    @JsonProperty("EnderecosEmail") List<EnderecoEmailApiRequest> enderecosEmail,
+	    @JsonProperty("ContatosTelefonicos") List<ContatoTelefonicoApiRequest> contatosTelefonicos
 		
 ) {}

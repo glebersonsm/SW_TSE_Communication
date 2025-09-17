@@ -10,9 +10,11 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.model.api.CachedToken;
-import com.sw.tse.domain.model.api.request.TokenApiResponse;
+import com.sw.tse.domain.model.api.response.TokenApiResponse;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
 
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class TokenTseServiceImpl implements TokenTseService{
 	private WebClient webClient;
 	private final WebClient.Builder webClientBuilder;
 	private final Object tokenLock = new Object();
+	private final ObjectMapper objectMapper;
 	
 	@Value("${api.tse.url}")
 	private String urlToken;
@@ -48,44 +51,69 @@ public class TokenTseServiceImpl implements TokenTseService{
 			if (cachedToken != null && cachedToken.isValido()) {
                 return cachedToken.accessToken();
             }
+			
 			log.info("Cache de token expirado ou inválido. Solicitando um novo token...");
 			
-			this.cachedToken = solicitarNovoToken(userName, password);
-	        log.info("Novo token de acesso obtido e armazenado no cache.");
+			TokenApiResponse response = this.logar(userName, password);
+			
+			if(response.isError() || response.accessToken() == null) {
+				if(response.erro().equals("invalid_grant")) {
+					throw new ApiTseException("Usuário ou senha inválidos");
+				}
+				throw new ApiTseException(response.erro());
+			}
+			
+			Instant expirationTime = Instant.now().plusSeconds(12 * 3600);
+			
+			this.cachedToken = new CachedToken(response.accessToken(), expirationTime);
+			
+			log.info("Novo token de acesso interno obtido e armazenado no cache.");
+			
 	        return this.cachedToken.accessToken();
 		}
 	}
 	
 	
-	private CachedToken solicitarNovoToken(String userName, String password) {
+	@Override
+	public TokenApiResponse gerarTokenClient(String clientUserName, String clientPassword) {
+		log.info("Solicitando token para o cliente {}", clientUserName);	
+		return this.logar(clientUserName, clientPassword);
+	}
+	
+	
+	private TokenApiResponse logar(String username, String password) {
 		
 		this.webClient = webClientBuilder.baseUrl(urlToken).build();
 		
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "password");
-        formData.add("username", userName);
+        formData.add("username", username);
         formData.add("password", password);
 
         try {
-            TokenApiResponse response = webClient.post()
+            return webClient.post()
                     .uri("/token")
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(BodyInserters.fromFormData(formData))
                     .retrieve()
                     .bodyToMono(TokenApiResponse.class)
                     .block();
-
-            if (response == null || response.accessToken() == null) {
-                throw new ApiTseException("A resposta da API de token foi inválida ao obter o token.");
-            }
-            Instant expirationTime = Instant.now().plusSeconds(12 * 3600);
-            
-            return new CachedToken(response.accessToken(), expirationTime);
-
         } catch (WebClientResponseException e) {
-            log.error("Erro HTTP ao solicitar novo token: Status {}, Corpo {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new ApiTseException("Não foi possível obter o token de acesso da API do tse" , e);
+            log.warn("Erro HTTP ao solicitar token para o usuário '{}'. Status: {}", username, e.getStatusCode());
+            return parseErrorResponse(e);
+        } catch (Exception e) {
+            log.error("Erro de comunicação inesperado ao solicitar token para '{}'", username, e);
+            return new TokenApiResponse(null, 0, null, null, e.getMessage(), e.getMessage());
         }
     }
-
+	
+    private TokenApiResponse parseErrorResponse(WebClientResponseException e) {
+        try {
+            return objectMapper.readValue(e.getResponseBodyAsString(), TokenApiResponse.class);
+        } catch (JsonProcessingException jsonEx) {
+            log.error("Não foi possível desserializar o corpo do erro HTTP: {}", e.getResponseBodyAsString());
+            String errorDescription = "Erro inesperado do servidor de autenticação. Status: " + e.getStatusCode().value();
+            return new TokenApiResponse(null, 0, null, null, e.getMessage(), errorDescription);
+        }
+    }
 }

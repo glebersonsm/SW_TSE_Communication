@@ -6,24 +6,24 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import com.sw.tse.domain.model.api.response.TipoLogradouroDto;
+import com.sw.tse.domain.model.api.response.TipoLogradouroApiResponse;
 import com.sw.tse.domain.model.db.TipoLogradouro;
 
 @Component
 public class TipoLogradouroConverter {
 
-	 public TipoLogradouroDto toDto(TipoLogradouro entidade) {
+	 public TipoLogradouroApiResponse toDto(TipoLogradouro entidade) {
         if (entidade == null) {
             return null;
         }
 
-        return new TipoLogradouroDto(
+        return new TipoLogradouroApiResponse(
                 entidade.getId(),
                 entidade.getDescricao()
         );
 	 }
 	 
-	 public TipoLogradouro toEntity(TipoLogradouroDto dto) {
+	 public TipoLogradouro toEntity(TipoLogradouroApiResponse dto) {
 	     if (dto == null) {
 	         return null;
 	     }
@@ -35,7 +35,7 @@ public class TipoLogradouroConverter {
 	     );
 	 }
 	 
-	 public List<TipoLogradouroDto> toDtoList(List<TipoLogradouro> listaDeEntidades) {
+	 public List<TipoLogradouroApiResponse> toDtoList(List<TipoLogradouro> listaDeEntidades) {
 	        if (listaDeEntidades == null || listaDeEntidades.isEmpty()) {
 	            return Collections.emptyList();
 	        }
@@ -45,7 +45,7 @@ public class TipoLogradouroConverter {
 	            .collect(Collectors.toList()); 
 	}
 	
-	 public List<TipoLogradouro> toEntityList(List<TipoLogradouroDto> listaDeDtos) {
+	 public List<TipoLogradouro> toEntityList(List<TipoLogradouroApiResponse> listaDeDtos) {
 	        if (listaDeDtos == null || listaDeDtos.isEmpty()) {
 	            return Collections.emptyList();
 	        }

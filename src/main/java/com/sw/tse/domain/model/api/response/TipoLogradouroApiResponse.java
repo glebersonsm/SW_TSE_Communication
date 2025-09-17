@@ -2,7 +2,6 @@ package com.sw.tse.domain.model.api.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record TipoEnderecoDto (
+public record TipoLogradouroApiResponse(
 		@JsonProperty("Id") Long id,
-		@JsonProperty("Descricao") String descricao
-) {}
+		@JsonProperty("Descricao") String descricao) {}

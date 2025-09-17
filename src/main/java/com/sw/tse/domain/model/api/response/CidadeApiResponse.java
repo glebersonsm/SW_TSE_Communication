@@ -14,7 +14,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CidadeDto {
+public class CidadeApiResponse {
 	@JsonProperty("idcidade") private Long idCidade;
 	@JsonProperty("nome") private String nome;
 	@JsonProperty("codigoibge") private String codigoIbege;

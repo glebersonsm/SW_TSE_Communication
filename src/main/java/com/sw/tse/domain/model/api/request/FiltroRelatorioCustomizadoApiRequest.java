@@ -14,7 +14,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class FiltroRelatorioCustomizado {
+public class FiltroRelatorioCustomizadoApiRequest {
 
 	@JsonProperty("NomeParametro") private String nomeParametro;
 	@JsonProperty("Value") private String valor;

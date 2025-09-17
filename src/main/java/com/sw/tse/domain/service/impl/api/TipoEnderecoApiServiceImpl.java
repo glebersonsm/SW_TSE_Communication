@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.sw.tse.client.LookupApiClient;
 import com.sw.tse.domain.expection.BrasilApiException;
-import com.sw.tse.domain.model.api.response.TipoEnderecoDto;
+import com.sw.tse.domain.model.api.response.TipoEnderecoApiResponse;
 import com.sw.tse.domain.service.interfaces.TipoEnderecoService;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
 
@@ -26,7 +26,7 @@ public class TipoEnderecoApiServiceImpl implements TipoEnderecoService {
 	private final TokenTseService tokenTseService;
 
 	@Override
-	public List<TipoEnderecoDto> listarTiposEndereco() {
+	public List<TipoEnderecoApiResponse> listarTiposEndereco() {
 		
 		String bearerToken = "Bearer " + tokenTseService.gerarToken();
 		try {

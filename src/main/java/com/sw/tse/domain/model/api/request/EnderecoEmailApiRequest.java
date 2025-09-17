@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record EnderecoEmailDto(
+public record EnderecoEmailApiRequest(
 		@JsonProperty("IdEndereco") Long idEndereco,
 	    @JsonProperty("Email") String email,
 	    @JsonProperty("DescricaoObs") String descricaoObs

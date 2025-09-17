@@ -10,7 +10,7 @@ import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.BrasilApiException;
 import com.sw.tse.domain.expection.CidadeNotFoundException;
 import com.sw.tse.domain.model.api.response.BuscaCepBrasilApiResponse;
-import com.sw.tse.domain.model.api.response.CidadeDto;
+import com.sw.tse.domain.model.api.response.CidadeApiResponse;
 import com.sw.tse.domain.model.db.Cidade;
 import com.sw.tse.domain.repository.CidadeRepository;
 import com.sw.tse.domain.service.interfaces.CidadeService;
@@ -29,19 +29,19 @@ public class CidadeDbServiceImpl implements CidadeService {
 	private final CidadeRepository cidadeRepository;
 
 	@Override
-	public CidadeDto buscarPorCep(String cep) {
+	public CidadeApiResponse buscarPorCep(String cep) {
 		BuscaCepBrasilApiResponse buscaCep = buscarCepApiBrasil(cep);
 		
-		CidadeDto cidadeDto = buscarCidadeTse(buscaCep);
+		CidadeApiResponse cidadeDto = buscarCidadeTse(buscaCep);
 		return cidadeDto;
 	}
 	
-	public CidadeDto buscarCidadeTse(BuscaCepBrasilApiResponse buscaCep){
+	public CidadeApiResponse buscarCidadeTse(BuscaCepBrasilApiResponse buscaCep){
 		Cidade cidade = cidadeRepository.findByNomeAndUfOrdenado(buscaCep.cidade(), buscaCep.uf())
 				.stream().findFirst().orElseThrow(() -> new CidadeNotFoundException(String.format("Não encontrado a cidade %s para o estado %s", buscaCep.cidade(), buscaCep.uf())));
 		
 
-		return CidadeDto.builder()
+		return CidadeApiResponse.builder()
 				.idCidade(cidade.getId())
 				.nome(cidade.getNome())
 				.codigoIbege(cidade.getCodigoIbge())

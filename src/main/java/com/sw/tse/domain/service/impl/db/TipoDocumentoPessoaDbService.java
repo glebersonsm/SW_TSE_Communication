@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import com.sw.tse.domain.converter.TipoDocumentoPessoaConverter;
-import com.sw.tse.domain.model.api.response.TipoDocumentoPessoaDto;
+import com.sw.tse.domain.model.api.response.TipoDocumentoPessoaApiResponse;
 import com.sw.tse.domain.model.db.TipoDocumentoPessoa;
 import com.sw.tse.domain.repository.TipoDocumentoPessoaRepository;
 import com.sw.tse.domain.service.interfaces.TipoDocumentoPessoaService;
@@ -24,7 +24,7 @@ public class TipoDocumentoPessoaDbService implements TipoDocumentoPessoaService 
 	
 	
 	@Override
-	public List<TipoDocumentoPessoaDto> listarTiposDocumento() {
+	public List<TipoDocumentoPessoaApiResponse> listarTiposDocumento() {
 		List<TipoDocumentoPessoa> listaTipoDocumentoPessoa = tipoDocumentoPessoaRepository.findAll();
 		return tipoDocumentoPessoaConverter.toDtoList(listaTipoDocumentoPessoa);
 	}
