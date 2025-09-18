@@ -1,5 +1,6 @@
 package com.sw.tse.domain.service.impl.api;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -73,7 +74,7 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
 			
 			Long idEmpresaPrincipal = requestDto.listaIdEmpresasPermitidas().get(0);
 			log.info("Setando empresa de sessão na API para o ID: {}", idEmpresaPrincipal);
-			operadorSistemaApiClient.setEmpresaSessao(idEmpresaPrincipal, bearerToken);
+			operadorSistemaApiClient.setEmpresaSessao(idEmpresaPrincipal, bearerToken, Collections.emptyMap());
 			
 
 			OperadorSistemaApiRequest apiRequest = new OperadorSistemaApiRequest(

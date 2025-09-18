@@ -13,13 +13,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.OperadorSistemaRequestDto;
+import com.sw.tse.domain.model.api.response.OperadorSistemaApiResponse;
 import com.sw.tse.domain.model.api.response.OperadorSistemaListaApiResponse;
 import com.sw.tse.domain.service.interfaces.OperadorSistemaService;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/operadorsistema")
+@RequestMapping("/api/v1/operadorsistema")
 @RequiredArgsConstructor
 public class OperadorSistemaController {
 
@@ -53,14 +54,14 @@ public class OperadorSistemaController {
         return ResponseEntity.ok(responseApi);
     }
     
-    @PostMapping("/SetOperadorSistema")
-    public ResponseEntity<ApiResponseDto<Long>> criarOperadorSistema(@RequestBody OperadorSistemaRequestDto requestDto) {
-        Long idOperador = operadorSistemaService.criarOperadorSistema(requestDto);
+    @PostMapping
+    public ResponseEntity<ApiResponseDto<OperadorSistemaApiResponse>> criarOperadorSistema(@RequestBody OperadorSistemaRequestDto requestDto) {
+    	OperadorSistemaApiResponse operadorSistemaCriado = operadorSistemaService.criarOperadorSistema(requestDto);
         
-        ApiResponseDto<Long> responseApi = new ApiResponseDto<>(
+        ApiResponseDto<OperadorSistemaApiResponse> responseApi = new ApiResponseDto<>(
             HttpStatus.CREATED.value(),
             true,
-            idOperador,
+            operadorSistemaCriado,
             "Operador de sistema criado com sucesso"
         );
         

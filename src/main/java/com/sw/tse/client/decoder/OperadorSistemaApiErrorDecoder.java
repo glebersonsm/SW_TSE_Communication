@@ -2,7 +2,7 @@ package com.sw.tse.client.decoder;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AccessDeniedException;
+
 
 import org.apache.commons.io.IOUtils;
 
@@ -36,19 +36,6 @@ public class OperadorSistemaApiErrorDecoder implements ErrorDecoder {
 
         String errorMessage = (errorResponse != null) ? errorResponse.message() : "Erro desconhecido da API.";
 
-        if (errorMessage.contains("operador vinculado á pessoa")) {
-            return new ApiTseException(errorMessage);
-        }
-        if (errorMessage.contains("Não encontrado pessoa com o id")) {
-            return new ApiTseException(errorMessage);
-        }
-        if (errorMessage.contains("login inválido")) {
-            return new ApiTseException(errorMessage);
-        }
-        if (response.status() == 401 || response.status() == 403) {
-             return new AccessDeniedException(errorMessage); // Do Spring Security
-        }
-
-        return new ErrorDecoder.Default().decode(methodKey, response); // Erro genérico
+        return new ApiTseException(errorMessage);
     }
 }

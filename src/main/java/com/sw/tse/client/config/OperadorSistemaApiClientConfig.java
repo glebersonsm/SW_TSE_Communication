@@ -13,4 +13,5 @@ public class OperadorSistemaApiClientConfig {
     ErrorDecoder operadorSistemaErrorDecoder() {
         return new OperadorSistemaApiErrorDecoder();
     }
+    
 }

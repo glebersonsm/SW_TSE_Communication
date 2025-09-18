@@ -10,6 +10,7 @@ import com.sw.tse.core.config.CadastroOperadorSistemaPropertiesCustom;
 import com.sw.tse.domain.converter.OperadorSistemaConverter;
 import com.sw.tse.domain.expection.OperadorSistemaNotFoundException;
 import com.sw.tse.domain.expection.ValorPadraoNaoConfiguradoException;
+import com.sw.tse.domain.model.api.response.OperadorSistemaApiResponse;
 import com.sw.tse.domain.model.api.response.OperadorSistemaListaApiResponse;
 import com.sw.tse.domain.model.db.OperadorSistema;
 import com.sw.tse.domain.repository.OperadorSistemaRepository;
@@ -54,7 +55,7 @@ public class OperadorSistemaDbServiceImpl implements OperadorSistemaService {
 	}
 
 	@Override
-	public Long criarOperadorSistema(OperadorSistemaRequestDto requestDto) {
+	public OperadorSistemaApiResponse criarOperadorSistema(OperadorSistemaRequestDto requestDto) {
 		throw new UnsupportedOperationException("Operação não suportada na implementação via banco de dados");
 	}
 

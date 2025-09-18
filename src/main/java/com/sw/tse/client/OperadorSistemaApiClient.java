@@ -1,5 +1,7 @@
 package com.sw.tse.client;
 
+import java.util.Map;
+
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,11 +20,13 @@ import com.sw.tse.domain.model.api.response.OperadorSistemaApiResponse;
 public interface OperadorSistemaApiClient {
     @PostMapping("/api/OperadorSistema/SetEmpresaSel/{idEmpresa}")
     void setEmpresaSessao(@PathVariable Long idEmpresa,
-                          @RequestHeader("Authorization") String token);
+                          @RequestHeader("Authorization") String token,
+                          @RequestBody() Map<String, Object> corpoVazio);
     
     @PostMapping("/api/operadorsistema/SetOperadorSistema")
     OperadorSistemaApiResponse criarOperadorSistema(
         @RequestHeader("Authorization") String token,
+        
         @RequestBody OperadorSistemaApiRequest request
     );
 }
