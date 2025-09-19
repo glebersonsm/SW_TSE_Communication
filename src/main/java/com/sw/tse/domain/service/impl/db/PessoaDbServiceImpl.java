@@ -2,6 +2,7 @@ package com.sw.tse.domain.service.impl.db;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import org.springframework.util.StringUtils;
 import com.sw.tse.api.dto.HospedeDto;
 import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.converter.PessoaConverter;
+import com.sw.tse.domain.model.api.response.PessoaCpfApiResponse;
 import com.sw.tse.domain.model.db.OperadorSistema;
 import com.sw.tse.domain.model.db.Pessoa;
 import com.sw.tse.domain.repository.PessoaRepository;
@@ -63,5 +65,21 @@ public class PessoaDbServiceImpl implements PessoaService {
 		return pessoa.getIdPessoa();
 	}
 
+
+
+	@Override
+	public Optional<PessoaCpfApiResponse> buscarPorCpf(String cpf) {
+		Pessoa pessoa = 
+				pessoaRepository.findFirstByCpfCnpjOrderByIdPessoa(cpf).stream().findFirst().orElse(new Pessoa());
+		
+		if(pessoa.getIdPessoa() == null) {
+			return Optional.empty();
+		}
+		
+		return  Optional.of(pessoaConverter.toPessoaCpfApiResponse(pessoa));
+	}
+	
+	
+	
 
 }

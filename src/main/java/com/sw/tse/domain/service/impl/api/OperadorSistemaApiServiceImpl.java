@@ -3,6 +3,7 @@ package com.sw.tse.domain.service.impl.api;
 import java.util.Collections;
 import java.util.List;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import com.sw.tse.api.dto.OperadorSistemaRequestDto;
@@ -22,6 +23,7 @@ import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+@ConditionalOnProperty(name = "database.enabled", havingValue = "false", matchIfMissing = true)
 @Slf4j
 @RequiredArgsConstructor
 @Service

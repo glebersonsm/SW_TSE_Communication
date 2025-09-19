@@ -20,6 +20,7 @@ import com.sw.tse.domain.model.api.request.EnderecoEmailApiRequest;
 import com.sw.tse.domain.model.api.request.EnderecoPessoaApiRequest;
 import com.sw.tse.domain.model.api.request.PessoaApiRequest;
 import com.sw.tse.domain.model.api.response.CidadeApiResponse;
+import com.sw.tse.domain.model.api.response.PessoaCpfApiResponse;
 import com.sw.tse.domain.model.api.response.TipoEnderecoApiResponse;
 import com.sw.tse.domain.model.api.response.TipoLogradouroApiResponse;
 import com.sw.tse.domain.model.db.Cidade;
@@ -306,6 +307,22 @@ public class PessoaConverter {
 					}
 					return email.equals(emailSalvo);
 				});
+	}
+	
+	
+	public PessoaCpfApiResponse toPessoaCpfApiResponse(Pessoa pessoa) {
+		if(pessoa.getIdPessoa() == null) {
+			return null;
+		}
+		
+		Long idPessoa = pessoa.getIdPessoa();
+		String nome = pessoa.getNome();
+		
+		String email = pessoa.getEmails().stream().findFirst().orElse(null).toString();
+		
+		return  new PessoaCpfApiResponse(idPessoa, nome, email);
+		
+		
 	}
 }
 

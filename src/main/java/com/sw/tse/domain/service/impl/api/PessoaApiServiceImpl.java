@@ -40,7 +40,7 @@ public class PessoaApiServiceImpl implements PessoaService {
 			String bearerToken = "Bearer " + tokenTseService.gerarToken();
 			
 			if(request.cpfCnpj() != null) {
-				 Optional<PessoaCpfApiResponse> optionalPessoaCpf = buscarPorCpf(bearerToken, request.cpfCnpj());
+				 Optional<PessoaCpfApiResponse> optionalPessoaCpf = buscarPorCpf(request.cpfCnpj());
 				 if(optionalPessoaCpf.isPresent()) {
 					 return optionalPessoaCpf.get().idPessoa();
 				 }
@@ -64,9 +64,11 @@ public class PessoaApiServiceImpl implements PessoaService {
 	}
 	
 	
-	private Optional<PessoaCpfApiResponse> buscarPorCpf(String token, String cpf) {
+	@Override
+	public Optional<PessoaCpfApiResponse> buscarPorCpf(String cpf) {
+		String bearerToken = "Bearer " + tokenTseService.gerarToken();
 		try {			
-			PessoaCpfApiResponse pessoaCpf = pessoaApiClient.buscarPorCpf(cpf, token);
+			PessoaCpfApiResponse pessoaCpf = pessoaApiClient.buscarPorCpf(cpf, bearerToken);
 			return Optional.of(pessoaCpf);
 		} catch (FeignException e) {
 			if(e.status() == 400) {

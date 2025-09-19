@@ -22,6 +22,7 @@ import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.ValidationErrorResposeDto;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.BrasilApiException;
+import com.sw.tse.domain.expection.LoginInvalidoTseException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -82,6 +83,14 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.BAD_REQUEST.value() , false, null, ex.getMessage()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+    
+    @ExceptionHandler(LoginInvalidoTseException.class)
+    public ResponseEntity<ApiResponseDto<?>> handleLoginInvalidoTseException(LoginInvalidoTseException ex, WebRequest request){
+    	ApiResponseDto<?> errorResponse = new ApiResponseDto<>(
+                HttpStatus.UNAUTHORIZED.value() , false, null, ex.getMessage()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
     }
     
     @ExceptionHandler(BrasilApiException.class)

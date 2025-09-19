@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@ConditionalOnProperty(name = "database.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "database.enabled", havingValue = "true")
 @RequiredArgsConstructor
 @Service
 public class CidadeDbServiceImpl implements CidadeService {

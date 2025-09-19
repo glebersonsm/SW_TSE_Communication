@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import com.sw.tse.client.BuscaCepBrasilApiClient;
-import com.sw.tse.client.RelatorioCustomizadoApiClient;
 import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.BrasilApiException;
@@ -18,7 +17,7 @@ import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizadoApiRequest;
 import com.sw.tse.domain.model.api.response.BuscaCepBrasilApiResponse;
 import com.sw.tse.domain.model.api.response.CidadeApiResponse;
 import com.sw.tse.domain.service.interfaces.CidadeService;
-import com.sw.tse.domain.service.interfaces.TokenTseService;
+import com.sw.tse.domain.service.interfaces.RelatorioCustomizadoService;
 
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +31,7 @@ public class CidadeApiServiceImpl implements CidadeService{
 
 	
 	private final BuscaCepBrasilApiClient brasilApiBuscaCep;
-	private final RelatorioCustomizadoApiService relatorioCustomizado;
+	private final RelatorioCustomizadoService relatorioCustomizado;
 	
 	 @Value("${api.tse.relatorios.cidade}")
 	 private Long idRelatorioCidade;
