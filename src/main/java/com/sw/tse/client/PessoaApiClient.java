@@ -7,10 +7,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
+import com.sw.tse.client.config.PessoaClientConfig;
 import com.sw.tse.domain.model.api.request.PessoaApiRequest;
 import com.sw.tse.domain.model.api.response.PessoaCpfApiResponse;
 
-@FeignClient(name = "pessoaApiClient", url = "${api.tse.url}")
+@FeignClient(
+		name = "pessoaApiClient",
+		url = "${api.tse.url}",
+		configuration = PessoaClientConfig.class
+)
 public interface PessoaApiClient {
 
 	@PostMapping("/api/cadastros/SetPessoa/{id}")

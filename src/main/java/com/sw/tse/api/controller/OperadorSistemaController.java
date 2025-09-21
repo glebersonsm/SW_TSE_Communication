@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.OperadorSistemaRequestDto;
-import com.sw.tse.domain.model.api.response.OperadorSistemaApiResponse;
+import com.sw.tse.domain.model.api.response.OperadorSistemaCriadoApiResponse;
 import com.sw.tse.domain.model.api.response.OperadorSistemaListaApiResponse;
 import com.sw.tse.domain.service.interfaces.OperadorSistemaService;
 
@@ -55,10 +55,10 @@ public class OperadorSistemaController {
     }
     
     @PostMapping
-    public ResponseEntity<ApiResponseDto<OperadorSistemaApiResponse>> criarOperadorSistema(@RequestBody OperadorSistemaRequestDto requestDto) {
-    	OperadorSistemaApiResponse operadorSistemaCriado = operadorSistemaService.criarOperadorSistema(requestDto);
+    public ResponseEntity<ApiResponseDto<OperadorSistemaCriadoApiResponse>> criarOperadorSistema(@RequestBody OperadorSistemaRequestDto requestDto) {
+    	OperadorSistemaCriadoApiResponse operadorSistemaCriado = operadorSistemaService.criarOperadorSistema(requestDto);
         
-        ApiResponseDto<OperadorSistemaApiResponse> responseApi = new ApiResponseDto<>(
+        ApiResponseDto<OperadorSistemaCriadoApiResponse> responseApi = new ApiResponseDto<>(
             HttpStatus.CREATED.value(),
             true,
             operadorSistemaCriado,

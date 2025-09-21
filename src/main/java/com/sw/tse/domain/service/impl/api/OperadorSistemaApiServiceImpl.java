@@ -1,8 +1,10 @@
 package com.sw.tse.domain.service.impl.api;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -12,8 +14,11 @@ import com.sw.tse.client.OperadorSistemaApiClient;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.BrasilApiException;
 import com.sw.tse.domain.expection.OperadorSistemaNotFoundException;
+import com.sw.tse.domain.model.api.enums.TipoValorRelatorioCustomizado;
+import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizadoApiRequest;
 import com.sw.tse.domain.model.api.request.OperadorSistemaApiRequest;
-import com.sw.tse.domain.model.api.response.OperadorSistemaApiResponse;
+import com.sw.tse.domain.model.api.response.BuscaOperadorSistemPessoaResponse;
+import com.sw.tse.domain.model.api.response.OperadorSistemaCriadoApiResponse;
 import com.sw.tse.domain.model.api.response.OperadorSistemaListaApiResponse;
 import com.sw.tse.domain.model.db.OperadorSistema;
 import com.sw.tse.domain.service.interfaces.OperadorSistemaService;
@@ -28,11 +33,14 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Service
 public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
-	
 
 	private final LookupApiClient lookupApiClient;
 	private final TokenTseService tokenTseService;
 	private final OperadorSistemaApiClient operadorSistemaApiClient;
+	private final RelatorioCustomizadoApiService relatorioCustomizadoApiService;
+	
+	@Value("${api.tse.relatorios.operadorcliente}")
+	private Long idRelatorioOperadorSistema;
 
 	@Override
 	public List<OperadorSistemaListaApiResponse> listarTodos() {
@@ -64,7 +72,7 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
 	}
 
 	@Override
-	public OperadorSistemaApiResponse criarOperadorSistema(OperadorSistemaRequestDto requestDto) {
+	public OperadorSistemaCriadoApiResponse criarOperadorSistema(OperadorSistemaRequestDto requestDto) {
 		log.info("Iniciando processo de criação de operador de sistema via API...");
 		try {
 			String bearerToken = "Bearer " + tokenTseService.gerarToken();
@@ -88,7 +96,7 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
 			);
 			
 			log.info("Enviando requisição para criar operador com login: {}", apiRequest.login() );
-			OperadorSistemaApiResponse response = operadorSistemaApiClient.criarOperadorSistema(bearerToken, apiRequest);
+			OperadorSistemaCriadoApiResponse response = operadorSistemaApiClient.criarOperadorSistema(bearerToken, apiRequest);
 			
 			log.info("Operador de sistema criado com sucesso via API. Novo ID: {}", response.idOperador());
 			return response;
@@ -101,5 +109,33 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
             throw new ApiTseException("Erro de comunicação com a API de Operadores.", e);
         }
 	}
+
+	@Override
+	public BuscaOperadorSistemPessoaResponse buscarPorIdPessoa(Long idPessoa) {
+
+		if(idRelatorioOperadorSistema == null || idRelatorioOperadorSistema.equals(0L)) {
+			throw new ApiTseException("Relatório customizado pra cidade não parametrizao");
+		}
+		
+		FiltroRelatorioCustomizadoApiRequest filtroIdPessoa = FiltroRelatorioCustomizadoApiRequest.builder()
+				.nomeParametro("idpessoa")
+				.valor(idPessoa.toString())
+				.tipo(TipoValorRelatorioCustomizado.INTETEIRO)
+				.criptografar(false)
+				.build();
+		
+		List<FiltroRelatorioCustomizadoApiRequest> filtros = Arrays.asList(filtroIdPessoa);
+		
+		try {
+			List<BuscaOperadorSistemPessoaResponse> listaOperadorSistemPessoa = 
+					relatorioCustomizadoApiService.buscarRelatorioGenerico(idRelatorioOperadorSistema, filtros, BuscaOperadorSistemPessoaResponse.class);
+			return listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(0L, null, null, null, false));
+			
+		} catch (FeignException e) {
+			log.error("erro ao chamar a api de operador de sistema cliente");
+            throw new ApiTseException(String.format("Erro: %s ao obter operador sistema cliente pela api do TSE", e.contentUTF8()));
+		}
+	}
+	
 
 }

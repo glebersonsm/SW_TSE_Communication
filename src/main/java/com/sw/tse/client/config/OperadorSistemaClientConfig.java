@@ -7,7 +7,8 @@ import com.sw.tse.client.decoder.OperadorSistemaApiErrorDecoder;
 import feign.codec.ErrorDecoder;
 
 
-public class OperadorSistemaApiClientConfig {
+public class OperadorSistemaClientConfig {
+	
     @Bean
     ErrorDecoder operadorSistemaErrorDecoder() {
         return new OperadorSistemaApiErrorDecoder();
