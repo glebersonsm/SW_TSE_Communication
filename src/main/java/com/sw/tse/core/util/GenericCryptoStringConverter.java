@@ -35,7 +35,8 @@ public class GenericCryptoStringConverter implements AttributeConverter<String, 
         try {
             CriptografiaService service = getCriptografiaService();
             if (service != null) {
-                return service.criptografarValor(attribute);
+            	String valorEncriptado = service.criptografarValor(attribute);
+                return valorEncriptado;
             }
             return attribute;
         } catch (Exception e) {

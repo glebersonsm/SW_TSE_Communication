@@ -9,6 +9,7 @@ import org.springframework.util.StringUtils;
 import com.sw.tse.api.dto.OperadorSistemaRequestDto;
 import com.sw.tse.core.util.CpfUtil;
 import com.sw.tse.core.util.StringUtil;
+import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.LoginInvalidoTseException;
 import com.sw.tse.domain.expection.PessoaSemContratoTseException;
 import com.sw.tse.domain.model.api.response.BuscaOperadorSistemPessoaResponse;
@@ -39,6 +40,8 @@ public class LoginApiServiceImpl implements LoginService {
 
     @Override
     public LoginResponse logarOperadorCliente(String login, String password) {
+    	login = StringUtil.removeMascaraCpf(login);
+    	
         TokenApiResponse tokenResponse = tokenTseService.gerarTokenClient(login, password);
 
         if (!tokenResponse.isError()) {
@@ -51,13 +54,15 @@ public class LoginApiServiceImpl implements LoginService {
     }
 
     private LoginResponse tratarFalhaDeLogin(String login, String password, TokenApiResponse tokenErrorResponse) {
-        final String MSG_CREDENCIAIS_INCORRETAS = "The user name or password is incorrect.";
+        final String MSG_USERNAME_INCORRETO = "The user name or password is incorrect.";
         
-        if (MSG_CREDENCIAIS_INCORRETAS.equals(tokenErrorResponse.descricaoErro())) {
+        if (MSG_USERNAME_INCORRETO.equals(tokenErrorResponse.descricaoErro())) {
             return tentarCriarNovoOperador(login, password);
         }
+        
+        String erroAutenticacao = tokenErrorResponse.descricaoErro() == null ? tokenErrorResponse.erro() : tokenErrorResponse.descricaoErro();
 
-        throw new LoginInvalidoTseException("Falha na autenticação: " + tokenErrorResponse.descricaoErro());
+        throw new LoginInvalidoTseException(erroAutenticacao);
     }
 
     private LoginResponse tentarCriarNovoOperador(String login, String password) {
@@ -67,7 +72,8 @@ public class LoginApiServiceImpl implements LoginService {
             throw new LoginInvalidoTseException("CPF inválido. Não é possível prosseguir com o cadastro.");
         }
 
-        PessoaCpfApiResponse pessoa = pessoaService.buscarPorCpf(login).get();
+        PessoaCpfApiResponse pessoa = pessoaService.buscarPorCpf(login)
+        		.orElseThrow(() -> new ApiTseException("Não localizado em nossa base de clientes, um cliente com cpf informado"));
 
         List<ContratoPessoaApiResponse> contratosAtivos = contratoService.buscarContratoPorCPF(login).stream()
                 .filter(contrato -> "ATIVO".equals(contrato.status()) || "ATIVOREV".equals(contrato.status()))
@@ -107,8 +113,6 @@ public class LoginApiServiceImpl implements LoginService {
 
     private LoginResponse criarEretornarNovoOperador(String login, PessoaCpfApiResponse pessoa, List<Long> idsEmpresas) {
         log.info("Criando novo operador para a pessoa: {} com acesso às empresas: {}", pessoa.nome(), idsEmpresas);
-        
-        login = StringUtil.removeMascaraCpf(login);
         
         if(!StringUtils.hasText(pessoa.email())) {
         	throw new LoginInvalidoTseException("Não é foi possível criar operador, pois não existe e-mail vinculado a pessoa");

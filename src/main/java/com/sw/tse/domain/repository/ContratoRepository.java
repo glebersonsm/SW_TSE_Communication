@@ -10,8 +10,10 @@ import com.sw.tse.domain.model.db.Contrato;
 public interface ContratoRepository extends JpaRepository<Contrato, Long> {
 
     @Query("SELECT c FROM Contrato c " +
-           "WHERE c.pessoaCessionario.cpfCnpj = :cpf " +
-           "OR c.pessaoCocessionario.cpfCnpj = :cpf " +
+           "LEFT JOIN c.pessoaCessionario pc " +
+           "LEFT JOIN c.pessaoCocessionario pco " +
+           "WHERE pc.cpfCnpj = :cpf " +
+           "OR pco.cpfCnpj = :cpf " +
            "ORDER BY c.id DESC")
     List<Contrato> findByPessoaCpf(String cpf);
 

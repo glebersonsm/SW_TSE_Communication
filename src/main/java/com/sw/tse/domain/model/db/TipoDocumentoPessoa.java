@@ -20,7 +20,7 @@ public class TipoDocumentoPessoa {
 	@Id
 	@Column(name = "idtipodocumentopessoa")
 	private Long id;
-	@Column(name = "")
+	@Column(name = "descricao")
 	private String decricao;
 	@Column(name = "sysid")
 	private String sysId;

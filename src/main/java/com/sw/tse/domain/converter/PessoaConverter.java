@@ -11,6 +11,7 @@ import org.springframework.util.StringUtils;
 import com.sw.tse.api.dto.HospedeDto;
 import com.sw.tse.core.config.CadastroPessoaPropertiesCustom;
 import com.sw.tse.core.util.StringUtil;
+import com.sw.tse.domain.expection.LoginInvalidoTseException;
 import com.sw.tse.domain.expection.ValorPadraoNaoConfiguradoException;
 import com.sw.tse.domain.model.api.enums.SexoEnum;
 import com.sw.tse.domain.model.api.enums.TipoPessoaEnum;
@@ -318,9 +319,11 @@ public class PessoaConverter {
 		Long idPessoa = pessoa.getIdPessoa();
 		String nome = pessoa.getNome();
 		
-		String email = pessoa.getEmails().stream().findFirst().orElse(null).toString();
+		if(pessoa.getEmails().isEmpty()) {
+			throw new LoginInvalidoTseException("Não é foi possível criar operador, pois não existe e-mail vinculado a pessoa");
+		}
 		
-		return  new PessoaCpfApiResponse(idPessoa, nome, email);
+		return  new PessoaCpfApiResponse(idPessoa, nome, pessoa.getEmails().get(0).getEmail());
 		
 		
 	}

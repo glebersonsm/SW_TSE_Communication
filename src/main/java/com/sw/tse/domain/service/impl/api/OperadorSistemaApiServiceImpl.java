@@ -114,7 +114,7 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
 	public BuscaOperadorSistemPessoaResponse buscarPorIdPessoa(Long idPessoa) {
 
 		if(idRelatorioOperadorSistema == null || idRelatorioOperadorSistema.equals(0L)) {
-			throw new ApiTseException("Relatório customizado pra cidade não parametrizao");
+			throw new ApiTseException("Relatório customizado pra consultar operador sistema por id pessoa não parametrizao");
 		}
 		
 		FiltroRelatorioCustomizadoApiRequest filtroIdPessoa = FiltroRelatorioCustomizadoApiRequest.builder()
