@@ -26,7 +26,6 @@ public interface OperadorSistemaApiClient {
     @PostMapping("/api/operadorsistema/SetOperadorSistema")
     OperadorSistemaCriadoApiResponse criarOperadorSistema(
         @RequestHeader("Authorization") String token,
-        
         @RequestBody OperadorSistemaApiRequest request
     );
 }

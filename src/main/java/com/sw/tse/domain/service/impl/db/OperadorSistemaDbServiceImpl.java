@@ -9,7 +9,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import com.sw.tse.api.dto.OperadorSistemaRequestDto;
-import com.sw.tse.client.LookupApiClient;
 import com.sw.tse.client.OperadorSistemaApiClient;
 import com.sw.tse.core.config.CadastroOperadorSistemaPropertiesCustom;
 import com.sw.tse.domain.converter.OperadorSistemaConverter;
@@ -43,8 +42,6 @@ public class OperadorSistemaDbServiceImpl implements OperadorSistemaService {
 	private final OperadorSistemaConverter operadorSistemaConverter;
 	private final CadastroOperadorSistemaPropertiesCustom cadastroOperadorSistemaPropertiesCustom;
 	
-
-	private final LookupApiClient lookupApiClient;
 	private final TokenTseService tokenTseService;
 	private final OperadorSistemaApiClient operadorSistemaApiClient;
 	private final RelatorioCustomizadoApiService relatorioCustomizadoApiService;
@@ -120,7 +117,7 @@ public class OperadorSistemaDbServiceImpl implements OperadorSistemaService {
 	public BuscaOperadorSistemPessoaResponse buscarPorIdPessoa(Long idPessoa) {
 
 		if(idRelatorioOperadorSistema == null || idRelatorioOperadorSistema.equals(0L)) {
-			throw new ApiTseException("Relatório customizado pra consultar operador sistema por id pessoa não parametrizao");
+			throw new ApiTseException("Relatório customizado pra consultar operador sistema por id pessoa não parametrizado");
 		}
 		
 		FiltroRelatorioCustomizadoApiRequest filtroIdPessoa = FiltroRelatorioCustomizadoApiRequest.builder()
@@ -141,6 +138,12 @@ public class OperadorSistemaDbServiceImpl implements OperadorSistemaService {
 			log.error("erro ao chamar a api de operador de sistema cliente");
             throw new ApiTseException(String.format("Erro: %s ao obter operador sistema cliente pela api do TSE", e.contentUTF8()));
 		}
+	}
+
+	@Override
+	public BuscaOperadorSistemPessoaResponse buscarPorLogin(String login) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 	
 }

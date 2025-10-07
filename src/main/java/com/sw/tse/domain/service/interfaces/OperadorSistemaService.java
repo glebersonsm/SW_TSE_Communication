@@ -14,4 +14,5 @@ public interface OperadorSistemaService {
 	OperadorSistema operadorSistemaPadraoCadastro();
 	OperadorSistemaCriadoApiResponse criarOperadorSistema(OperadorSistemaRequestDto requestDto);
 	BuscaOperadorSistemPessoaResponse buscarPorIdPessoa(Long idPessoa);
+	BuscaOperadorSistemPessoaResponse buscarPorLogin(String login);
 }

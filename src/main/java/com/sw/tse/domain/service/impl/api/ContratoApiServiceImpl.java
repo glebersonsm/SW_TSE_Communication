@@ -5,7 +5,7 @@ import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
-import com.sw.tse.client.ContratoApiClient;
+import com.sw.tse.client.ContratoPorCpfApiClient;
 import com.sw.tse.core.util.CpfUtil;
 import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.expection.LoginInvalidoTseException;
@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ContratoApiServiceImpl implements ContratoService{
 	
-	private final ContratoApiClient contratoApiClient;
+	private final ContratoPorCpfApiClient contratoPorCpfApiClient;
 	private final TokenTseService tokenTseService;
 
 	@Override
@@ -36,7 +36,7 @@ public class ContratoApiServiceImpl implements ContratoService{
 		
 		String cpfLimpo = StringUtil.removeMascaraCpf(cpf);
 		
-		List<ContratoPessoaApiResponse> listaContrato = contratoApiClient.buscarContratoPorCpf(cpfLimpo, bearerToken);
+		List<ContratoPessoaApiResponse> listaContrato = contratoPorCpfApiClient.buscarContratoPorCpf(cpfLimpo, bearerToken);
 		
 		return listaContrato;
 	}

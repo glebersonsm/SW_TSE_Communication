@@ -15,7 +15,7 @@ import com.sw.tse.domain.model.api.response.ContratoPessoaApiResponse;
 		url = "${api.tse.url}",
 		configuration = GeralClientConfig.class
 )
-public interface ContratoApiClient {
+public interface ContratoPorCpfApiClient {
 
 	@GetMapping("/api/utilizacaocontrato/obtercontratos")
 	public List<ContratoPessoaApiResponse> buscarContratoPorCpf(

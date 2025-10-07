@@ -114,7 +114,7 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
 	public BuscaOperadorSistemPessoaResponse buscarPorIdPessoa(Long idPessoa) {
 
 		if(idRelatorioOperadorSistema == null || idRelatorioOperadorSistema.equals(0L)) {
-			throw new ApiTseException("Relatório customizado pra consultar operador sistema por id pessoa não parametrizao");
+			throw new ApiTseException("Relatório customizado pra cidade não parametrizao");
 		}
 		
 		FiltroRelatorioCustomizadoApiRequest filtroIdPessoa = FiltroRelatorioCustomizadoApiRequest.builder()
@@ -136,6 +136,34 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
             throw new ApiTseException(String.format("Erro: %s ao obter operador sistema cliente pela api do TSE", e.contentUTF8()));
 		}
 	}
+
+	@Override
+	public BuscaOperadorSistemPessoaResponse buscarPorLogin(String login) {
+
+		if(idRelatorioOperadorSistema == null || idRelatorioOperadorSistema.equals(0L)) {
+			throw new ApiTseException("Relatório customizado para operador não parametrizado");
+		}
+		
+		FiltroRelatorioCustomizadoApiRequest filtroLogin = FiltroRelatorioCustomizadoApiRequest.builder()
+				.nomeParametro("login")
+				.valor(login)
+				.tipo(TipoValorRelatorioCustomizado.STRING)
+				.criptografar(false)
+				.build();
+		
+		List<FiltroRelatorioCustomizadoApiRequest> filtros = Arrays.asList(filtroLogin);
+		
+		try {
+			List<BuscaOperadorSistemPessoaResponse> listaOperadorSistemPessoa = 
+					relatorioCustomizadoApiService.buscarRelatorioGenerico(idRelatorioOperadorSistema, filtros, BuscaOperadorSistemPessoaResponse.class);
+			return listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(0L, null, null, null, false));
+			
+		} catch (FeignException e) {
+			log.error("erro ao chamar a api de operador de sistema cliente por login");
+            throw new ApiTseException(String.format("Erro: %s ao obter operador sistema cliente pela api do TSE", e.contentUTF8()));
+		}
+	}
+	
 	
 
 }
