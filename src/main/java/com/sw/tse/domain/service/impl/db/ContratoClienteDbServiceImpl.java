@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
+import com.sw.tse.api.dto.UsuarioClienteDto;
 import com.sw.tse.domain.model.api.dto.ContratoClienteApiResponse;
 import com.sw.tse.domain.repository.ContratoRepository;
 import com.sw.tse.domain.repository.PessoaRepository;
@@ -23,7 +24,7 @@ public class ContratoClienteDbServiceImpl implements ContratoClienteService {
     private final PessoaRepository pessoaRepository;
 
     @Override
-    public List<ContratoClienteApiResponse> buscarContratosPorToken(String token) {
+    public List<ContratoClienteApiResponse> buscarContratosCliente(UsuarioClienteDto usuarioClienteDto) {
         log.warn("Método buscarContratosPorToken não implementado na versão DB - use buscarContratosPorIdUsuario");
         throw new UnsupportedOperationException("Busca por token não suportada na implementação DB. Use buscarContratosPorIdUsuario.");
     }

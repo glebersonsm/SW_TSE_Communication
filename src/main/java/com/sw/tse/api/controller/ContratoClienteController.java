@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sw.tse.api.dto.ApiResponseDto;
+import com.sw.tse.api.dto.UsuarioClienteDto;
 import com.sw.tse.domain.model.api.dto.ContratoClienteApiResponse;
 import com.sw.tse.domain.model.api.response.TokenApiResponse;
 import com.sw.tse.domain.service.interfaces.ContratoClienteService;
@@ -31,7 +32,9 @@ public class ContratoClienteController {
 		
 		String beareToken = "Bearer " + tokenResponse.accessToken();
 		
-		List<ContratoClienteApiResponse> listaContratos = contratoClienteService.buscarContratosPorToken(beareToken);
+		UsuarioClienteDto usuarioClienteDto = new UsuarioClienteDto(beareToken, null, null);
+		
+		List<ContratoClienteApiResponse> listaContratos = contratoClienteService.buscarContratosCliente(usuarioClienteDto);
 		
 		ApiResponseDto<List<ContratoClienteApiResponse>> responseApi = new ApiResponseDto<>(
 			    HttpStatus.OK.value(),  

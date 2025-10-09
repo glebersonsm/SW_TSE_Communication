@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
+import com.sw.tse.api.dto.UsuarioClienteDto;
 import com.sw.tse.client.ContratoClienteApiClient;
 import com.sw.tse.domain.model.api.dto.ContratoClienteApiResponse;
 import com.sw.tse.domain.service.interfaces.ContratoClienteService;
@@ -21,8 +22,8 @@ public class ContratoClienteApiServiceImpl implements ContratoClienteService{
 	private final ContratoClienteApiClient contratoClienteApiClient;
 	
 	@Override
-	public List<ContratoClienteApiResponse> buscarContratosPorToken(String token) {
-		return contratoClienteApiClient.buscarMeusContratos(token);
+	public List<ContratoClienteApiResponse> buscarContratosCliente(UsuarioClienteDto usuarioClienteDto) {
+		return contratoClienteApiClient.buscarMeusContratos(usuarioClienteDto.tokenCliente());
 	}
 
 	@Override
