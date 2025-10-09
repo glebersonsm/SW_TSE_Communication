@@ -20,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ContratoClienteApiServiceImpl implements ContratoClienteService{
 	
 	private final ContratoClienteApiClient contratoClienteApiClient;
-	
+
 	@Override
 	public List<ContratoClienteApiResponse> buscarContratosCliente(UsuarioClienteDto usuarioClienteDto) {
 		return contratoClienteApiClient.buscarMeusContratos(usuarioClienteDto.tokenCliente());

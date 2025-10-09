@@ -4,41 +4,117 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-public record ContratoClienteApiResponse(
-    @JsonProperty("IdContrato") Long idContrato,
-    @JsonProperty("NumeroContrato") String numeroContrato,
-    @JsonProperty("DescricaoProduto") String descricaoProduto,
-    @JsonProperty("QtdPontosContratados") BigDecimal qtdPontosContratados,
-    @JsonProperty("PercentualMinimoIntegralizadoExigido") BigDecimal percentualMinimoIntegralizadoExigido,
-    @JsonProperty("QtdPontosDebitados") BigDecimal qtdPontosDebitados,
-    @JsonProperty("QtdPontosUtilizados") BigDecimal qtdPontosUtilizados,
-    @JsonProperty("QtdPontosCompraAvulsa") BigDecimal qtdPontosCompraAvulsa,
-    @JsonProperty("QtdPontosDebitarPorNaoUtilizacao") BigDecimal qtdPontosDebitarPorNaoUtilizacao,
-    @JsonProperty("QtdPontosDebitadosPorNaoUtilizacao") BigDecimal qtdPontosDebitadosPorNaoUtilizacao,
-    @JsonProperty("QtdTotalPontosDebitadosPorNaoUtilizacao") BigDecimal qtdTotalPontosDebitadosPorNaoUtilizacao,
-    @JsonProperty("DataVenda") OffsetDateTime dataVenda,
-    @JsonProperty("DataEfetivacaoDebitoPorNaoutilizacao") OffsetDateTime dataEfetivacaoDebitoPorNaoUtilizacao,
-    @JsonProperty("DataEfetivarDebitoPorNaoutilizacao") OffsetDateTime dataEfetivarDebitoPorNaoUtilizacao,
-    @JsonProperty("ValorNegociado") BigDecimal valorNegociado,
-    @JsonProperty("ValorTotalEntrada") BigDecimal valorTotalEntrada,
-    @JsonProperty("ValorTotalSaldoRestante") BigDecimal valorTotalSaldoRestante,
-    @JsonProperty("PorcentagemIntegralizadaSobreValorNegociado") BigDecimal porcentagemIntegralizadaSobreValorNegociado,
-    @JsonProperty("NomeCessionario") String nomeCessionario,
-    @JsonProperty("QtdPontosLiberadosParaUso") BigDecimal qtdPontosLiberadosParaUso,
-    @JsonProperty("QtdParcelasVencidas") Integer qtdParcelasVencidas,
-    @JsonProperty("QtdDiasVencido") Integer qtdDiasVencido,
-    @JsonProperty("ProximaUtilizacao") OffsetDateTime proximaUtilizacao,
-    @JsonProperty("IdGrupoTabelaPontos") Long idGrupoTabelaPontos,
-    @JsonProperty("IdEmpresa") Long idEmpresa,
-    @JsonProperty("DataInicioVigencia") OffsetDateTime dataInicioVigencia,
-    @JsonProperty("DataFimVigencia") OffsetDateTime dataFimVigencia,
-    @JsonProperty("ValorTotalIntegralizado") BigDecimal valorTotalIntegralizado,
-    @JsonProperty("ValorTotalEmAtraso") BigDecimal valorTotalEmAtraso,
-    @JsonProperty("PorcentagemAIntegralizarSobreValorNegociado") BigDecimal porcentagemAIntegralizarSobreValorNegociado,
-    @JsonProperty("TipoContrato") String tipoContrato,
-    @JsonProperty("StatusContrato") String statusContrato,
-    @JsonProperty("SaldoPontosGeral") BigDecimal saldoPontosGeral,
-    @JsonProperty("ValorBrutoRecebido") BigDecimal valorBrutoRecebido,
-    @JsonProperty("ValorReembolsoPago") BigDecimal valorReembolsoPago
-) {}
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ContratoClienteApiResponse {
+    
+    @JsonProperty("IdContrato")
+    private Long idContrato;
+    
+    @JsonProperty("NumeroContrato")
+    private String numeroContrato;
+    
+    @JsonProperty("DescricaoProduto")
+    private String descricaoProduto;
+    
+    @JsonProperty("QtdPontosContratados")
+    private BigDecimal qtdPontosContratados;
+    
+    @JsonProperty("PercentualMinimoIntegralizadoExigido")
+    private BigDecimal percentualMinimoIntegralizadoExigido;
+    
+    @JsonProperty("QtdPontosDebitados")
+    private BigDecimal qtdPontosDebitados;
+    
+    @JsonProperty("QtdPontosUtilizados")
+    private BigDecimal qtdPontosUtilizados;
+    
+    @JsonProperty("QtdPontosCompraAvulsa")
+    private BigDecimal qtdPontosCompraAvulsa;
+    
+    @JsonProperty("QtdPontosDebitarPorNaoUtilizacao")
+    private BigDecimal qtdPontosDebitarPorNaoUtilizacao;
+    
+    @JsonProperty("QtdPontosDebitadosPorNaoUtilizacao")
+    private BigDecimal qtdPontosDebitadosPorNaoUtilizacao;
+    
+    @JsonProperty("QtdTotalPontosDebitadosPorNaoUtilizacao")
+    private BigDecimal qtdTotalPontosDebitadosPorNaoUtilizacao;
+    
+    @JsonProperty("DataVenda")
+    private OffsetDateTime dataVenda;
+    
+    @JsonProperty("DataEfetivacaoDebitoPorNaoutilizacao")
+    private OffsetDateTime dataEfetivacaoDebitoPorNaoUtilizacao;
+    
+    @JsonProperty("DataEfetivarDebitoPorNaoutilizacao")
+    private OffsetDateTime dataEfetivarDebitoPorNaoUtilizacao;
+    
+    @JsonProperty("ValorNegociado")
+    private BigDecimal valorNegociado;
+    
+    @JsonProperty("ValorTotalEntrada")
+    private BigDecimal valorTotalEntrada;
+    
+    @JsonProperty("ValorTotalSaldoRestante")
+    private BigDecimal valorTotalSaldoRestante;
+    
+    @JsonProperty("PorcentagemIntegralizadaSobreValorNegociado")
+    private BigDecimal porcentagemIntegralizadaSobreValorNegociado;
+    
+    @JsonProperty("NomeCessionario")
+    private String nomeCessionario;
+    
+    @JsonProperty("QtdPontosLiberadosParaUso")
+    private BigDecimal qtdPontosLiberadosParaUso;
+    
+    @JsonProperty("QtdParcelasVencidas")
+    private Integer qtdParcelasVencidas;
+    
+    @JsonProperty("QtdDiasVencido")
+    private Integer qtdDiasVencido;
+    
+    @JsonProperty("ProximaUtilizacao")
+    private OffsetDateTime proximaUtilizacao;
+    
+    @JsonProperty("IdGrupoTabelaPontos")
+    private Long idGrupoTabelaPontos;
+    
+    @JsonProperty("IdEmpresa")
+    private Long idEmpresa;
+    
+    @JsonProperty("DataInicioVigencia")
+    private OffsetDateTime dataInicioVigencia;
+    
+    @JsonProperty("DataFimVigencia")
+    private OffsetDateTime dataFimVigencia;
+    
+    @JsonProperty("ValorTotalIntegralizado")
+    private BigDecimal valorTotalIntegralizado;
+    
+    @JsonProperty("ValorTotalEmAtraso")
+    private BigDecimal valorTotalEmAtraso;
+    
+    @JsonProperty("PorcentagemAIntegralizarSobreValorNegociado")
+    private BigDecimal porcentagemAIntegralizarSobreValorNegociado;
+    
+    @JsonProperty("TipoContrato")
+    private String tipoContrato;
+    
+    @JsonProperty("StatusContrato")
+    private String statusContrato;
+    
+    @JsonProperty("SaldoPontosGeral")
+    private BigDecimal saldoPontosGeral;
+    
+    @JsonProperty("ValorBrutoRecebido")
+    private BigDecimal valorBrutoRecebido;
+    
+    @JsonProperty("ValorReembolsoPago")
+    private BigDecimal valorReembolsoPago;
+}

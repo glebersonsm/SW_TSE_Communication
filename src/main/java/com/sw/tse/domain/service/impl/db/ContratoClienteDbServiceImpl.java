@@ -25,12 +25,34 @@ public class ContratoClienteDbServiceImpl implements ContratoClienteService {
 
     @Override
     public List<ContratoClienteApiResponse> buscarContratosCliente(UsuarioClienteDto usuarioClienteDto) {
-        log.warn("Método buscarContratosPorToken não implementado na versão DB - use buscarContratosPorIdUsuario");
-        throw new UnsupportedOperationException("Busca por token não suportada na implementação DB. Use buscarContratosPorIdUsuario.");
+        if (usuarioClienteDto.idPesssoaCliente() == null) {
+            log.error("ID da pessoa cliente não fornecido no UsuarioClienteDto");
+            throw new IllegalArgumentException("ID da pessoa cliente é obrigatório para buscar contratos na implementação DB");
+        }
+        
+        log.info("Buscando contratos para a pessoa cliente com ID: {}", usuarioClienteDto.idPesssoaCliente());
+        
+        List<ContratoClienteApiResponse> contratos = contratoRepository.buscarContratosClientePorIdPessoa(usuarioClienteDto.idPesssoaCliente());
+        
+        log.info("Encontrados {} contratos para a pessoa cliente ID: {}", contratos.size(), usuarioClienteDto.idPesssoaCliente());
+        
+        return contratos;
     }
 
     @Override
     public List<ContratoClienteApiResponse> buscarContratosPorIdUsuario(Long idUsuario) {
-    	throw new UnsupportedOperationException("Busca por token não suportada na implementação DB. Use buscarContratosPorIdUsuario.");
+        if (idUsuario == null) {
+            log.error("ID do usuário não fornecido");
+            throw new IllegalArgumentException("ID do usuário é obrigatório para buscar contratos");
+        }
+        
+        log.info("Buscando contratos para o usuário com ID: {}", idUsuario);
+        
+        // Assumindo que idUsuario corresponde ao idPessoa na implementação DB
+        List<ContratoClienteApiResponse> contratos = contratoRepository.buscarContratosClientePorIdPessoa(idUsuario);
+        
+        log.info("Encontrados {} contratos para o usuário ID: {}", contratos.size(), idUsuario);
+        
+        return contratos;
     }
 }

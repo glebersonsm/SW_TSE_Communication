@@ -32,7 +32,7 @@ public class ContratoClienteController {
 		
 		String beareToken = "Bearer " + tokenResponse.accessToken();
 		
-		UsuarioClienteDto usuarioClienteDto = new UsuarioClienteDto(beareToken, null, null);
+		UsuarioClienteDto usuarioClienteDto = new UsuarioClienteDto(beareToken, null, 37418L);
 		
 		List<ContratoClienteApiResponse> listaContratos = contratoClienteService.buscarContratosCliente(usuarioClienteDto);
 		
