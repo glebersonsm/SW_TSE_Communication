@@ -47,16 +47,15 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ApiResponseDto<?>> handleDataIntegrityViolationException(
     		DataIntegrityViolationException ex, WebRequest request) {
         
-		
 		String userMessage = "Ocorreu um erro de integridade dos dados. Verifique se os valores fornecidos são válidos e únicos.";
 		
-		log.error("Erro de integridade de dados: {}", userMessage, ex);
+		log.error("Erro de integridade de dados: {}", ex.getMessage(), ex);
 
 		ApiResponseDto<?> errorResponse = new ApiResponseDto<>(
-				HttpStatus.BAD_GATEWAY.value(), false, null, ex.getMessage()                 
+				HttpStatus.BAD_REQUEST.value(), false, null, userMessage                 
         );
 
-        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 	
 

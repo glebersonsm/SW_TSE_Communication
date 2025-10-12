@@ -45,4 +45,8 @@ public class Contrato {
     @JoinColumn(name = "idtenant")
 	private Empresa empresa;
 	
+	@ManyToOne()
+    @JoinColumn(name = "idcotaadquirida")
+	private CotaUh cotaUh;
+	
 }
