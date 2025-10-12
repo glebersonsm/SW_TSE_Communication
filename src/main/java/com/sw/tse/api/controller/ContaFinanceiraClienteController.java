@@ -40,17 +40,15 @@ public class ContaFinanceiraClienteController {
 	})
 	@GetMapping("/contasfinanceiras")
 	public ResponseEntity<ApiResponseDto<List<ContaFinanceiraClienteDto>>> listarContasFinanceiras() {
-		// ID fixo temporário - será substituído pelo ID do token quando implementar Spring Security
-		Long idCliente = 37418L;
 		
-		List<ContaFinanceiraClienteDto> contasDto = contaFinanceiraService.buscarContasClienteDto(idCliente);
+		List<ContaFinanceiraClienteDto> contasDto = contaFinanceiraService.buscarContasClienteDto();
 		
 		ApiResponseDto<List<ContaFinanceiraClienteDto>> responseApi = new ApiResponseDto<>(
 				HttpStatus.OK.value(),
 				true,
 				contasDto,
 				"Contas financeiras listadas com sucesso"
-		);
+			);
 		
 		return ResponseEntity.ok(responseApi);
 	}

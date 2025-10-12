@@ -24,6 +24,7 @@ import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.BrasilApiException;
 import com.sw.tse.domain.expection.LoginInvalidoTseException;
 import com.sw.tse.domain.expection.PessoaSemContratoTseException;
+import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -196,5 +197,18 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         );
 
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+    
+    @ExceptionHandler(TokenJwtInvalidoException.class)
+    public ResponseEntity<ApiResponseDto<Object>> handleTokenJwtInvalidoException(TokenJwtInvalidoException ex) {
+        log.warn("Token JWT inválido ou dados ausentes: {}", ex.getMessage());
+        
+        ApiResponseDto<Object> response = new ApiResponseDto<>(
+            HttpStatus.UNAUTHORIZED.value(),
+            false,
+            null,
+            ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 }

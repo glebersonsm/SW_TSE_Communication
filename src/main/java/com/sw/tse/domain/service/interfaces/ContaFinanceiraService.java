@@ -45,5 +45,5 @@ public interface ContaFinanceiraService {
 
     List<ContaFinanceira> buscarContasPorCliente(Long idCliente);
 
-    List<ContaFinanceiraClienteDto> buscarContasClienteDto(Long idCliente);
+    List<ContaFinanceiraClienteDto> buscarContasClienteDto();
 }

@@ -5,11 +5,11 @@ import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
-import com.sw.tse.api.dto.UsuarioClienteDto;
+import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 import com.sw.tse.domain.model.api.dto.ContratoClienteApiResponse;
 import com.sw.tse.domain.repository.ContratoRepository;
-import com.sw.tse.domain.repository.PessoaRepository;
 import com.sw.tse.domain.service.interfaces.ContratoClienteService;
+import com.sw.tse.security.JwtTokenUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,20 +21,21 @@ import lombok.extern.slf4j.Slf4j;
 public class ContratoClienteDbServiceImpl implements ContratoClienteService {
 
     private final ContratoRepository contratoRepository;
-    private final PessoaRepository pessoaRepository;
 
     @Override
-    public List<ContratoClienteApiResponse> buscarContratosCliente(UsuarioClienteDto usuarioClienteDto) {
-        if (usuarioClienteDto.idPesssoaCliente() == null) {
-            log.error("ID da pessoa cliente não fornecido no UsuarioClienteDto");
-            throw new IllegalArgumentException("ID da pessoa cliente é obrigatório para buscar contratos na implementação DB");
+    public List<ContratoClienteApiResponse> buscarContratosCliente() {
+        Long idPessoaCliente = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (idPessoaCliente == null) {
+            log.error("ID da pessoa cliente não encontrado no contexto JWT");
+            throw new TokenJwtInvalidoException("ID da pessoa cliente não está disponível no token de autenticação");
         }
         
-        log.info("Buscando contratos para a pessoa cliente com ID: {}", usuarioClienteDto.idPesssoaCliente());
+        log.info("Buscando contratos para a pessoa cliente com ID: {}", idPessoaCliente);
         
-        List<ContratoClienteApiResponse> contratos = contratoRepository.buscarContratosClientePorIdPessoa(usuarioClienteDto.idPesssoaCliente());
+        List<ContratoClienteApiResponse> contratos = contratoRepository.buscarContratosClientePorIdPessoa(idPessoaCliente);
         
-        log.info("Encontrados {} contratos para a pessoa cliente ID: {}", contratos.size(), usuarioClienteDto.idPesssoaCliente());
+        log.info("Encontrados {} contratos para a pessoa cliente ID: {}", contratos.size(), idPessoaCliente);
         
         return contratos;
     }

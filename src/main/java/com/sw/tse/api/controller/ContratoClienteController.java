@@ -9,11 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sw.tse.api.dto.ApiResponseDto;
-import com.sw.tse.api.dto.UsuarioClienteDto;
 import com.sw.tse.domain.model.api.dto.ContratoClienteApiResponse;
-import com.sw.tse.domain.model.api.response.TokenApiResponse;
 import com.sw.tse.domain.service.interfaces.ContratoClienteService;
-import com.sw.tse.domain.service.interfaces.TokenTseService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,19 +19,12 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/painelcliente/meuscontratos")
 public class ContratoClienteController {
 	
-	private final TokenTseService tokenTseService;
 	private final ContratoClienteService contratoClienteService;
-	
 	
 	@GetMapping
 	public ResponseEntity<ApiResponseDto<List<ContratoClienteApiResponse>>> buscarMeusContratos(){
-		TokenApiResponse tokenResponse = tokenTseService.gerarTokenClient("17096934871", "8{$CvVYg");
 		
-		String beareToken = "Bearer " + tokenResponse.accessToken();
-		
-		UsuarioClienteDto usuarioClienteDto = new UsuarioClienteDto(beareToken, null, 37418L);
-		
-		List<ContratoClienteApiResponse> listaContratos = contratoClienteService.buscarContratosCliente(usuarioClienteDto);
+		List<ContratoClienteApiResponse> listaContratos = contratoClienteService.buscarContratosCliente();
 		
 		ApiResponseDto<List<ContratoClienteApiResponse>> responseApi = new ApiResponseDto<>(
 			    HttpStatus.OK.value(),  
@@ -45,6 +35,4 @@ public class ContratoClienteController {
 		
 		return ResponseEntity.ok(responseApi);
 	}
-	
-	
 }

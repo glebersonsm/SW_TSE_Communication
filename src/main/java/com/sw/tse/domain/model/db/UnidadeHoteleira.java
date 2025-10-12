@@ -51,10 +51,6 @@ public class UnidadeHoteleira {
     @JoinColumn(name = "idedificiohotel")
     private EdificioHotel edificioHotel;
 
-    @ManyToOne
-    @JoinColumn(name = "idhotelnegocio")
-    private HotelNegocio hotelNegocio;
-
     @Column(name = "descricao", length = 60)
     private String descricao;
 
@@ -165,12 +161,11 @@ public class UnidadeHoteleira {
     private Short idUhHits;
 
     static UnidadeHoteleira novaUnidadeHoteleira(EdificioHotel edificioHotel, 
-            HotelNegocio hotelNegocio, String descricao, TipoUnidadeHoteleira tipoUnidadeHoteleira,
+            String descricao, TipoUnidadeHoteleira tipoUnidadeHoteleira,
             Empresa empresa, OperadorSistema responsavelCadastro) {
         
         UnidadeHoteleira novaUnidade = new UnidadeHoteleira();
         novaUnidade.setEdificioHotel(edificioHotel);
-        novaUnidade.setHotelNegocio(hotelNegocio);
         novaUnidade.setDescricao(descricao);
         novaUnidade.setTipoUnidadeHoteleira(tipoUnidadeHoteleira);
         novaUnidade.setEmpresa(empresa);

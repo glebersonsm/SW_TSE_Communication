@@ -12,9 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sw.tse.api.dto.ContaFinanceiraClienteDto;
 import com.sw.tse.domain.converter.ContaFinanceiraConverter;
+import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 import com.sw.tse.domain.model.db.ContaFinanceira;
 import com.sw.tse.domain.repository.ContaFinanceiraRepository;
 import com.sw.tse.domain.service.interfaces.ContaFinanceiraService;
+import com.sw.tse.security.JwtTokenUtil;
 
 @Service
 @ConditionalOnProperty(name = "database.enabled", havingValue = "true")
@@ -118,7 +120,13 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ContaFinanceiraClienteDto> buscarContasClienteDto(Long idCliente) {
+    public List<ContaFinanceiraClienteDto> buscarContasClienteDto() {
+        Long idCliente = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (idCliente == null) {
+            throw new TokenJwtInvalidoException("ID do cliente não está disponível no token de autenticação");
+        }
+        
         List<ContaFinanceira> contasFinanceiras = contaFinanceiraRepository.findContasPorCliente(idCliente);
         
         return contasFinanceiras.stream()
