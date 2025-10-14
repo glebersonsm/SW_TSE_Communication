@@ -22,6 +22,7 @@ import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.ValidationErrorResposeDto;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.BrasilApiException;
+import com.sw.tse.domain.expection.ContratoNaoPertenceAoClienteException;
 import com.sw.tse.domain.expection.LoginInvalidoTseException;
 import com.sw.tse.domain.expection.PessoaSemContratoTseException;
 import com.sw.tse.domain.expection.TokenJwtInvalidoException;
@@ -210,5 +211,18 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             ex.getMessage()
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+    
+    @ExceptionHandler(ContratoNaoPertenceAoClienteException.class)
+    public ResponseEntity<ApiResponseDto<Object>> handleContratoNaoPertenceAoClienteException(ContratoNaoPertenceAoClienteException ex) {
+        log.warn("Tentativa de acesso a contrato não autorizado: {}", ex.getMessage());
+        
+        ApiResponseDto<Object> response = new ApiResponseDto<>(
+            HttpStatus.FORBIDDEN.value(),
+            false,
+            null,
+            ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 }

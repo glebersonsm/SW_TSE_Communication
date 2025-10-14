@@ -155,4 +155,16 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
         );
     }
 
+    /**
+     * Verifica se o contrato pertence ao cliente (cessionário ou cocessionário)
+     * 
+     * @param idContrato ID do contrato a ser verificado
+     * @param idPessoaCliente ID da pessoa do cliente autenticado
+     * @return true se o contrato pertence ao cliente, false caso contrário
+     */
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Contrato c " +
+           "WHERE c.id = :idContrato " +
+           "AND (c.pessoaCessionario.idPessoa = :idPessoaCliente OR c.pessaoCocessionario.idPessoa = :idPessoaCliente)")
+    boolean contratoPerteceAoCliente(@Param("idContrato") Long idContrato, @Param("idPessoaCliente") Long idPessoaCliente);
+
 }

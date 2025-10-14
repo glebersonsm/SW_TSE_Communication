@@ -310,8 +310,8 @@ public class CarteiraBoleto {
     @Column(name = "configuracaoapisicredijson")
     private String configuracaoApiSicrediJson;
 
-    @Column(name = "configuracaoapiitaujson")
-    private String configuracaoApiItauJson;
+    /*@Column(name = "configuracaoapiitaujson")
+    private String configuracaoApiItauJson;*/
 
     // Relacionamentos
     @ManyToOne()

@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sw.tse.api.dto.ContaFinanceiraClienteDto;
-import com.sw.tse.client.OperadorSistemaApiClient;
 import com.sw.tse.client.SegundaViaBoletoApiClient;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.TokenJwtInvalidoException;
@@ -31,7 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 public class ContaFinanceiraApiServiceImpl implements ContaFinanceiraService {
 
     private final SegundaViaBoletoApiClient segundaViaBoletoApiClient;
-    private final OperadorSistemaApiClient operadorSistemaApiClient;
     private final TokenTseService tokenTseService;
 
     @Override
@@ -57,7 +55,7 @@ public class ContaFinanceiraApiServiceImpl implements ContaFinanceiraService {
             log.info("Tentando gerar segunda via sem setar empresa de sessão");
             
             log.info("Solicitando geração de segunda via do boleto para conta ID: {}", idContaFinanceira);
-            Response response = segundaViaBoletoApiClient.gerarSegundaViaBoleto(idContaFinanceira, bearerToken, "");
+            Response response = segundaViaBoletoApiClient.gerarSegundaViaBoleto(idContaFinanceira, bearerToken);
             
             // Verificar status da resposta
             if (response.status() < 200 || response.status() >= 300) {

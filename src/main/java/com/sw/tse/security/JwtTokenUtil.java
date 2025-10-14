@@ -8,9 +8,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class JwtTokenUtil {
     
-    public static final Long ID_USUARIO_CLIENTE_FAKE = 2478L;
+    public static final Long ID_USUARIO_CLIENTE_FAKE = 1894L;
     public static final String TOKEN_USUARIO_CLIENTE_FAKE = "token-fake-cliente-2478";
-    public static final Long ID_PESSOA_CLIENTE_FAKE = 37418L;
+    public static final Long ID_PESSOA_CLIENTE_FAKE = 7357L;
     
     public static Long getIdUsuarioCliente() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

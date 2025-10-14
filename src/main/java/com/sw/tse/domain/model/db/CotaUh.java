@@ -32,4 +32,8 @@ public class CotaUh {
     @ManyToOne
     @JoinColumn(name = "idunidadehoteleira")
     private UnidadeHoteleira unidadeHoteleira;
+
+    @ManyToOne
+    @JoinColumn(name = "idmodelocota")
+    private ModeloCota modeloCota;
 }
