@@ -24,7 +24,7 @@ import lombok.Setter;
 @Setter(value = AccessLevel.PRIVATE)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PACKAGE)
-public class PeriodosModeloCota {
+public class PeriodoModeloCota {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seqperiodomodelocota")
@@ -107,10 +107,10 @@ public class PeriodosModeloCota {
     private String idIntegracao;
 
     // Método estático para criar novo período modelo cota
-    static PeriodosModeloCota novoPeriodosModeloCota(PeriodoUtilizacao periodoUtilizacao, 
+    static PeriodoModeloCota novoPeriodoModeloCota(PeriodoUtilizacao periodoUtilizacao, 
             ModeloCota modeloCota, UnidadeHoteleira unidadeHoteleira, Empresa empresa) {
         
-        PeriodosModeloCota novoPeriodoModelo = new PeriodosModeloCota();
+        PeriodoModeloCota novoPeriodoModelo = new PeriodoModeloCota();
         novoPeriodoModelo.setPeriodoUtilizacao(periodoUtilizacao);
         novoPeriodoModelo.setModeloCota(modeloCota);
         novoPeriodoModelo.setUnidadeHoteleira(unidadeHoteleira);
