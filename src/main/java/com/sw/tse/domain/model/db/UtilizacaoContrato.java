@@ -7,6 +7,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import com.sw.tse.domain.expection.PeriodoModeloCotaNullException;
+import com.sw.tse.domain.expection.TipoUtilizacaoContratoInvalidoException;
+import com.sw.tse.domain.expection.TipoUtilizacaoContratoNullException;
+import com.sw.tse.domain.expection.UsuarioResponsavelNullException;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -364,5 +369,87 @@ public class UtilizacaoContrato {
      */
     public boolean isCancelada() {
         return "CANCELADO".equals(this.status);
+    }
+
+    /**
+     * Método factory simplificado para criar nova utilização de contrato do tipo RESERVA
+     * Apenas cria a estrutura básica da utilização, sem processar hóspedes
+     */
+    public static UtilizacaoContrato criarUtilizacaoContratoReserva(
+            PeriodoModeloCota periodoModeloCota,
+            OperadorSistema usuarioResponsavel,
+            TipoUtilizacaoContrato tipoUtilizacaoContrato) {
+
+        // Validações obrigatórias
+        if (periodoModeloCota == null) {
+            throw new PeriodoModeloCotaNullException();
+        }
+        if (usuarioResponsavel == null) {
+            throw new UsuarioResponsavelNullException();
+        }
+        if (tipoUtilizacaoContrato == null) {
+            throw new TipoUtilizacaoContratoNullException();
+        }
+        if (!"RESERVA".equals(tipoUtilizacaoContrato.getSigla())) {
+            throw new TipoUtilizacaoContratoInvalidoException(tipoUtilizacaoContrato.getSigla());
+        }
+
+        UtilizacaoContrato novaUtilizacao = new UtilizacaoContrato();
+        
+        // Parâmetros obrigatórios
+        novaUtilizacao.setPeriodoModeloCota(periodoModeloCota);
+        novaUtilizacao.setContrato(periodoModeloCota.getContrato());
+        novaUtilizacao.setResponsavelCadastro(usuarioResponsavel);
+        novaUtilizacao.setResponsavelSolicitacao(usuarioResponsavel);
+        novaUtilizacao.setTipoUtilizacaoContrato(tipoUtilizacaoContrato);
+        
+        // Campos derivados automaticamente
+        novaUtilizacao.setUnidadeHoteleira(periodoModeloCota.getUnidadeHoteleira());
+        novaUtilizacao.setEmpresa(periodoModeloCota.getEmpresa());
+        novaUtilizacao.setHotelReserva(periodoModeloCota.getUnidadeHoteleira().getEdificioHotel().getHotel());
+        
+        // Pessoa solicitante
+        if (usuarioResponsavel.getPessoa() != null) {
+            novaUtilizacao.setPessoaSolicitante(usuarioResponsavel.getPessoa());
+            novaUtilizacao.setNomeSolicitante(usuarioResponsavel.getPessoa().getNome());
+        }
+        
+        // Datas derivadas do período
+        PeriodoUtilizacao periodoUtilizacao = periodoModeloCota.getPeriodoUtilizacao();
+        if (periodoUtilizacao != null) {
+            novaUtilizacao.setDataCheckin(LocalDateTime.of(
+                periodoUtilizacao.getAnoInicio(),
+                periodoUtilizacao.getMesInicio(),
+                periodoUtilizacao.getDiaInicio(),
+                0, 0  // 00:00
+            ));
+            
+            novaUtilizacao.setDataCheckout(LocalDateTime.of(
+                periodoUtilizacao.getAnoFim(),
+                periodoUtilizacao.getMesFim(),
+                periodoUtilizacao.getDiaFim(),
+                0, 0  // 00:00
+            ));
+            
+            novaUtilizacao.setTipoPeriodoUtilizacao(periodoUtilizacao.getTipoPeriodoUtilizacao());
+        }
+        
+        // Valores iniciais padrão
+        novaUtilizacao.setNroReserva(0L);
+        novaUtilizacao.setUtilizacaoConfirmada(false);
+        novaUtilizacao.setStatus("ATIVO");
+        novaUtilizacao.setMultipropriedade(true);
+        novaUtilizacao.setSemanaDoAno(0);
+        novaUtilizacao.setUtilizacaoContratoGuid(UUID.randomUUID());
+        
+        return novaUtilizacao;
+    }
+    
+    /**
+     * Define os quantitativos de hóspedes por faixa etária
+     */
+    public void setQuantitativosHospedes(int qtdAdultos, int qtdCriancas) {
+        this.setQtdAdultos(qtdAdultos);
+        this.setQtdCriancas(qtdCriancas);
     }
 }

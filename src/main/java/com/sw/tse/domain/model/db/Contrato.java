@@ -49,4 +49,7 @@ public class Contrato {
     @JoinColumn(name = "idcotaadquirida")
 	private CotaUh cotaUh;
 	
+	@Column(name = "idcontratoorigemadm")
+	private Long idContratoOrigemAdm;
+	
 }

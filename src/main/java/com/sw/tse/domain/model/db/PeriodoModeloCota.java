@@ -107,14 +107,29 @@ public class PeriodoModeloCota {
     private String idIntegracao;
 
     // Método estático para criar novo período modelo cota
-    static PeriodoModeloCota novoPeriodoModeloCota(PeriodoUtilizacao periodoUtilizacao, 
-            ModeloCota modeloCota, UnidadeHoteleira unidadeHoteleira, Empresa empresa) {
+    static PeriodoModeloCota novoPeriodoModeloCota(Contrato contrato, 
+            PeriodoUtilizacao periodoUtilizacao, OperadorSistema responsavelCadastro) {
         
         PeriodoModeloCota novoPeriodoModelo = new PeriodoModeloCota();
+        
+        // Parâmetros diretos
+        novoPeriodoModelo.setContrato(contrato);
         novoPeriodoModelo.setPeriodoUtilizacao(periodoUtilizacao);
-        novoPeriodoModelo.setModeloCota(modeloCota);
-        novoPeriodoModelo.setUnidadeHoteleira(unidadeHoteleira);
-        novoPeriodoModelo.setEmpresa(empresa);
+        novoPeriodoModelo.setResponsavelCadastro(responsavelCadastro);
+        
+        // Campos derivados do contrato
+        novoPeriodoModelo.setModeloCota(contrato.getCotaUh().getModeloCota());
+        novoPeriodoModelo.setEmpresa(contrato.getEmpresa());
+        novoPeriodoModelo.setUnidadeHoteleira(contrato.getCotaUh().getUnidadeHoteleira());
+        
+        // Campo dataInicial construído a partir do período de utilização
+        if (periodoUtilizacao.obterDataInicio() != null) {
+            novoPeriodoModelo.setDataInicial(periodoUtilizacao.obterDataInicio().atStartOfDay());
+        }
+        
+        // Valores padrão
+        novoPeriodoModelo.setSemanaMes(0);
+        novoPeriodoModelo.setPeriodoManual(false);
         novoPeriodoModelo.setDeletado(false);
         
         return novoPeriodoModelo;

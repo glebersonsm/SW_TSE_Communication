@@ -16,13 +16,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.ContaFinanceiraClienteDto;
+import com.sw.tse.api.dto.ReservarSemanaRequest;
 import com.sw.tse.api.dto.SemanasDisponiveisRequest;
 import com.sw.tse.api.dto.SemanasDisponiveisResponse;
+import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 import com.sw.tse.domain.model.api.dto.ContratoClienteApiResponse;
 import com.sw.tse.domain.model.dto.PeriodoUtilizacaoDisponivel;
 import com.sw.tse.domain.service.interfaces.ContaFinanceiraService;
 import com.sw.tse.domain.service.interfaces.ContratoClienteService;
 import com.sw.tse.domain.service.interfaces.PeriodoUtilizacaoService;
+import com.sw.tse.domain.service.interfaces.ReservarSemanaService;
+import com.sw.tse.security.JwtTokenUtil;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -43,6 +47,7 @@ public class PainelClienteController {
     private final PeriodoUtilizacaoService periodoUtilizacaoService;
     private final ContaFinanceiraService contaFinanceiraService;
     private final ContratoClienteService contratoClienteService;
+    private final ReservarSemanaService reservarSemanaService;
 
     // ==================== ENDPOINTS DE SEMANAS DISPONÍVEIS ====================
     
@@ -88,6 +93,43 @@ public class PainelClienteController {
                 .rci(dto.getRci())
                 .pool(dto.getPool())
                 .build();
+    }
+    
+    @Operation(summary = "Reservar semana disponível", 
+               description = "Valida e cria uma reserva para um período de utilização disponível")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Período validado com sucesso",
+                    content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Contrato bloqueado ou inadimplente", content = @Content),
+            @ApiResponse(responseCode = "409", description = "Período não disponível", content = @Content),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor", content = @Content)
+    })
+    @PostMapping("/reservar")
+    public ResponseEntity<ApiResponseDto<String>> reservarSemana(
+            @Valid @RequestBody ReservarSemanaRequest request) {
+
+        Long idPessoaCliente = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (idPessoaCliente == null) {
+            throw new TokenJwtInvalidoException("ID da pessoa cliente não está disponível no token de autenticação");
+        }
+        
+        // Delega toda a lógica de negócio para o service
+        reservarSemanaService.validarReserva(
+            request.getIdContrato(), 
+            request.getIdPeriodoUtilizacao(),
+            idPessoaCliente
+        );
+
+        ApiResponseDto<String> responseApi = new ApiResponseDto<>(
+                HttpStatus.OK.value(),
+                true,
+                "VALIDADO",
+                "Período validado com sucesso e disponível para reserva"
+        );
+
+        return ResponseEntity.ok(responseApi);
     }
 
     // ==================== ENDPOINTS DE CONTRATOS ====================

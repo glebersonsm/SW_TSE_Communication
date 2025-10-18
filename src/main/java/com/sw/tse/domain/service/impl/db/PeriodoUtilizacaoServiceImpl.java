@@ -12,6 +12,7 @@ import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 import com.sw.tse.domain.model.dto.PeriodoUtilizacaoDisponivel;
 import com.sw.tse.domain.repository.ContratoRepository;
 import com.sw.tse.domain.repository.PeriodoUtilizacaoCustomRepository;
+import com.sw.tse.domain.service.interfaces.ContratoDisponibilidadeService;
 import com.sw.tse.domain.service.interfaces.PeriodoUtilizacaoService;
 import com.sw.tse.security.JwtTokenUtil;
 
@@ -26,6 +27,7 @@ public class PeriodoUtilizacaoServiceImpl implements PeriodoUtilizacaoService {
     private final PeriodoUtilizacaoCustomRepository customRepository;
     private final PeriodoUtilizacaoParametros parametros;
     private final ContratoRepository contratoRepository;
+    private final ContratoDisponibilidadeService contratoDisponibilidadeService;
 
     @Override
     public List<PeriodoUtilizacaoDisponivel> buscarPeriodosDisponiveisParaReserva(Long idContrato, Integer ano) {
@@ -49,6 +51,10 @@ public class PeriodoUtilizacaoServiceImpl implements PeriodoUtilizacaoService {
         }
         
         log.info("Contrato {} validado com sucesso para o cliente {}", idContrato, idPessoaCliente);
+        
+        // Validar disponibilidade do contrato para reserva
+        log.info("Validando disponibilidade do contrato {} para reserva", idContrato);
+        contratoDisponibilidadeService.validarDisponibilidadeParaReserva(idContrato);
         
         List<Object[]> resultados = customRepository.buscarPeriodosDisponiveisParaReserva(
             idContrato,

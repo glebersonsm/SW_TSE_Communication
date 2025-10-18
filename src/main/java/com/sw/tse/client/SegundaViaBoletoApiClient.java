@@ -7,8 +7,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import com.sw.tse.client.config.GeralClientConfig;
 
-import feign.Response;
-
 @FeignClient(
     name = "segundaViaBoletoApiClient",
     url = "${api.tse.url}",
@@ -17,7 +15,7 @@ import feign.Response;
 public interface SegundaViaBoletoApiClient {
 
     @GetMapping("/api/PainelDoCliente/SegundaViaBoleto/{idContaFinanceira}")
-    Response gerarSegundaViaBoleto(
+    byte[] gerarSegundaViaBoleto(
         @PathVariable Long idContaFinanceira,
         @RequestHeader("Authorization") String token
     );
