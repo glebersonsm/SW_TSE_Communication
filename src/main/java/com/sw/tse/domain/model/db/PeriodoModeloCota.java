@@ -7,6 +7,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -32,11 +33,11 @@ public class PeriodoModeloCota {
     @Column(name = "idperiodomodelocota")
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idperiodoutilizacao")
     private PeriodoUtilizacao periodoUtilizacao;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idmodelocota")
     private ModeloCota modeloCota;
 
@@ -48,7 +49,7 @@ public class PeriodoModeloCota {
     @Column(name = "dataalteracao")
     private LocalDateTime dataAlteracao;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idtenant")
     private Empresa empresa;
 
@@ -61,7 +62,7 @@ public class PeriodoModeloCota {
     @Column(name = "semanames")
     private Integer semanaMes;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idunidadehoteleira")
     private UnidadeHoteleira unidadeHoteleira;
 
@@ -74,7 +75,7 @@ public class PeriodoModeloCota {
     @Column(name = "periodomanual")
     private Boolean periodoManual;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idcontrato")
     private Contrato contrato;
 
@@ -84,19 +85,19 @@ public class PeriodoModeloCota {
     @Column(name = "datahoradelete")
     private LocalDateTime dataHoraDelete;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idrespdelete")
     private OperadorSistema responsavelDelete;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idrespalteracao")
     private OperadorSistema responsavelAlteracao;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idrespcadastro")
     private OperadorSistema responsavelCadastro;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idcotauh")
     private CotaUh cotaUh;
 
@@ -133,5 +134,14 @@ public class PeriodoModeloCota {
         novoPeriodoModelo.setDeletado(false);
         
         return novoPeriodoModelo;
+    }
+    
+    public void deletarPeriodo(OperadorSistema responsavel) {
+        LocalDateTime agora = LocalDateTime.now().withNano(0);
+        this.setDeletado(true);
+        this.setDataHoraDelete(agora);
+        this.setDataAlteracao(agora);
+        this.setResponsavelDelete(responsavel);
+        this.setResponsavelAlteracao(responsavel);
     }
 }

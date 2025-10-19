@@ -1,5 +1,7 @@
 package com.sw.tse.domain.service.impl.db;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -13,6 +15,7 @@ import com.sw.tse.api.dto.HospedeDto;
 import com.sw.tse.api.dto.HospedeResponse;
 import com.sw.tse.api.dto.ReservaSemanaResponse;
 import com.sw.tse.api.dto.ReservarSemanaRequest;
+import com.sw.tse.core.config.UtilizacaoContratoPropertiesCustom;
 import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.BrasilApiException;
@@ -23,6 +26,8 @@ import com.sw.tse.domain.expection.ContratoNaoPertenceAoClienteException;
 import com.sw.tse.domain.expection.ContratoSemIntercambioException;
 import com.sw.tse.domain.expection.HospedesObrigatoriosException;
 import com.sw.tse.domain.expection.OperadorSistemaNaoEncontradoException;
+import com.sw.tse.domain.expection.PeriodoNaoPermitePoolException;
+import com.sw.tse.domain.expection.PeriodoNaoPermiteRciException;
 import com.sw.tse.domain.expection.PeriodoUtilizacaoNotFoundException;
 import com.sw.tse.domain.expection.PessoaNotFoundException;
 import com.sw.tse.domain.expection.HospedePrincipalInvalidoException;
@@ -42,6 +47,7 @@ import com.sw.tse.domain.model.db.TipoUtilizacaoContrato;
 import com.sw.tse.domain.model.db.UtilizacaoContrato;
 import com.sw.tse.domain.model.db.UtilizacaoContratoHospede;
 import com.sw.tse.domain.model.dto.BrasilApiErrorResponse;
+import com.sw.tse.domain.model.dto.PeriodoUtilizacaoDisponivel;
 import com.sw.tse.domain.repository.ContratoIntercambioRepository;
 import com.sw.tse.domain.repository.ContratoRepository;
 import com.sw.tse.domain.repository.OperadorSistemaRepository;
@@ -55,6 +61,7 @@ import com.sw.tse.domain.service.interfaces.CidadeService;
 import com.sw.tse.domain.service.interfaces.ContratoDisponibilidadeService;
 import com.sw.tse.domain.service.interfaces.FaixaEtariaService;
 import com.sw.tse.domain.service.interfaces.PeriodoDisponibilidadeService;
+import com.sw.tse.domain.service.interfaces.PeriodoUtilizacaoService;
 import com.sw.tse.domain.service.interfaces.PessoaService;
 import com.sw.tse.domain.service.interfaces.ReservarSemanaService;
 
@@ -70,6 +77,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
     private final ContratoDisponibilidadeService contratoDisponibilidadeService;
     private final PeriodoDisponibilidadeService periodoDisponibilidadeService;
     private final PeriodoUtilizacaoRepository periodoUtilizacaoRepository;
+    private final PeriodoUtilizacaoService periodoUtilizacaoService;
     private final OperadorSistemaRepository operadorSistemaRepository;
     private final TipoUtilizacaoContratoRepository tipoUtilizacaoContratoRepository;
     private final PeriodoModeloCotaRepository periodoModeloCotaRepository;
@@ -80,6 +88,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
     private final FaixaEtariaService faixaEtariaService;
     private final ContratoIntercambioRepository contratoIntercambioRepository;
     private final CidadeService cidadeService;
+    private final UtilizacaoContratoPropertiesCustom utilizacaoContratoConfig;
     
     private final ObjectMapper objectMapper = new ObjectMapper();
     
@@ -169,20 +178,39 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         
         log.info("PeriodoModeloCota criado com ID: {}", periodoModeloCota.getId());
         
-        // 5. Criar UtilizacaoContrato
+        // 5. Criar UtilizacaoContrato usando o método factory adequado
         log.info("Criando UtilizacaoContrato do tipo {}", siglaBanco);
         
-        UtilizacaoContrato utilizacaoContrato = UtilizacaoContrato.criarUtilizacaoContratoReserva(
-            periodoModeloCota, 
-            operadorSistema, 
-            tipoUtilizacao
-        );
+        UtilizacaoContrato utilizacaoContrato;
+        if ("RESERVA".equals(request.getTipoUtilizacao())) {
+            utilizacaoContrato = UtilizacaoContrato.criarUtilizacaoContratoReserva(
+                periodoModeloCota, 
+                operadorSistema, 
+                tipoUtilizacao
+            );
+        } else if ("RCI".equals(request.getTipoUtilizacao())) {
+            utilizacaoContrato = UtilizacaoContrato.criarUtilizacaoContratoRci(
+                periodoModeloCota, 
+                operadorSistema, 
+                tipoUtilizacao
+            );
+        } else if ("POOL".equals(request.getTipoUtilizacao())) {
+            utilizacaoContrato = UtilizacaoContrato.criarUtilizacaoContratoPool(
+                periodoModeloCota, 
+                operadorSistema, 
+                tipoUtilizacao
+            );
+        } else {
+            throw new TipoUtilizacaoContratoInvalidoException(request.getTipoUtilizacao());
+        }
         
         // 6. Processar dados específicos por tipo
         if ("RESERVA".equals(request.getTipoUtilizacao())) {
             processarReserva(utilizacaoContrato, request.getHospedes(), operadorSistema, contrato);
         } else if ("RCI".equals(request.getTipoUtilizacao())) {
             processarRCI(utilizacaoContrato, contrato, operadorSistema);
+        } else if ("POOL".equals(request.getTipoUtilizacao())) {
+            processarPool(utilizacaoContrato);
         }
         
         utilizacaoContrato = utilizacaoContratoRepository.save(utilizacaoContrato);
@@ -202,8 +230,13 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
             
             // Validar que existe exatamente 1 hóspede principal
             validarHospedePrincipal(request.getHospedes());
+        } else if ("RCI".equals(request.getTipoUtilizacao())) {
+            // Validar que contrato possui intercâmbio ativo e período permite RCI
+            validarContratoIntercambioAtivo(request.getIdContrato(), request.getIdPeriodoUtilizacao());
+        } else if ("POOL".equals(request.getTipoUtilizacao())) {
+            // Validar que período permite POOL
+            validarPeriodoPermitePool(request.getIdContrato(), request.getIdPeriodoUtilizacao());
         }
-        // Para RCI não precisa validar nada no request, buscaremos do contrato
     }
     
     private void validarHospedePrincipal(List<HospedeDto> hospedes) {
@@ -224,6 +257,80 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         }
         
         log.debug("Validação de hóspede principal OK - 1 principal identificado");
+    }
+    
+    private void validarContratoIntercambioAtivo(Long idContrato, Long idPeriodoUtilizacao) {
+        log.debug("Validando se contrato {} possui intercâmbio ativo e período {} permite RCI", idContrato, idPeriodoUtilizacao);
+        
+        Contrato contrato = contratoRepository.findById(idContrato)
+            .orElseThrow(() -> new ContratoNotFoundException(idContrato));
+        
+        // Validar que contrato possui intercâmbio ativo
+        ContratoIntercambio contratoIntercambio = contratoIntercambioRepository
+            .findByContratoIdAndTipoHistoricoAtivo(idContrato)
+            .orElseThrow(() -> new ContratoSemIntercambioException(
+                contrato.getId(), 
+                contrato.getNumeroContrato()
+            ));
+        
+        log.info("Contrato {} possui intercâmbio ativo (ID: {})", idContrato, contratoIntercambio.getId());
+        
+        // Validar que o período permite RCI
+        PeriodoUtilizacao periodoUtilizacao = periodoUtilizacaoRepository.findById(idPeriodoUtilizacao)
+            .orElseThrow(() -> new PeriodoUtilizacaoNotFoundException(idPeriodoUtilizacao));
+        
+        // Buscar períodos disponíveis para verificar se o período permite RCI
+        List<PeriodoUtilizacaoDisponivel> periodosDisponiveis = periodoUtilizacaoService
+            .buscarPeriodosDisponiveisParaReserva(idContrato, periodoUtilizacao.getAnoInicio());
+        
+        PeriodoUtilizacaoDisponivel periodoDisponivel = periodosDisponiveis.stream()
+            .filter(p -> p.getIdPeriodoUtilizacao().equals(idPeriodoUtilizacao))
+            .findFirst()
+            .orElseThrow(() -> new PeriodoUtilizacaoNotFoundException(idPeriodoUtilizacao));
+        
+        // Debug: Log detalhado dos valores
+        log.debug("DEBUG RCI - Período encontrado: ID={}, Descrição={}", 
+            periodoDisponivel.getIdPeriodoUtilizacao(), periodoDisponivel.getDescricaoPeriodo());
+        log.debug("DEBUG RCI - Campo rci do período: {}", periodoDisponivel.getRci());
+        log.debug("DEBUG RCI - Intercâmbio ativo encontrado: ID {}", contratoIntercambio.getId());
+        log.debug("DEBUG RCI - Intercambiadora: ID {}", contratoIntercambio.getIdIntercambiadora());
+        
+        // Verificar se o período permite RCI (rci = 1)
+        if (periodoDisponivel.getRci() == null || periodoDisponivel.getRci() != 1) {
+            log.warn("Período {} não permite RCI - flag rci: {}", idPeriodoUtilizacao, periodoDisponivel.getRci());
+            throw new PeriodoNaoPermiteRciException(idPeriodoUtilizacao, periodoUtilizacao.getDescricaoPeriodo());
+        }
+        
+        log.info("Período {} validado com sucesso para RCI", idPeriodoUtilizacao);
+    }
+    
+    private void validarPeriodoPermitePool(Long idContrato, Long idPeriodoUtilizacao) {
+        log.debug("Validando se período {} permite POOL para contrato {}", idPeriodoUtilizacao, idContrato);
+        
+        PeriodoUtilizacao periodoUtilizacao = periodoUtilizacaoRepository.findById(idPeriodoUtilizacao)
+            .orElseThrow(() -> new PeriodoUtilizacaoNotFoundException(idPeriodoUtilizacao));
+        
+        // Buscar períodos disponíveis para verificar se o período permite POOL
+        List<PeriodoUtilizacaoDisponivel> periodosDisponiveis = periodoUtilizacaoService
+            .buscarPeriodosDisponiveisParaReserva(idContrato, periodoUtilizacao.getAnoInicio());
+        
+        PeriodoUtilizacaoDisponivel periodoDisponivel = periodosDisponiveis.stream()
+            .filter(p -> p.getIdPeriodoUtilizacao().equals(idPeriodoUtilizacao))
+            .findFirst()
+            .orElseThrow(() -> new PeriodoUtilizacaoNotFoundException(idPeriodoUtilizacao));
+        
+        // Debug: Log detalhado dos valores
+        log.debug("DEBUG POOL - Período encontrado: ID={}, Descrição={}", 
+            periodoDisponivel.getIdPeriodoUtilizacao(), periodoDisponivel.getDescricaoPeriodo());
+        log.debug("DEBUG POOL - Campo pool do período: {}", periodoDisponivel.getPool());
+        
+        // Verificar se o período permite POOL (pool = 1)
+        if (periodoDisponivel.getPool() == null || periodoDisponivel.getPool() != 1) {
+            log.warn("Período {} não permite POOL - flag pool: {}", idPeriodoUtilizacao, periodoDisponivel.getPool());
+            throw new PeriodoNaoPermitePoolException(idPeriodoUtilizacao, periodoUtilizacao.getDescricaoPeriodo());
+        }
+        
+        log.info("Período {} validado com sucesso para POOL", idPeriodoUtilizacao);
     }
     
     private void processarReserva(UtilizacaoContrato utilizacaoContrato, 
@@ -257,17 +364,23 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
             // Calcular faixa etária
             FaixaEtaria faixaEtaria = faixaEtariaService.calcularFaixaEtariaPorDataNascimento(pessoa.getDataNascimento());
             
+            // Separar nome completo em nome e sobrenome
+            String nomeCompleto = pessoa.getNome();
+            String[] partesNome = nomeCompleto != null ? nomeCompleto.split(" ", 2) : new String[]{"", ""};
+            String nome = partesNome[0];
+            String sobrenome = partesNome.length > 1 ? partesNome[1] : "";
+            
             // Criar hóspede
             UtilizacaoContratoHospede hospede = UtilizacaoContratoHospede.novoHospede(
                 utilizacaoContrato,
-                pessoa.getNome(),
-                "",  // sobrenome vazio (não usado)
+                nome,
+                sobrenome,
                 pessoa.getCpfCnpj(),
                 pessoa.getSexo() != null ? pessoa.getSexo().getCodigo() : null,
-                pessoa.getDataNascimento() != null ? pessoa.getDataNascimento().atStartOfDay() : null,
+                pessoa.getDataNascimento(),
                 faixaEtaria,
                 tipoHospede,
-                i == 0,  // Primeiro é principal
+                "S".equalsIgnoreCase(dto.principal()),
                 operador
             );
             
@@ -285,7 +398,36 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         
         utilizacaoContrato.setQuantitativosHospedes((int) qtdAdultos, (int) qtdCriancas);
         
-        log.info("Reserva processada com {} adultos e {} crianças", qtdAdultos, qtdCriancas);
+        // Calcular quantidade de pagantes
+        int qtdPagantes = calcularQtdPagantes(utilizacaoContrato.getHospedes());
+        utilizacaoContrato.definirQtdPagantes(qtdPagantes);
+        
+        // Configurar pensão padrão
+        utilizacaoContrato.definirIdUtilizacaoContratoTsTipoPensao(utilizacaoContratoConfig.getIdPensaoPadrao());
+        
+        log.info("Reserva processada com {} adultos, {} crianças e {} pagantes", qtdAdultos, qtdCriancas, qtdPagantes);
+    }
+    
+    private int calcularQtdPagantes(List<UtilizacaoContratoHospede> hospedes) {
+        return (int) hospedes.stream()
+            .filter(h -> {
+                if (h.getFaixaEtaria() == null) return false;
+                
+                // Se faixa etária marca como pagante, incluir
+                if (Boolean.TRUE.equals(h.getFaixaEtaria().getIsPagante())) {
+                    return true;
+                }
+                
+                // Ou se tem idade >= idade mínima configurada, incluir
+                if (h.getDataNascimento() != null) {
+                    LocalDate dataAtual = LocalDate.now();
+                    long anos = ChronoUnit.YEARS.between(h.getDataNascimento(), dataAtual);
+                    return anos >= utilizacaoContratoConfig.getIdadeMinimaPagante();
+                }
+                
+                return false;
+            })
+            .count();
     }
     
     private void processarRCI(UtilizacaoContrato utilizacaoContrato, Contrato contrato, OperadorSistema operador) {
@@ -318,7 +460,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
             "",
             pessoaRCI.getCpfCnpj(),
             pessoaRCI.getSexo() != null ? pessoaRCI.getSexo().getCodigo() : null,
-            pessoaRCI.getDataNascimento() != null ? pessoaRCI.getDataNascimento().atStartOfDay() : null,
+            pessoaRCI.getDataNascimento(),
             faixaEtaria,
             tipoHospedePadrao,
             true,  // Principal
@@ -331,6 +473,22 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         
         log.info("Hóspede padrão RCI adicionado (Pessoa ID: {}, TipoHospede ID: {})", 
             idPessoaHospedePadraoRCI, idTipoHospedePadraoRCI);
+    }
+    
+    private void processarPool(UtilizacaoContrato utilizacaoContrato) {
+        log.info("Processando POOL - sem hóspedes (disponibilizado para o hotel comercializar)");
+        
+        // POOL não tem hóspedes - a semana é disponibilizada para o hotel comercializar
+        // Não adicionar hóspedes à utilização
+        
+        // Definir quantitativos como 0
+        utilizacaoContrato.setQuantitativosHospedes(0, 0);
+        utilizacaoContrato.definirQtdPagantes(0);
+        
+        // Configurar pensão padrão
+        utilizacaoContrato.definirIdUtilizacaoContratoTsTipoPensao(utilizacaoContratoConfig.getIdPensaoPadrao());
+        
+        log.info("POOL processado - sem hóspedes, quantitativos zerados");
     }
     
     private void validarCepHospede(HospedeDto dto) {
@@ -449,6 +607,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         return switch (tipoFrontend) {
             case "RESERVA" -> "RESERVA";
             case "RCI" -> "DEPSEMANA";
+            case "POOL" -> "DEPPOOL";
             default -> throw new TipoUtilizacaoContratoInvalidoException(tipoFrontend);
         };
     }
@@ -456,10 +615,23 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
     private ReservaSemanaResponse mapearParaResponse(UtilizacaoContrato utilizacaoContrato, 
             Contrato contrato, PeriodoUtilizacao periodoUtilizacao) {
         
-        List<HospedeResponse> hospedesResponse = null;
+        String siglaTipo = utilizacaoContrato.getTipoUtilizacaoContrato().getSigla();
+        boolean isRci = "DEPSEMANA".equals(siglaTipo);
+        boolean isPool = "DEPPOOL".equals(siglaTipo);
         
-        // Se houver hóspedes, mapear para o response
-        if (utilizacaoContrato.getHospedes() != null && !utilizacaoContrato.getHospedes().isEmpty()) {
+        // Traduzir DEPSEMANA para RCI e DEPPOOL para POOL no response
+        String tipoUtilizacaoResponse;
+        if (isRci) {
+            tipoUtilizacaoResponse = "RCI";
+        } else if (isPool) {
+            tipoUtilizacaoResponse = "POOL";
+        } else {
+            tipoUtilizacaoResponse = siglaTipo;
+        }
+        
+        // Para RCI e POOL, não retornar hóspedes (informação interna do sistema / POOL não tem hóspedes)
+        List<HospedeResponse> hospedesResponse = null;
+        if (!isRci && !isPool && utilizacaoContrato.getHospedes() != null && !utilizacaoContrato.getHospedes().isEmpty()) {
             hospedesResponse = utilizacaoContrato.getHospedes().stream()
                 .map(this::mapearHospedeParaResponse)
                 .collect(Collectors.toList());
@@ -469,7 +641,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
             .idUtilizacaoContrato(utilizacaoContrato.getId())
             .idPeriodoModeloCota(utilizacaoContrato.getPeriodoModeloCota().getId())
             .numeroContrato(contrato.getNumeroContrato())
-            .tipoUtilizacao(utilizacaoContrato.getTipoUtilizacaoContrato().getSigla())
+            .tipoUtilizacao(tipoUtilizacaoResponse)
             .checkin(utilizacaoContrato.getDataCheckin().toLocalDate())
             .checkout(utilizacaoContrato.getDataCheckout().toLocalDate())
             .descricaoPeriodo(periodoUtilizacao.getDescricaoPeriodo())

@@ -1,12 +1,14 @@
 package com.sw.tse.domain.service.impl.db;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sw.tse.api.dto.HospedeDto;
+import com.sw.tse.core.config.UtilizacaoContratoPropertiesCustom;
 import com.sw.tse.domain.expection.HospedesObrigatoriosException;
 import com.sw.tse.domain.expection.PessoaNotFoundException;
 import com.sw.tse.domain.expection.TipoHospedeNotFoundException;
@@ -40,9 +42,7 @@ public class UtilizacaoContratoServiceImpl implements UtilizacaoContratoService 
     private final PessoaService pessoaService;
     private final TipoHospedeRepository tipoHospedeRepository;
     private final UtilizacaoContratoRepository utilizacaoContratoRepository;
-    
-    @Value("${sw.tse.utilizacao.id.pensao}")
-    private Long idUtilizacaoContratoPensao;
+    private final UtilizacaoContratoPropertiesCustom utilizacaoContratoConfig;
     
     @Override
     public UtilizacaoContrato criarUtilizacaoContratoReserva(
@@ -83,7 +83,7 @@ public class UtilizacaoContratoServiceImpl implements UtilizacaoContratoService 
             TipoHospede tipoHospede = tipoHospedeRepository.findById(idTipoHospede)
                 .orElseThrow(() -> new TipoHospedeNotFoundException(idTipoHospede));
             
-            // Separar nome completo
+            // Separar nome completo em nome e sobrenome
             String nomeCompleto = pessoa.getNome();
             String[] partesNome = nomeCompleto != null ? nomeCompleto.split(" ", 2) : new String[]{"", ""};
             String nome = partesNome[0];
@@ -113,7 +113,7 @@ public class UtilizacaoContratoServiceImpl implements UtilizacaoContratoService 
                 sobrenome,
                 pessoa.getCpfCnpj(),
                 pessoa.getSexo() != null ? pessoa.getSexo().getCodigo() : null,
-                pessoa.getDataNascimento() != null ? pessoa.getDataNascimento().atStartOfDay() : null,
+                pessoa.getDataNascimento(),
                 faixaEtaria,
                 tipoHospede,
                 isPrincipal,
@@ -127,8 +127,15 @@ public class UtilizacaoContratoServiceImpl implements UtilizacaoContratoService 
         // Setar quantitativos na utilização
         utilizacao.setQuantitativosHospedes(qtdAdultos, qtdCriancas);
         
-        log.info("Utilização criada com {} hóspedes: {} adultos, {} crianças", 
-            hospedes.size(), qtdAdultos, qtdCriancas);
+        // Calcular quantidade de pagantes
+        int qtdPagantes = calcularQtdPagantes(utilizacao.getHospedes());
+        utilizacao.definirQtdPagantes(qtdPagantes);
+        
+        // Configurar pensão padrão
+        utilizacao.definirIdUtilizacaoContratoTsTipoPensao(utilizacaoContratoConfig.getIdPensaoPadrao());
+        
+        log.info("Utilização criada com {} hóspedes: {} adultos, {} crianças, {} pagantes", 
+            hospedes.size(), qtdAdultos, qtdCriancas, qtdPagantes);
         
         // Salvar utilização
         UtilizacaoContrato utilizacaoSalva = utilizacaoContratoRepository.save(utilizacao);
@@ -151,5 +158,27 @@ public class UtilizacaoContratoServiceImpl implements UtilizacaoContratoService 
         }
         
         log.debug("Validações de parâmetros passaram com sucesso");
+    }
+    
+    private int calcularQtdPagantes(List<UtilizacaoContratoHospede> hospedes) {
+        return (int) hospedes.stream()
+            .filter(h -> {
+                if (h.getFaixaEtaria() == null) return false;
+                
+                // Se faixa etária marca como pagante, incluir
+                if (Boolean.TRUE.equals(h.getFaixaEtaria().getIsPagante())) {
+                    return true;
+                }
+                
+                // Ou se tem idade >= idade mínima configurada, incluir
+                if (h.getDataNascimento() != null) {
+                    LocalDate dataAtual = LocalDate.now();
+                    long anos = ChronoUnit.YEARS.between(h.getDataNascimento(), dataAtual);
+                    return anos >= utilizacaoContratoConfig.getIdadeMinimaPagante();
+                }
+                
+                return false;
+            })
+            .count();
     }
 }

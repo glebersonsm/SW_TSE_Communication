@@ -12,9 +12,6 @@ import com.sw.tse.domain.expection.TipoUtilizacaoContratoInvalidoException;
 import com.sw.tse.domain.expection.TipoUtilizacaoContratoNullException;
 import com.sw.tse.domain.expection.UsuarioResponsavelNullException;
 
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -53,12 +50,10 @@ public class UtilizacaoContrato {
     private Long nroReserva;
 
     // ========== AUDITORIA ==========
-    @CreationTimestamp
     @Column(name = "datacadastro", updatable = false)
     private LocalDateTime dataCadastro;
 
-    @UpdateTimestamp
-    @Column(name = "dataalteracao")
+    @Column(name = "dataalteracao", insertable = false)
     private LocalDateTime dataAlteracao;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -207,6 +202,25 @@ public class UtilizacaoContrato {
     @Column(name = "datahoracancelamentocapere")
     private LocalDateTime dataHoraCancelamentoCapere;
 
+    // ========== CAMPOS ADICIONAIS ==========
+    @Column(name = "cortesia")
+    private Boolean cortesia;
+
+    @Column(name = "idutilizcontratotstipopensao")
+    private Long idUtilizacaoContratoTsTipoPensao;
+
+    @Column(name = "valortotalpensao", precision = 19, scale = 2)
+    private BigDecimal valorTotalPensao;
+
+    @Column(name = "precheckin")
+    private Boolean preCheckin;
+
+    @Column(name = "entroufilaespera")
+    private Boolean entrouFilaEspera;
+
+    @Column(name = "voucherenviadoautomaticamente")
+    private Boolean voucherEnviadoAutomaticamente;
+
     // ========== AGREGADOS ==========
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "utilizacaoContrato", fetch = FetchType.LAZY)
     private List<UtilizacaoContratoHospede> hospedes = new ArrayList<>();
@@ -294,18 +308,21 @@ public class UtilizacaoContrato {
      */
     public void confirmarUtilizacao(OperadorSistema responsavelConfirmacao) {
         this.setUtilizacaoConfirmada(true);
-        this.setDataConfirmacao(LocalDateTime.now());
+        this.setDataConfirmacao(LocalDateTime.now().withNano(0));
         this.setResponsavelConfirmacao(responsavelConfirmacao);
+        this.setDataAlteracao(LocalDateTime.now().withNano(0));
     }
 
     /**
      * Cancela a utilização do contrato
      */
     public void cancelarUtilizacao(String motivoCancelamento, OperadorSistema responsavelCancelamento) {
-        this.setDataCancelamento(LocalDateTime.now());
+        this.setDataCancelamento(LocalDateTime.now().withNano(0));
         this.setMotivoCancelamento(motivoCancelamento);
         this.setResponsavelCancelamento(responsavelCancelamento);
+        this.setResponsavelAlteracao(responsavelCancelamento);
         this.setStatus("CANCELADO");
+        this.setDataAlteracao(LocalDateTime.now().withNano(0));
     }
 
     /**
@@ -316,6 +333,7 @@ public class UtilizacaoContrato {
             this.setObservacao(novaObservacao);
         }
         this.setResponsavelAlteracao(responsavelAlteracao);
+        this.setDataAlteracao(LocalDateTime.now().withNano(0));
     }
 
     /**
@@ -327,6 +345,7 @@ public class UtilizacaoContrato {
         this.setQtdAdultos(qtdAdultos);
         this.setQtdCriancas(qtdCriancas);
         this.setResponsavelAlteracao(responsavelAlteracao);
+        this.setDataAlteracao(LocalDateTime.now().withNano(0));
     }
 
     /**
@@ -337,6 +356,7 @@ public class UtilizacaoContrato {
         this.setValorDiariaAcordo(valorDiariaAcordo);
         this.setValorTotalDiarias(valorTotalDiarias);
         this.setResponsavelAlteracao(responsavelAlteracao);
+        this.setDataAlteracao(LocalDateTime.now().withNano(0));
     }
 
     /**
@@ -348,6 +368,7 @@ public class UtilizacaoContrato {
         this.setConfirmadoCapere(confirmado);
         this.setCanceladoCapere(cancelado);
         this.setResponsavelAlteracao(responsavelAlteracao);
+        this.setDataAlteracao(LocalDateTime.now().withNano(0));
     }
 
     /**
@@ -442,6 +463,18 @@ public class UtilizacaoContrato {
         novaUtilizacao.setSemanaDoAno(0);
         novaUtilizacao.setUtilizacaoContratoGuid(UUID.randomUUID());
         
+        // Inicializar datas sem milissegundos
+        LocalDateTime agora = LocalDateTime.now().withNano(0);
+        novaUtilizacao.setDataCadastro(agora);
+        novaUtilizacao.setDataSolicitacao(agora);
+        
+        // Inicializar novos campos
+        novaUtilizacao.setCortesia(false);
+        novaUtilizacao.setPreCheckin(false);
+        novaUtilizacao.setEntrouFilaEspera(false);
+        novaUtilizacao.setVoucherEnviadoAutomaticamente(false);
+        novaUtilizacao.setValorTotalPensao(BigDecimal.ZERO);
+        
         return novaUtilizacao;
     }
     
@@ -454,9 +487,202 @@ public class UtilizacaoContrato {
     }
     
     /**
+     * Define a quantidade de pagantes
+     */
+    public void definirQtdPagantes(int qtdPagantes) {
+        this.setQtdPagantes(qtdPagantes);
+    }
+    
+    /**
+     * Define o ID da pensão
+     */
+    public void definirIdUtilizacaoContratoTsTipoPensao(Long idPensao) {
+        this.setIdUtilizacaoContratoTsTipoPensao(idPensao);
+    }
+    
+    /**
      * Define o contrato de intercâmbio
      */
     public void setContratoIntercambio(ContratoIntercambio contratoIntercambio) {
         this.contratoIntercambio = contratoIntercambio;
+    }
+    
+    /**
+     * Método factory para criar nova utilização de contrato do tipo RCI
+     * Aceita sigla DEPSEMANA (sigla do banco de dados TSE para depósito de semana RCI)
+     */
+    public static UtilizacaoContrato criarUtilizacaoContratoRci(
+            PeriodoModeloCota periodoModeloCota,
+            OperadorSistema usuarioResponsavel,
+            TipoUtilizacaoContrato tipoUtilizacaoContrato) {
+
+        // Validações obrigatórias
+        if (periodoModeloCota == null) {
+            throw new PeriodoModeloCotaNullException();
+        }
+        if (usuarioResponsavel == null) {
+            throw new UsuarioResponsavelNullException();
+        }
+        if (tipoUtilizacaoContrato == null) {
+            throw new TipoUtilizacaoContratoNullException();
+        }
+        if (!"DEPSEMANA".equals(tipoUtilizacaoContrato.getSigla())) {
+            throw new TipoUtilizacaoContratoInvalidoException(
+                String.format("TipoUtilizacaoContrato deve ter sigla 'DEPSEMANA', mas foi informado '%s'", 
+                    tipoUtilizacaoContrato.getSigla())
+            );
+        }
+
+        UtilizacaoContrato novaUtilizacao = new UtilizacaoContrato();
+        
+        // Parâmetros obrigatórios
+        novaUtilizacao.setPeriodoModeloCota(periodoModeloCota);
+        novaUtilizacao.setContrato(periodoModeloCota.getContrato());
+        novaUtilizacao.setResponsavelCadastro(usuarioResponsavel);
+        novaUtilizacao.setResponsavelSolicitacao(usuarioResponsavel);
+        novaUtilizacao.setTipoUtilizacaoContrato(tipoUtilizacaoContrato);
+        
+        // Campos derivados automaticamente
+        novaUtilizacao.setUnidadeHoteleira(periodoModeloCota.getUnidadeHoteleira());
+        novaUtilizacao.setEmpresa(periodoModeloCota.getEmpresa());
+        novaUtilizacao.setHotelReserva(periodoModeloCota.getUnidadeHoteleira().getEdificioHotel().getHotel());
+        
+        // Pessoa solicitante
+        if (usuarioResponsavel.getPessoa() != null) {
+            novaUtilizacao.setPessoaSolicitante(usuarioResponsavel.getPessoa());
+            novaUtilizacao.setNomeSolicitante(usuarioResponsavel.getPessoa().getNome());
+        }
+        
+        // Datas derivadas do período
+        PeriodoUtilizacao periodoUtilizacao = periodoModeloCota.getPeriodoUtilizacao();
+        if (periodoUtilizacao != null) {
+            novaUtilizacao.setDataCheckin(LocalDateTime.of(
+                periodoUtilizacao.getAnoInicio(),
+                periodoUtilizacao.getMesInicio(),
+                periodoUtilizacao.getDiaInicio(),
+                0, 0  // 00:00
+            ));
+            
+            novaUtilizacao.setDataCheckout(LocalDateTime.of(
+                periodoUtilizacao.getAnoFim(),
+                periodoUtilizacao.getMesFim(),
+                periodoUtilizacao.getDiaFim(),
+                0, 0  // 00:00
+            ));
+            
+            novaUtilizacao.setTipoPeriodoUtilizacao(periodoUtilizacao.getTipoPeriodoUtilizacao());
+        }
+        
+        // Valores iniciais padrão
+        novaUtilizacao.setNroReserva(0L);
+        novaUtilizacao.setUtilizacaoConfirmada(false);
+        novaUtilizacao.setStatus("ATIVO");
+        novaUtilizacao.setMultipropriedade(true);
+        novaUtilizacao.setSemanaDoAno(0);
+        novaUtilizacao.setUtilizacaoContratoGuid(UUID.randomUUID());
+        
+        // Inicializar datas sem milissegundos
+        LocalDateTime agora = LocalDateTime.now().withNano(0);
+        novaUtilizacao.setDataCadastro(agora);
+        novaUtilizacao.setDataSolicitacao(agora);
+        
+        // Inicializar novos campos
+        novaUtilizacao.setCortesia(false);
+        novaUtilizacao.setPreCheckin(false);
+        novaUtilizacao.setEntrouFilaEspera(false);
+        novaUtilizacao.setVoucherEnviadoAutomaticamente(false);
+        novaUtilizacao.setValorTotalPensao(BigDecimal.ZERO);
+        
+        return novaUtilizacao;
+    }
+    
+    /**
+     * Método factory para criar nova utilização de contrato do tipo POOL
+     * Aceita sigla DEPPOOL (sigla do banco de dados TSE para depósito pool)
+     * POOL não possui hóspedes - a utilização é disponibilizada para o hotel comercializar
+     */
+    public static UtilizacaoContrato criarUtilizacaoContratoPool(
+            PeriodoModeloCota periodoModeloCota,
+            OperadorSistema usuarioResponsavel,
+            TipoUtilizacaoContrato tipoUtilizacaoContrato) {
+
+        // Validações obrigatórias
+        if (periodoModeloCota == null) {
+            throw new PeriodoModeloCotaNullException();
+        }
+        if (usuarioResponsavel == null) {
+            throw new UsuarioResponsavelNullException();
+        }
+        if (tipoUtilizacaoContrato == null) {
+            throw new TipoUtilizacaoContratoNullException();
+        }
+        if (!"DEPPOOL".equals(tipoUtilizacaoContrato.getSigla())) {
+            throw new TipoUtilizacaoContratoInvalidoException(
+                String.format("TipoUtilizacaoContrato deve ter sigla 'DEPPOOL', mas foi informado '%s'", 
+                    tipoUtilizacaoContrato.getSigla())
+            );
+        }
+
+        UtilizacaoContrato novaUtilizacao = new UtilizacaoContrato();
+        
+        // Parâmetros obrigatórios
+        novaUtilizacao.setPeriodoModeloCota(periodoModeloCota);
+        novaUtilizacao.setContrato(periodoModeloCota.getContrato());
+        novaUtilizacao.setResponsavelCadastro(usuarioResponsavel);
+        novaUtilizacao.setResponsavelSolicitacao(usuarioResponsavel);
+        novaUtilizacao.setTipoUtilizacaoContrato(tipoUtilizacaoContrato);
+        
+        // Campos derivados automaticamente
+        novaUtilizacao.setUnidadeHoteleira(periodoModeloCota.getUnidadeHoteleira());
+        novaUtilizacao.setEmpresa(periodoModeloCota.getEmpresa());
+        novaUtilizacao.setHotelReserva(periodoModeloCota.getUnidadeHoteleira().getEdificioHotel().getHotel());
+        
+        // Pessoa solicitante
+        if (usuarioResponsavel.getPessoa() != null) {
+            novaUtilizacao.setPessoaSolicitante(usuarioResponsavel.getPessoa());
+            novaUtilizacao.setNomeSolicitante(usuarioResponsavel.getPessoa().getNome());
+        }
+        
+        // Datas derivadas do período
+        PeriodoUtilizacao periodoUtilizacao = periodoModeloCota.getPeriodoUtilizacao();
+        if (periodoUtilizacao != null) {
+            novaUtilizacao.setDataCheckin(LocalDateTime.of(
+                periodoUtilizacao.getAnoInicio(),
+                periodoUtilizacao.getMesInicio(),
+                periodoUtilizacao.getDiaInicio(),
+                0, 0  // 00:00
+            ));
+            
+            novaUtilizacao.setDataCheckout(LocalDateTime.of(
+                periodoUtilizacao.getAnoFim(),
+                periodoUtilizacao.getMesFim(),
+                periodoUtilizacao.getDiaFim(),
+                0, 0  // 00:00
+            ));
+            
+            novaUtilizacao.setTipoPeriodoUtilizacao(periodoUtilizacao.getTipoPeriodoUtilizacao());
+        }
+        
+        // Valores iniciais padrão
+        novaUtilizacao.setNroReserva(0L);
+        novaUtilizacao.setUtilizacaoConfirmada(false);
+        novaUtilizacao.setStatus("ATIVO");
+        novaUtilizacao.setMultipropriedade(true);
+        novaUtilizacao.setSemanaDoAno(0);
+        novaUtilizacao.setUtilizacaoContratoGuid(UUID.randomUUID());
+        
+        // Inicializar datas sem milissegundos
+        LocalDateTime agora = LocalDateTime.now().withNano(0);
+        novaUtilizacao.setDataCadastro(agora);
+        novaUtilizacao.setDataSolicitacao(agora);
+        
+        // Inicializar novos campos
+        novaUtilizacao.setCortesia(false);
+        novaUtilizacao.setPreCheckin(false);
+        novaUtilizacao.setEntrouFilaEspera(false);
+        novaUtilizacao.setVoucherEnviadoAutomaticamente(false);
+        novaUtilizacao.setValorTotalPensao(BigDecimal.ZERO);
+        
+        return novaUtilizacao;
     }
 }

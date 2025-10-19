@@ -10,7 +10,7 @@ public class ContratoSemIntercambioException extends RegraDeNegocioException {
     private final String numeroContrato;
     
     public ContratoSemIntercambioException(Long idContrato, String numeroContrato) {
-        super(String.format("Contrato: %s não possui contrato de intercâmbio (RCI) ativo vinculado", numeroContrato));
+        super(String.format("O Contrato %s ainda não tem associação com a RCI", numeroContrato));
         this.idContrato = idContrato;
         this.numeroContrato = numeroContrato;
     }

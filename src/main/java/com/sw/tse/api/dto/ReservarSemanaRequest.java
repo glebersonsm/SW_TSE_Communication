@@ -17,7 +17,7 @@ public class ReservarSemanaRequest {
     private Long idPeriodoUtilizacao;
     
     @NotNull(message = "Tipo de utilização é obrigatório")
-    @Pattern(regexp = "RESERVA|RCI", message = "Tipo deve ser RESERVA ou RCI")
+    @Pattern(regexp = "RESERVA|RCI|POOL", message = "Tipo deve ser RESERVA, RCI ou POOL")
     private String tipoUtilizacao;
     
     // Para RESERVA: obrigatório (HospedeDto com dados completos)

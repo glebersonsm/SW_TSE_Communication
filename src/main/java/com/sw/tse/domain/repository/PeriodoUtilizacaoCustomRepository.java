@@ -45,7 +45,15 @@ public class PeriodoUtilizacaoCustomRepository {
                 tp.descricao AS descricaotipoperiodo,
                 pe.anoinicio AS ano,
                 (case when CAST((lpad(cast(pe.diainicio AS VARCHAR), 2, '0') || '/' || lpad(cast(pe.mesinicio AS VARCHAR), 2, '0') || '/' || pe.anoinicio) AS DATE) - CURRENT_DATE >= :antecedenciaMinima THEN 1 ELSE 0 END) AS reserva,
-                (CASE WHEN rci.rci > 0 AND rci.datamin <= CAST((lpad(cast(pe.diainicio AS VARCHAR), 2, '0') || '/' || lpad(cast(pe.mesinicio AS VARCHAR), 2, '0') || '/' || pe.anoinicio) AS DATE) THEN 1 ELSE 0 END) AS RCI,
+                (CASE 
+                    WHEN (SELECT COUNT(1) FROM contratointercambio 
+                          WHERE idcontrato = :idContrato 
+                            AND tipohistorico = 'ATIVO' 
+                            AND idintercambiadora = :intercambiadoraRciId) > 0
+                      AND (CAST(current_date AS DATE) + :rciDiasMinimos) <= CAST((lpad(cast(pe.diainicio AS VARCHAR), 2, '0') || '/' || lpad(cast(pe.mesinicio AS VARCHAR), 2, '0') || '/' || pe.anoinicio) AS DATE)
+                    THEN 1 
+                    ELSE 0 
+                END) AS RCI,
                 (CASE WHEN pe.anoinicio > EXTRACT(YEAR FROM CURRENT_DATE) AND CAST(CURRENT_DATE AS DATE) <= CAST((lpad(CAST(:poolDiaLimite AS VARCHAR), 2, '0') || '/' || lpad(CAST(:poolMesLimite AS VARCHAR), 2, '0') || '/' || EXTRACT(YEAR FROM CURRENT_DATE)) AS DATE) THEN 1 ELSE 0 END) AS pool
             FROM 
                 periodoutilizacao pe
@@ -53,8 +61,6 @@ public class PeriodoUtilizacaoCustomRepository {
                 periodogrupocota pgc ON pgc.idperiodoutilizacao = pe.idperiodoutilizacao AND pgc.idgrupocota IN (SELECT gc.idgrupocota FROM grupocota gc LEFT JOIN modelocota mc ON mc.idgrupocota = gc.idgrupocota LEFT JOIN cotauh co ON co.idmodelocota = mc.idmodelocota INNER JOIN contrato ct ON ct.idcotaadquirida = co.idcotauh AND ct.idcontrato = :idContrato)
             LEFT JOIN  
                 tipoperiodoutilizacao tp ON tp.idtipoperiodoutilizacao = pe.idtipoperiodoutilizacao
-            LEFT JOIN
-                (SELECT COUNT(1) AS rci, CAST(current_date AS DATE)+:rciDiasMinimos datamin FROM contratointercambio WHERE idcontrato = :idContrato AND tipohistorico = 'ATIVO' and idintercambiadora = :intercambiadoraRciId) rci ON 1=1
             LEFT JOIN 
                 (SELECT pu.anoinicio, pu.idtipoperiodoutilizacao, (MAX(mctp.qtdmaximautilizacoes) -COUNT(1)) AS saldo FROM periodosmodelocota pmc INNER JOIN cotauh co ON co.idmodelocota = pmc.idmodelocota LEFT JOIN periodoutilizacao pu ON pu.idperiodoutilizacao = pmc.idperiodoutilizacao LEFT JOIN modelocotatipoperiodo mctp ON mctp.idmodelocota = co.idmodelocota AND mctp.idtipoperiodoutilizacao = pu.idtipoperiodoutilizacao WHERE co.idcotauh = (SELECT idcotaadquirida FROM contrato WHERE idcontrato = :idContrato) AND pmc.idunidadehoteleira = co.idunidadehoteleira AND pmc.deletado = FALSE GROUP BY 1,2) periodospermitidos ON periodospermitidos.anoinicio = pe.anoinicio AND periodospermitidos.idtipoperiodoutilizacao = pe.idtipoperiodoutilizacao
             WHERE 

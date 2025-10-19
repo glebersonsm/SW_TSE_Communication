@@ -7,6 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,9 +21,11 @@ import com.sw.tse.api.dto.ReservaSemanaResponse;
 import com.sw.tse.api.dto.ReservarSemanaRequest;
 import com.sw.tse.api.dto.SemanasDisponiveisRequest;
 import com.sw.tse.api.dto.SemanasDisponiveisResponse;
+import com.sw.tse.domain.model.dto.CancelarReservaRequest;
 import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 import com.sw.tse.domain.model.api.dto.ContratoClienteApiResponse;
 import com.sw.tse.domain.model.dto.PeriodoUtilizacaoDisponivel;
+import com.sw.tse.domain.service.interfaces.CancelarReservaService;
 import com.sw.tse.domain.service.interfaces.ContaFinanceiraService;
 import com.sw.tse.domain.service.interfaces.ContratoClienteService;
 import com.sw.tse.domain.service.interfaces.PeriodoUtilizacaoService;
@@ -49,6 +52,7 @@ public class PainelClienteController {
     private final ContaFinanceiraService contaFinanceiraService;
     private final ContratoClienteService contratoClienteService;
     private final ReservarSemanaService reservarSemanaService;
+    private final CancelarReservaService cancelarReservaService;
 
     // ==================== ENDPOINTS DE SEMANAS DISPONÍVEIS ====================
     
@@ -204,5 +208,40 @@ public class PainelClienteController {
         return ResponseEntity.ok()
                 .headers(headers)
                 .body(pdfBytes);
+    }
+    
+    // ==================== ENDPOINTS DE CANCELAMENTO ====================
+    
+    @Operation(summary = "Cancelar reserva", 
+               description = "Cancela uma utilizacao de contrato (RESERVA ou RCI) e seu periodo modelo cota")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Reserva cancelada com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Utilizacao nao encontrada"),
+            @ApiResponse(responseCode = "400", description = "Cancelamento nao permitido ou fora do prazo")
+    })
+    @DeleteMapping("/reservar")
+    public ResponseEntity<ApiResponseDto<Void>> cancelarReserva(
+            @Valid @RequestBody CancelarReservaRequest request) {
+        
+        Long idPessoaCliente = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (idPessoaCliente == null) {
+            throw new TokenJwtInvalidoException("ID da pessoa cliente nao esta disponivel no token");
+        }
+        
+        cancelarReservaService.cancelarReserva(
+            request.getIdUtilizacaoContrato(), 
+            request.getMotivo(), 
+            idPessoaCliente
+        );
+        
+        ApiResponseDto<Void> responseApi = new ApiResponseDto<>(
+            HttpStatus.OK.value(),
+            true,
+            null,
+            "Reserva cancelada com sucesso"
+        );
+        
+        return ResponseEntity.ok(responseApi);
     }
 }

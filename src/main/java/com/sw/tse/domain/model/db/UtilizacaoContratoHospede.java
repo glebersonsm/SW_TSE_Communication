@@ -1,11 +1,13 @@
 package com.sw.tse.domain.model.db;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import com.sw.tse.core.util.GenericCryptoLocalDateConverter;
+import com.sw.tse.core.util.GenericCryptoStringConverter;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -35,12 +37,10 @@ public class UtilizacaoContratoHospede {
     private Long id;
 
     // ========== AUDITORIA ==========
-    @CreationTimestamp
-    @Column(name = "datacadastro")
+    @Column(name = "datacadastro", updatable = false)
     private LocalDateTime dataCadastro;
 
-    @UpdateTimestamp
-    @Column(name = "dataalteracao")
+    @Column(name = "dataalteracao", insertable = false)
     private LocalDateTime dataAlteracao;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -67,14 +67,16 @@ public class UtilizacaoContratoHospede {
     @Column(name = "sobrenome", length = 250)
     private String sobrenome;
 
+    @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "cpf", length = 120)
     private String cpf;
 
     @Column(name = "sexo")
     private Integer sexo;
 
+    @Convert(converter = GenericCryptoLocalDateConverter.class)
     @Column(name = "datanascimento")
-    private LocalDateTime dataNascimento;
+    private LocalDate dataNascimento;
 
     @Column(name = "idnacionalidade")
     private Integer idNacionalidade;
@@ -147,7 +149,7 @@ public class UtilizacaoContratoHospede {
             String sobrenome,
             String cpf,
             Integer sexo,
-            LocalDateTime dataNascimento,
+            LocalDate dataNascimento,
             FaixaEtaria faixaEtaria,
             TipoHospede tipoHospede,
             Boolean isPrincipal,
@@ -166,6 +168,9 @@ public class UtilizacaoContratoHospede {
         novoHospede.setSexo(sexo);
         novoHospede.setDataNascimento(dataNascimento);
         
+        // Nacionalidade padrão (Brasil = 30, igual Pessoa)
+        novoHospede.setIdNacionalidade(30);
+        
         // Faixa etária e tipo
         novoHospede.setFaixaEtaria(faixaEtaria);
         if (faixaEtaria != null) {
@@ -183,6 +188,9 @@ public class UtilizacaoContratoHospede {
         novoHospede.setDataCheckin(utilizacaoContrato.getDataCheckin());
         novoHospede.setDataCheckout(utilizacaoContrato.getDataCheckout());
         
+        // Data de cadastro sem milissegundos
+        novoHospede.setDataCadastro(LocalDateTime.now().withNano(0));
+        
         return novoHospede;
     }
 
@@ -190,7 +198,7 @@ public class UtilizacaoContratoHospede {
      * Altera dados pessoais do hóspede
      */
     public void alterarDadosPessoais(String novoNome, String novoSobrenome, String novoCpf,
-            Integer novoSexo, LocalDateTime novaDataNascimento, OperadorSistema responsavelAlteracao) {
+            Integer novoSexo, LocalDate novaDataNascimento, OperadorSistema responsavelAlteracao) {
         
         if (novoNome != null && !novoNome.trim().isEmpty()) {
             this.setNome(novoNome);
@@ -213,6 +221,7 @@ public class UtilizacaoContratoHospede {
         }
         
         this.setResponsavelAlteracao(responsavelAlteracao);
+        this.setDataAlteracao(LocalDateTime.now().withNano(0));
     }
 
     /**
@@ -226,6 +235,7 @@ public class UtilizacaoContratoHospede {
             this.setFaixaEtariaSigla(null);
         }
         this.setResponsavelAlteracao(responsavelAlteracao);
+        this.setDataAlteracao(LocalDateTime.now().withNano(0));
     }
 
     /**
@@ -234,6 +244,7 @@ public class UtilizacaoContratoHospede {
     public void alterarTipoHospede(TipoHospede novoTipoHospede, OperadorSistema responsavelAlteracao) {
         this.setTipoHospede(novoTipoHospede);
         this.setResponsavelAlteracao(responsavelAlteracao);
+        this.setDataAlteracao(LocalDateTime.now().withNano(0));
     }
 
     /**
@@ -244,6 +255,7 @@ public class UtilizacaoContratoHospede {
         this.setDataCheckinReal(dataCheckinReal);
         this.setDataCheckoutReal(dataCheckoutReal);
         this.setResponsavelAlteracao(responsavelAlteracao);
+        this.setDataAlteracao(LocalDateTime.now().withNano(0));
     }
 
     /**
@@ -254,6 +266,7 @@ public class UtilizacaoContratoHospede {
         this.setControleAlteracaoApiHotbeach(controleAlteracao);
         this.setPessoaIncompletaIntegracaoHotbeach(pessoaIncompleta);
         this.setResponsavelAlteracao(responsavelAlteracao);
+        this.setDataAlteracao(LocalDateTime.now().withNano(0));
     }
 
     /**
@@ -262,6 +275,7 @@ public class UtilizacaoContratoHospede {
     public void definirComoPrincipal(Boolean isPrincipal, OperadorSistema responsavelAlteracao) {
         this.setIsPrincipal(isPrincipal);
         this.setResponsavelAlteracao(responsavelAlteracao);
+        this.setDataAlteracao(LocalDateTime.now().withNano(0));
     }
 
     /**
