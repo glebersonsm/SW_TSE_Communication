@@ -452,4 +452,11 @@ public class UtilizacaoContrato {
         this.setQtdAdultos(qtdAdultos);
         this.setQtdCriancas(qtdCriancas);
     }
+    
+    /**
+     * Define o contrato de intercâmbio
+     */
+    public void setContratoIntercambio(ContratoIntercambio contratoIntercambio) {
+        this.contratoIntercambio = contratoIntercambio;
+    }
 }

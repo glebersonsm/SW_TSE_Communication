@@ -22,13 +22,13 @@ import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.ValidationErrorResposeDto;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.BrasilApiException;
-import com.sw.tse.domain.expection.ContratoBloqueadoPorTagException;
-import com.sw.tse.domain.expection.ContratoInadimplenteException;
-import com.sw.tse.domain.expection.ContratoIntegralizacaoInsuficienteException;
 import com.sw.tse.domain.expection.ContratoNaoPertenceAoClienteException;
+import com.sw.tse.domain.expection.DadoInvalidoException;
+import com.sw.tse.domain.expection.DadoObrigatorioException;
 import com.sw.tse.domain.expection.LoginInvalidoTseException;
-import com.sw.tse.domain.expection.PeriodoNaoDisponivelException;
 import com.sw.tse.domain.expection.PessoaSemContratoTseException;
+import com.sw.tse.domain.expection.RecursoNaoEncontradoException;
+import com.sw.tse.domain.expection.RegraDeNegocioException;
 import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -113,6 +113,60 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ApiResponseDto<?>> handleApiTseException(BrasilApiException ex, WebRequest request){
     	ApiResponseDto<?> errorResponse = new ApiResponseDto<>(
                 HttpStatus.BAD_REQUEST.value() , false, null, ex.getMessage()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+    
+    // ========== Handlers Genéricos por Categoria de Exceção ==========
+    
+    @ExceptionHandler(RecursoNaoEncontradoException.class)
+    public ResponseEntity<ApiResponseDto<?>> handleRecursoNaoEncontrado(RecursoNaoEncontradoException ex, WebRequest request) {
+        log.warn("Recurso não encontrado: {}", ex.getMessage());
+        
+        ApiResponseDto<?> errorResponse = new ApiResponseDto<>(
+            HttpStatus.NOT_FOUND.value(),
+            false,
+            null,
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+    
+    @ExceptionHandler(DadoObrigatorioException.class)
+    public ResponseEntity<ApiResponseDto<?>> handleDadoObrigatorio(DadoObrigatorioException ex, WebRequest request) {
+        log.warn("Dado obrigatório não informado: {}", ex.getMessage());
+        
+        ApiResponseDto<?> errorResponse = new ApiResponseDto<>(
+            HttpStatus.BAD_REQUEST.value(),
+            false,
+            null,
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+    
+    @ExceptionHandler(DadoInvalidoException.class)
+    public ResponseEntity<ApiResponseDto<?>> handleDadoInvalido(DadoInvalidoException ex, WebRequest request) {
+        log.warn("Dado inválido: {}", ex.getMessage());
+        
+        ApiResponseDto<?> errorResponse = new ApiResponseDto<>(
+            HttpStatus.BAD_REQUEST.value(),
+            false,
+            null,
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+    
+    @ExceptionHandler(RegraDeNegocioException.class)
+    public ResponseEntity<ApiResponseDto<?>> handleRegraDeNegocio(RegraDeNegocioException ex, WebRequest request) {
+        log.warn("Regra de negócio violada: {}", ex.getMessage());
+        
+        ApiResponseDto<?> errorResponse = new ApiResponseDto<>(
+            HttpStatus.BAD_REQUEST.value(),
+            false,
+            null,
+            ex.getMessage()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
@@ -204,6 +258,8 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
     
+    // ========== Handlers Específicos com Status HTTP Diferenciados ==========
+    
     @ExceptionHandler(TokenJwtInvalidoException.class)
     public ResponseEntity<ApiResponseDto<Object>> handleTokenJwtInvalidoException(TokenJwtInvalidoException ex) {
         log.warn("Token JWT inválido ou dados ausentes: {}", ex.getMessage());
@@ -228,57 +284,5 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             ex.getMessage()
         );
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-    }
-    
-    @ExceptionHandler(ContratoBloqueadoPorTagException.class)
-    public ResponseEntity<ApiResponseDto<Object>> handleContratoBloqueadoPorTagException(ContratoBloqueadoPorTagException ex) {
-        log.warn("Contrato bloqueado para reserva: {}", ex.getMessage());
-        
-        ApiResponseDto<Object> response = new ApiResponseDto<>(
-            HttpStatus.FORBIDDEN.value(),
-            false,
-            null,
-            ex.getMessage()
-        );
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-    }
-    
-    @ExceptionHandler(ContratoIntegralizacaoInsuficienteException.class)
-    public ResponseEntity<ApiResponseDto<Object>> handleContratoIntegralizacaoInsuficienteException(ContratoIntegralizacaoInsuficienteException ex) {
-        log.warn("Contrato com integralização insuficiente: {}", ex.getMessage());
-        
-        ApiResponseDto<Object> response = new ApiResponseDto<>(
-            HttpStatus.FORBIDDEN.value(),
-            false,
-            null,
-            ex.getMessage()
-        );
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-    }
-    
-    @ExceptionHandler(ContratoInadimplenteException.class)
-    public ResponseEntity<ApiResponseDto<Object>> handleContratoInadimplenteException(ContratoInadimplenteException ex) {
-        log.warn("Contrato inadimplente: {}", ex.getMessage());
-        
-        ApiResponseDto<Object> response = new ApiResponseDto<>(
-            HttpStatus.FORBIDDEN.value(),
-            false,
-            null,
-            ex.getMessage()
-        );
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-    }
-    
-    @ExceptionHandler(PeriodoNaoDisponivelException.class)
-    public ResponseEntity<ApiResponseDto<Object>> handlePeriodoNaoDisponivelException(PeriodoNaoDisponivelException ex) {
-        log.warn("Período não disponível: {}", ex.getMessage());
-        
-        ApiResponseDto<Object> response = new ApiResponseDto<>(
-            HttpStatus.CONFLICT.value(),
-            false,
-            null,
-            ex.getMessage()
-        );
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 }

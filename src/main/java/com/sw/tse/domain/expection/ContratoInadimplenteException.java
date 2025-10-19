@@ -7,7 +7,8 @@ import com.sw.tse.domain.model.dto.InadimplenciaDto.TipoInadimplencia;
 import lombok.Getter;
 
 @Getter
-public class ContratoInadimplenteException extends RuntimeException {
+public class ContratoInadimplenteException extends RegraDeNegocioException {
+    private static final long serialVersionUID = 1L;
     
     private final Long idContrato;
     private final String numeroContrato;

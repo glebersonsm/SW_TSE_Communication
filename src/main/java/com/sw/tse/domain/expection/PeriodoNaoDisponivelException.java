@@ -3,7 +3,8 @@ package com.sw.tse.domain.expection;
 import lombok.Getter;
 
 @Getter
-public class PeriodoNaoDisponivelException extends RuntimeException {
+public class PeriodoNaoDisponivelException extends RegraDeNegocioException {
+    private static final long serialVersionUID = 1L;
     
     private final Long idContrato;
     private final Long idPeriodoUtilizacao;

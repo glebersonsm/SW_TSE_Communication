@@ -2,7 +2,7 @@ package com.sw.tse.domain.service.interfaces;
 
 import java.util.List;
 
-import com.sw.tse.api.dto.HospedeReservaDto;
+import com.sw.tse.api.dto.HospedeDto;
 import com.sw.tse.domain.model.db.OperadorSistema;
 import com.sw.tse.domain.model.db.PeriodoModeloCota;
 import com.sw.tse.domain.model.db.TipoUtilizacaoContrato;
@@ -16,7 +16,7 @@ public interface UtilizacaoContratoService {
      * @param periodoModeloCota Período modelo cota
      * @param usuarioResponsavel Usuário responsável pela criação
      * @param tipoUtilizacaoContrato Tipo de utilização (deve ter sigla 'RESERVA')
-     * @param hospedes Lista de hóspedes (obrigatório ao menos 1)
+     * @param hospedes Lista de hóspedes completos (obrigatório ao menos 1)
      * @return UtilizacaoContrato criada
      * @throws HospedesObrigatoriosException se lista de hóspedes estiver vazia
      * @throws TipoUtilizacaoContratoInvalidoException se tipo não for RESERVA
@@ -28,6 +28,6 @@ public interface UtilizacaoContratoService {
             PeriodoModeloCota periodoModeloCota,
             OperadorSistema usuarioResponsavel,
             TipoUtilizacaoContrato tipoUtilizacaoContrato,
-            List<HospedeReservaDto> hospedes);
+            List<HospedeDto> hospedes);
 }
 

@@ -51,23 +51,14 @@ public class TipoPeriodoUtilizacao {
     @JoinColumn(name = "idtenant")
     private Empresa empresa;
 
-    @ManyToOne
-    @JoinColumn(name = "idrespcadastro")
-    private OperadorSistema responsavelCadastro;
-
-    @ManyToOne
-    @JoinColumn(name = "idrespalteracao")
-    private OperadorSistema responsavelAlteracao;
-
     // Método estático para criar novo tipo de período de utilização
     static TipoPeriodoUtilizacao novoTipoPeriodoUtilizacao(String descricao, Integer peso, 
-            Empresa empresa, OperadorSistema responsavelCadastro) {
+            Empresa empresa) {
         
         TipoPeriodoUtilizacao novoTipo = new TipoPeriodoUtilizacao();
         novoTipo.setDescricao(descricao);
         novoTipo.setPeso(peso);
         novoTipo.setEmpresa(empresa);
-        novoTipo.setResponsavelCadastro(responsavelCadastro);
         
         return novoTipo;
     }

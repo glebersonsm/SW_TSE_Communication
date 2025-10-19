@@ -6,21 +6,25 @@ import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
 @Converter(autoApply = true)
-public class ModeloUtilizacaoEnumConverter implements AttributeConverter<ModeloUtilizacaoEnum, Integer> {
+public class ModeloUtilizacaoEnumConverter implements AttributeConverter<ModeloUtilizacaoEnum, String> {
 
     @Override
-    public Integer convertToDatabaseColumn(ModeloUtilizacaoEnum attribute) {
+    public String convertToDatabaseColumn(ModeloUtilizacaoEnum attribute) {
         if (attribute == null) {
             return null;
         }
-        return attribute.getCodigo();
+        return attribute.name(); // Retorna "COTA" ou "PONTOS"
     }
 
     @Override
-    public ModeloUtilizacaoEnum convertToEntityAttribute(Integer dbData) {
-        if (dbData == null) {
+    public ModeloUtilizacaoEnum convertToEntityAttribute(String dbData) {
+        if (dbData == null || dbData.trim().isEmpty()) {
             return null;
         }
-        return ModeloUtilizacaoEnum.fromCodigo(dbData);
+        try {
+            return ModeloUtilizacaoEnum.valueOf(dbData.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Valor inválido para ModeloUtilizacaoEnum: " + dbData, e);
+        }
     }
 }

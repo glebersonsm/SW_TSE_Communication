@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.ContaFinanceiraClienteDto;
+import com.sw.tse.api.dto.ReservaSemanaResponse;
 import com.sw.tse.api.dto.ReservarSemanaRequest;
 import com.sw.tse.api.dto.SemanasDisponiveisRequest;
 import com.sw.tse.api.dto.SemanasDisponiveisResponse;
@@ -96,9 +97,9 @@ public class PainelClienteController {
     }
     
     @Operation(summary = "Reservar semana disponível", 
-               description = "Valida e cria uma reserva para um período de utilização disponível")
+               description = "Cria uma reserva completa para um período de utilização disponível")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Período validado com sucesso",
+            @ApiResponse(responseCode = "201", description = "Reserva criada com sucesso",
                     content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
             @ApiResponse(responseCode = "400", description = "Dados inválidos", content = @Content),
             @ApiResponse(responseCode = "403", description = "Contrato bloqueado ou inadimplente", content = @Content),
@@ -106,7 +107,7 @@ public class PainelClienteController {
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor", content = @Content)
     })
     @PostMapping("/reservar")
-    public ResponseEntity<ApiResponseDto<String>> reservarSemana(
+    public ResponseEntity<ApiResponseDto<ReservaSemanaResponse>> reservarSemana(
             @Valid @RequestBody ReservarSemanaRequest request) {
 
         Long idPessoaCliente = JwtTokenUtil.getIdPessoaCliente();
@@ -116,20 +117,16 @@ public class PainelClienteController {
         }
         
         // Delega toda a lógica de negócio para o service
-        reservarSemanaService.validarReserva(
-            request.getIdContrato(), 
-            request.getIdPeriodoUtilizacao(),
-            idPessoaCliente
-        );
+        ReservaSemanaResponse reserva = reservarSemanaService.criarReserva(request, idPessoaCliente);
 
-        ApiResponseDto<String> responseApi = new ApiResponseDto<>(
-                HttpStatus.OK.value(),
+        ApiResponseDto<ReservaSemanaResponse> responseApi = new ApiResponseDto<>(
+                HttpStatus.CREATED.value(),
                 true,
-                "VALIDADO",
-                "Período validado com sucesso e disponível para reserva"
+                reserva,
+                "Reserva criada com sucesso"
         );
 
-        return ResponseEntity.ok(responseApi);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseApi);
     }
 
     // ==================== ENDPOINTS DE CONTRATOS ====================

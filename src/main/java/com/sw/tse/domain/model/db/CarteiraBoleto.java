@@ -19,8 +19,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import com.sw.tse.domain.model.db.Empresa;
-
 @Entity
 @Table(name = "carteiraboleto")
 @Setter(value = AccessLevel.PRIVATE)

@@ -11,7 +11,12 @@ import org.springframework.util.StringUtils;
 import com.sw.tse.api.dto.HospedeDto;
 import com.sw.tse.core.config.CadastroPessoaPropertiesCustom;
 import com.sw.tse.core.util.StringUtil;
+import com.sw.tse.domain.expection.BrasilApiException;
+import com.sw.tse.domain.expection.CepInvalidoException;
+import com.sw.tse.domain.expection.CepObrigatorioException;
 import com.sw.tse.domain.expection.LoginInvalidoTseException;
+import com.sw.tse.domain.expection.SexoInvalidoException;
+import com.sw.tse.domain.expection.SexoObrigatorioException;
 import com.sw.tse.domain.expection.ValorPadraoNaoConfiguradoException;
 import com.sw.tse.domain.model.api.enums.SexoEnum;
 import com.sw.tse.domain.model.api.enums.TipoPessoaEnum;
@@ -34,7 +39,9 @@ import com.sw.tse.domain.service.interfaces.TipoEnderecoService;
 import com.sw.tse.domain.service.interfaces.TipoLogradouroService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class PessoaConverter {
@@ -62,10 +69,15 @@ public class PessoaConverter {
         	documento = StringUtils.hasText(hospedeDto.numeroDocumento()) ? StringUtil.removeMascaraCpf(hospedeDto.numeroDocumento()) : "";
         }
         SexoEnum sexo;
-        if(hospedeDto.sexo().equals("M")) {
+        if (hospedeDto.sexo() == null || hospedeDto.sexo().isBlank()) {
+            throw new SexoObrigatorioException();
+        }
+        if ("M".equalsIgnoreCase(hospedeDto.sexo())) {
         	sexo = SexoEnum.MASCULINO;
-        } else {
+        } else if ("F".equalsIgnoreCase(hospedeDto.sexo())) {
         	sexo = SexoEnum.FEMININO;
+        } else {
+            throw new SexoInvalidoException(hospedeDto.sexo());
         }
 
         List<EnderecoPessoaApiRequest> enderecos = construirListaEnderecos(hospedeDto);
@@ -101,11 +113,35 @@ public class PessoaConverter {
             return Collections.emptyList();
         }
         
+        // Validar CEP obrigatório para principal
+        boolean isPrincipal = "S".equalsIgnoreCase(dto.principal());
+        if (isPrincipal && !StringUtils.hasText(dto.cep())) {
+            throw new CepObrigatorioException("CEP é obrigatório para o hóspede principal");
+        }
+        
+        // Se não tem CEP e não é principal, pode pular
+        if (!StringUtils.hasText(dto.cep())) {
+            log.info("CEP não informado para hóspede não principal, pulando validação de endereço");
+            return Collections.emptyList();
+        }
+        
         TipoEnderecoApiResponse tipoEnderecoPadrao = validarTipoEnderecoPadrao();
         TipoLogradouroApiResponse tipoLogradouroPadrao = validarTipoLogradouroPadrao();
         
         String cep = StringUtil.removerMascaraCep(dto.cep());
-        CidadeApiResponse cidadeDto = cidadeService.buscarPorCep(cep);
+        
+        // Validar formato do CEP
+        validarFormatoCep(cep, isPrincipal);
+        
+        // Tentar buscar CEP - se falhar, ABORTAR o processo
+        CidadeApiResponse cidadeDto;
+        try {
+            cidadeDto = cidadeService.buscarPorCep(cep);
+        } catch (BrasilApiException e) {
+            log.error("Brasil API falhou ao validar CEP {}: {}. Abortando processo.", cep, e.getMessage());
+            // SEMPRE abortar se Brasil API falhar (não permite CEP inválido)
+            throw new CepInvalidoException("CEP informado não pôde ser validado: " + e.getMessage());
+        }
 
         EnderecoPessoaApiRequest endereco = new EnderecoPessoaApiRequest(
         		tipoEnderecoPadrao.id(), // ID ENDERECO
@@ -171,6 +207,15 @@ public class PessoaConverter {
         return null;
     }
 
+    private void validarFormatoCep(String cep, boolean isPrincipal) {
+        if (!cep.matches("\\d{8}")) {
+            String mensagem = isPrincipal 
+                ? "CEP do hóspede principal deve conter apenas números e ter 8 dígitos"
+                : "CEP informado deve conter apenas números e ter 8 dígitos";
+            throw new CepInvalidoException(mensagem);
+        }
+    }
+    
     private Integer tryParseInt(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -218,17 +263,34 @@ public class PessoaConverter {
 		if(pessoa.getIdPessoa() == null) {
 			pessoa = novaPessoa(hospedeDto, pessoa, responsavelCadastro);
 		}
-		String cep = StringUtil.removerMascaraCep(hospedeDto.cep());
-        CidadeApiResponse cidadeDto = cidadeService.buscarPorCep(cep);
-        Cidade cidade = cidadeConverter.toEntity(cidadeDto);
-	
-        TipoEnderecoPessoa tipoEndereco = tipoEnderecoConverter.toEntity(validarTipoEnderecoPadrao());
-        TipoLogradouro tipoLogradouro = tipoLogradouroConverter.toEntity(validarTipoLogradouroPadrao());
-        
-       
-        if (!verificarSeEnderecoExiste(pessoa, cep)) {
-			pessoa.adicionarEndereco("Endereço padrão", hospedeDto.logradouro(), hospedeDto.numero(), hospedeDto.complemento(), hospedeDto.bairro(), hospedeDto.cep(),
-					cidade, true, tipoEndereco, tipoLogradouro, responsavelCadastro);
+		
+		// Validar CEP antes de processar endereço
+		if (StringUtils.hasText(hospedeDto.logradouro()) && StringUtils.hasText(hospedeDto.cep())) {
+			String cep = StringUtil.removerMascaraCep(hospedeDto.cep());
+			
+			// Validar formato
+			if (!cep.matches("\\d{8}")) {
+				throw new CepInvalidoException("CEP deve conter apenas números e ter 8 dígitos");
+			}
+			
+			// Tentar buscar CEP - se falhar, ABORTAR o processo
+			CidadeApiResponse cidadeDto;
+			try {
+				cidadeDto = cidadeService.buscarPorCep(cep);
+			} catch (BrasilApiException e) {
+				log.error("Brasil API falhou ao validar CEP {}: {}. Abortando processo.", cep, e.getMessage());
+				// SEMPRE abortar se Brasil API falhar (não permite CEP inválido)
+				throw new CepInvalidoException("CEP informado não pôde ser validado: " + e.getMessage());
+			}
+			Cidade cidade = cidadeConverter.toEntity(cidadeDto);
+		
+			TipoEnderecoPessoa tipoEndereco = tipoEnderecoConverter.toEntity(validarTipoEnderecoPadrao());
+			TipoLogradouro tipoLogradouro = tipoLogradouroConverter.toEntity(validarTipoLogradouroPadrao());
+			
+			if (!verificarSeEnderecoExiste(pessoa, cep)) {
+				pessoa.adicionarEndereco("Endereço padrão", hospedeDto.logradouro(), hospedeDto.numero(), hospedeDto.complemento(), hospedeDto.bairro(), hospedeDto.cep(),
+						cidade, true, tipoEndereco, tipoLogradouro, responsavelCadastro);
+			}
 		}
 		
         if(!verificarSeTelefoneExiste(pessoa, hospedeDto.ddd(), hospedeDto.telefone())){
@@ -252,7 +314,9 @@ public class PessoaConverter {
 			pessoa.setNumeroDocumento(hospedeDto.numeroDocumento());
 		}
 		pessoa.setDataNascimento(hospedeDto.dataNascimento());
-		SexoEnum sexo = hospedeDto.sexo().equals("M") ? SexoEnum.MASCULINO : SexoEnum.FEMININO;
+		SexoEnum sexo = (hospedeDto.sexo() != null && "M".equalsIgnoreCase(hospedeDto.sexo())) 
+		    ? SexoEnum.MASCULINO 
+		    : SexoEnum.FEMININO;
 		pessoa.setSexo(sexo);
 		pessoa.setOperadorCadastro(responsavelCadastro);
 		

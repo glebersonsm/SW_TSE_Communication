@@ -74,7 +74,11 @@ public class PessoaApiServiceImpl implements PessoaService {
 			if(e.status() == 400) {
 				return Optional.empty();
 			}
-			throw new ApiTseException(e.contentUTF8());
+			String errorContent = e.contentUTF8();
+			String errorMessage = (errorContent != null && !errorContent.trim().isEmpty()) 
+				? errorContent 
+				: "Erro ao buscar pessoa por CPF (HTTP " + e.status() + ")";
+			throw new ApiTseException(errorMessage);
 			
 		}
 	}

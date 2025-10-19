@@ -13,6 +13,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -28,7 +29,8 @@ public class UtilizacaoContratoHospede {
 
     // ========== IDENTIFICAÇÃO ==========
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "sequtilizacaocontratotshospede")
+    @SequenceGenerator(name = "sequtilizacaocontratotshospede", sequenceName = "sequtilizacaocontratotshospede", allocationSize = 1)
     @Column(name = "idutilizacaocontratotshospede")
     private Long id;
 
@@ -127,6 +129,13 @@ public class UtilizacaoContratoHospede {
      */
     void setUtilizacaoContrato(UtilizacaoContrato utilizacaoContrato) {
         this.utilizacaoContrato = utilizacaoContrato;
+    }
+    
+    /**
+     * Define a pessoa do hóspede
+     */
+    public void setPessoa(Pessoa pessoa) {
+        this.pessoa = pessoa;
     }
 
     /**

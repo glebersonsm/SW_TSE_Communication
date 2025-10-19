@@ -1,5 +1,7 @@
 package com.sw.tse.domain.service.interfaces;
 
+import com.sw.tse.api.dto.ReservaSemanaResponse;
+import com.sw.tse.api.dto.ReservarSemanaRequest;
 import com.sw.tse.domain.expection.ContratoBloqueadoPorTagException;
 import com.sw.tse.domain.expection.ContratoInadimplenteException;
 import com.sw.tse.domain.expection.ContratoIntegralizacaoInsuficienteException;
@@ -13,7 +15,6 @@ public interface ReservarSemanaService {
     
     /**
      * Valida se uma reserva pode ser criada
-     * (por enquanto só valida, não cria a reserva)
      * 
      * @param idContrato ID do contrato
      * @param idPeriodoUtilizacao ID do período a reservar
@@ -25,5 +26,14 @@ public interface ReservarSemanaService {
      * @throws PeriodoNaoDisponivelException se período não disponível
      */
     void validarReserva(Long idContrato, Long idPeriodoUtilizacao, Long idPessoaCliente);
+    
+    /**
+     * Cria uma reserva completa (PeriodoModeloCota + UtilizacaoContrato)
+     * 
+     * @param request Dados da reserva
+     * @param idPessoaCliente ID do cliente autenticado
+     * @return Dados da reserva criada
+     */
+    ReservaSemanaResponse criarReserva(ReservarSemanaRequest request, Long idPessoaCliente);
 }
 

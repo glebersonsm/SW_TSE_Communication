@@ -6,12 +6,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
-import com.sw.tse.client.RelatorioCustomizadoApiClient;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.model.api.request.FiltroRelatorioCustomizadoApiRequest;
 import com.sw.tse.domain.model.api.response.TipoDocumentoPessoaApiResponse;
 import com.sw.tse.domain.service.interfaces.TipoDocumentoPessoaService;
-import com.sw.tse.domain.service.interfaces.TokenTseService;
 
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;

@@ -5,7 +5,8 @@ import java.math.BigDecimal;
 import lombok.Getter;
 
 @Getter
-public class ContratoIntegralizacaoInsuficienteException extends RuntimeException {
+public class ContratoIntegralizacaoInsuficienteException extends RegraDeNegocioException {
+    private static final long serialVersionUID = 1L;
     
     private final Long idContrato;
     private final String numeroContrato;

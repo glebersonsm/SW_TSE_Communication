@@ -103,21 +103,21 @@ public class EnderecoPessoa {
 	    @JoinColumn(name = "idrespalteracao")
 	    private OperadorSistema responsavelAlteracao;
 	    
-	    static EnderecoPessoa novoEndereco(String descricaoEndereco, String logradouro, String numero, String complemento, String Bairro, String cep, Cidade cidade,
-	    		boolean correspondencia, TipoEnderecoPessoa tipoEndereco, TipoLogradouro tipoLogradouro, OperadorSistema respCadastro, Pessoa pessoa) {
-	    	EnderecoPessoa enderecoPessoa = new EnderecoPessoa();
-	    	enderecoPessoa.setDescricaoEndereco(descricaoEndereco.toUpperCase());
-	    	enderecoPessoa.setLogradouro(logradouro.toUpperCase());
-	    	enderecoPessoa.setNumero(numero.toUpperCase());
-	    	enderecoPessoa.setComplemento(complemento.toUpperCase());
-	    	enderecoPessoa.setBairro(Bairro.toUpperCase());
-	    	enderecoPessoa.setCep(cep.toUpperCase());
-	    	enderecoPessoa.setCidade(cidade);
-	    	enderecoPessoa.setParaCorrespondencia(correspondencia);
-	    	enderecoPessoa.setTipoEndereco(tipoEndereco);
-	    	enderecoPessoa.setTipoLogradouro(tipoLogradouro);
-	    	enderecoPessoa.setResponsavelCadastro(respCadastro);
-	    	enderecoPessoa.setPessoa(pessoa);    
-	    	return enderecoPessoa;
-	    }
+    static EnderecoPessoa novoEndereco(String descricaoEndereco, String logradouro, String numero, String complemento, String Bairro, String cep, Cidade cidade,
+    		boolean correspondencia, TipoEnderecoPessoa tipoEndereco, TipoLogradouro tipoLogradouro, OperadorSistema respCadastro, Pessoa pessoa) {
+    	EnderecoPessoa enderecoPessoa = new EnderecoPessoa();
+    	enderecoPessoa.setDescricaoEndereco(descricaoEndereco != null ? descricaoEndereco.toUpperCase() : null);
+    	enderecoPessoa.setLogradouro(logradouro != null ? logradouro.toUpperCase() : null);
+    	enderecoPessoa.setNumero(numero != null ? numero.toUpperCase() : null);
+    	enderecoPessoa.setComplemento(complemento != null ? complemento.toUpperCase() : null);
+    	enderecoPessoa.setBairro(Bairro != null ? Bairro.toUpperCase() : null);
+    	enderecoPessoa.setCep(cep != null ? cep.toUpperCase() : null);
+    	enderecoPessoa.setCidade(cidade);
+    	enderecoPessoa.setParaCorrespondencia(correspondencia);
+    	enderecoPessoa.setTipoEndereco(tipoEndereco);
+    	enderecoPessoa.setTipoLogradouro(tipoLogradouro);
+    	enderecoPessoa.setResponsavelCadastro(respCadastro);
+    	enderecoPessoa.setPessoa(pessoa);    
+    	return enderecoPessoa;
+    }
 }

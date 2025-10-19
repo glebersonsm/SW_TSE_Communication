@@ -107,7 +107,7 @@ public class PeriodoModeloCota {
     private String idIntegracao;
 
     // Método estático para criar novo período modelo cota
-    static PeriodoModeloCota novoPeriodoModeloCota(Contrato contrato, 
+    public static PeriodoModeloCota novoPeriodoModeloCota(Contrato contrato, 
             PeriodoUtilizacao periodoUtilizacao, OperadorSistema responsavelCadastro) {
         
         PeriodoModeloCota novoPeriodoModelo = new PeriodoModeloCota();

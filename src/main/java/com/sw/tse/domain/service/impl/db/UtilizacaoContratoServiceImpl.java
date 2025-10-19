@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.sw.tse.api.dto.HospedeReservaDto;
+import com.sw.tse.api.dto.HospedeDto;
 import com.sw.tse.domain.expection.HospedesObrigatoriosException;
 import com.sw.tse.domain.expection.PessoaNotFoundException;
 import com.sw.tse.domain.expection.TipoHospedeNotFoundException;
@@ -23,6 +23,7 @@ import com.sw.tse.domain.repository.PessoaRepository;
 import com.sw.tse.domain.repository.TipoHospedeRepository;
 import com.sw.tse.domain.repository.UtilizacaoContratoRepository;
 import com.sw.tse.domain.service.interfaces.FaixaEtariaService;
+import com.sw.tse.domain.service.interfaces.PessoaService;
 import com.sw.tse.domain.service.interfaces.UtilizacaoContratoService;
 
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class UtilizacaoContratoServiceImpl implements UtilizacaoContratoService 
     
     private final FaixaEtariaService faixaEtariaService;
     private final PessoaRepository pessoaRepository;
+    private final PessoaService pessoaService;
     private final TipoHospedeRepository tipoHospedeRepository;
     private final UtilizacaoContratoRepository utilizacaoContratoRepository;
     
@@ -47,7 +49,7 @@ public class UtilizacaoContratoServiceImpl implements UtilizacaoContratoService 
             PeriodoModeloCota periodoModeloCota,
             OperadorSistema usuarioResponsavel,
             TipoUtilizacaoContrato tipoUtilizacaoContrato,
-            List<HospedeReservaDto> hospedes) {
+            List<HospedeDto> hospedes) {
         
         log.info("Iniciando criação de utilização de contrato do tipo RESERVA");
         
@@ -67,15 +69,19 @@ public class UtilizacaoContratoServiceImpl implements UtilizacaoContratoService 
         
         // Processar cada hóspede
         for (int i = 0; i < hospedes.size(); i++) {
-            HospedeReservaDto hospedeDto = hospedes.get(i);
+            HospedeDto hospedeDto = hospedes.get(i);
             
-            // Buscar Pessoa
-            Pessoa pessoa = pessoaRepository.findById(hospedeDto.idPessoa())
-                .orElseThrow(() -> new PessoaNotFoundException(hospedeDto.idPessoa()));
+            // Salvar/atualizar pessoa usando service existente
+            Long idPessoa = pessoaService.salvar(hospedeDto);
+            
+            // Buscar Pessoa salva
+            Pessoa pessoa = pessoaRepository.findById(idPessoa)
+                .orElseThrow(() -> new PessoaNotFoundException(idPessoa));
             
             // Buscar TipoHospede
-            TipoHospede tipoHospede = tipoHospedeRepository.findById(hospedeDto.idTipoHospede())
-                .orElseThrow(() -> new TipoHospedeNotFoundException(hospedeDto.idTipoHospede()));
+            Long idTipoHospede = Long.parseLong(hospedeDto.tipoHospede());
+            TipoHospede tipoHospede = tipoHospedeRepository.findById(idTipoHospede)
+                .orElseThrow(() -> new TipoHospedeNotFoundException(idTipoHospede));
             
             // Separar nome completo
             String nomeCompleto = pessoa.getNome();
@@ -132,7 +138,7 @@ public class UtilizacaoContratoServiceImpl implements UtilizacaoContratoService 
         return utilizacaoSalva;
     }
     
-    private void validarParametros(List<HospedeReservaDto> hospedes, TipoUtilizacaoContrato tipoUtilizacaoContrato) {
+    private void validarParametros(List<HospedeDto> hospedes, TipoUtilizacaoContrato tipoUtilizacaoContrato) {
         // Validar lista de hóspedes
         if (hospedes == null || hospedes.isEmpty()) {
             throw new HospedesObrigatoriosException();

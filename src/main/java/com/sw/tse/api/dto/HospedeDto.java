@@ -6,13 +6,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 
 public record HospedeDto (	
-	@NotNull
 	@JsonProperty("id") Long id,
 	@JsonProperty("idHospede") Long idHospede,
 	@JsonProperty("idTipoHospede") String tipoHospede,
 	@JsonProperty("clienteId") Long clienteId,
+	@NotNull(message = "Campo 'principal' é obrigatório")
+	@Pattern(regexp = "S|N", message = "Campo 'principal' deve ser 'S' ou 'N'")
 	@JsonProperty("principal") String principal,
 	@NotNull
 	@JsonProperty("nome") String nome,
@@ -28,6 +30,7 @@ public record HospedeDto (
 	@JsonProperty("ddi") String ddi,
 	@JsonProperty("ddd") String ddd,
 	@JsonProperty("telefone") String telefone,
+	@NotNull(message = "Sexo é obrigatório")
 	@JsonProperty("sexo") String sexo,
 	@JsonProperty("codigoIbge") String codigoIbge,
 	
@@ -37,9 +40,7 @@ public record HospedeDto (
 	@JsonProperty("complemento") String complemento,
 	
 	@JsonProperty("cep") String cep,
-	@NotNull
 	@JsonProperty("checkIn") LocalDate dataCheckin,
-	@NotNull
 	@JsonProperty("checkOut") LocalDate dataCheckOut
 	
 ) {}
