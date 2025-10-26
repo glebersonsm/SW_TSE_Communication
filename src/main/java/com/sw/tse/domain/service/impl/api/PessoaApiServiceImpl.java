@@ -11,6 +11,7 @@ import com.sw.tse.domain.converter.PessoaConverter;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.model.api.request.PessoaApiRequest;
 import com.sw.tse.domain.model.api.response.PessoaCpfApiResponse;
+import com.sw.tse.domain.model.db.Contrato;
 import com.sw.tse.domain.service.interfaces.PessoaService;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
 
@@ -29,7 +30,7 @@ public class PessoaApiServiceImpl implements PessoaService {
 	private final PessoaConverter pessoaConverter;
 	
 	@Override	
-	public Long salvar(HospedeDto hospedeDto) {
+	public Long salvar(HospedeDto hospedeDto, Contrato contrato) {
 		
 		PessoaApiRequest request = pessoaConverter.toPessoaApiHospedeDto(hospedeDto);
 		Long idPessoa = hospedeDto.idHospede() == null ? 0 : hospedeDto.idHospede();
@@ -42,7 +43,20 @@ public class PessoaApiServiceImpl implements PessoaService {
 			if(request.cpfCnpj() != null) {
 				 Optional<PessoaCpfApiResponse> optionalPessoaCpf = buscarPorCpf(request.cpfCnpj());
 				 if(optionalPessoaCpf.isPresent()) {
-					 return optionalPessoaCpf.get().idPessoa();
+					 // VALIDAR SE É PROPRIETÁRIO - SE FOR, NÃO ATUALIZAR DADOS
+					 Long pessoaId = optionalPessoaCpf.get().idPessoa();
+					 if (contrato != null && pessoaId != null) {
+						 // Verificar se é cessionário ou cocessionário
+						 if ((contrato.getPessoaCessionario() != null && 
+							  pessoaId.equals(contrato.getPessoaCessionario().getIdPessoa())) ||
+							 (contrato.getPessaoCocessionario() != null && 
+							  pessoaId.equals(contrato.getPessaoCocessionario().getIdPessoa()))) {
+							 log.info("Pessoa {} é proprietário do contrato {} - dados não serão atualizados por segurança", 
+								 pessoaId, contrato.getId());
+							 return pessoaId;
+						 }
+					 }
+					 return pessoaId;
 				 }
 			}
 		

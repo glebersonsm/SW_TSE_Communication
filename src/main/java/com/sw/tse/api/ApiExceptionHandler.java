@@ -29,6 +29,8 @@ import com.sw.tse.domain.expection.LoginInvalidoTseException;
 import com.sw.tse.domain.expection.PessoaSemContratoTseException;
 import com.sw.tse.domain.expection.RecursoNaoEncontradoException;
 import com.sw.tse.domain.expection.RegraDeNegocioException;
+import com.sw.tse.domain.expection.ReservaCanceladaNaoEditavelException;
+import com.sw.tse.domain.expection.ReservaCheckinPassadoException;
 import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -284,5 +286,31 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             ex.getMessage()
         );
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+    
+    @ExceptionHandler(ReservaCanceladaNaoEditavelException.class)
+    public ResponseEntity<ApiResponseDto<Object>> handleReservaCanceladaNaoEditavel(ReservaCanceladaNaoEditavelException ex) {
+        log.warn("Tentativa de editar reserva cancelada: {}", ex.getMessage());
+        
+        ApiResponseDto<Object> response = new ApiResponseDto<>(
+            HttpStatus.BAD_REQUEST.value(),
+            false,
+            null,
+            ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+    
+    @ExceptionHandler(ReservaCheckinPassadoException.class)
+    public ResponseEntity<ApiResponseDto<Object>> handleReservaCheckinPassado(ReservaCheckinPassadoException ex) {
+        log.warn("Tentativa de editar reserva com check-in já passado: {}", ex.getMessage());
+        
+        ApiResponseDto<Object> response = new ApiResponseDto<>(
+            HttpStatus.BAD_REQUEST.value(),
+            false,
+            null,
+            ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 }

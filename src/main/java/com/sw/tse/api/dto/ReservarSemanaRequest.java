@@ -10,6 +10,10 @@ import lombok.Data;
 @Data
 public class ReservarSemanaRequest {
     
+    // Para edição: informar o ID da utilização existente
+    // Para criação: deixar null ou zero
+    private Long idUtilizacaoContrato;
+    
     @NotNull(message = "ID do contrato é obrigatório")
     private Long idContrato;
     
@@ -22,6 +26,7 @@ public class ReservarSemanaRequest {
     
     // Para RESERVA: obrigatório (HospedeDto com dados completos)
     // Para RCI: null ou vazio (hóspedes virão depois da RCI)
+    // Para edição: idHospede preenchido = atualizar, null = criar novo
     @Valid
     private List<HospedeDto> hospedes;
 }

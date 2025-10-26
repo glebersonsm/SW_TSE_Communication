@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.ContaFinanceiraClienteDto;
+import com.sw.tse.api.dto.ReservaResumoResponse;
 import com.sw.tse.api.dto.ReservaSemanaResponse;
 import com.sw.tse.api.dto.ReservarSemanaRequest;
 import com.sw.tse.api.dto.SemanasDisponiveisRequest;
@@ -120,17 +121,83 @@ public class PainelClienteController {
             throw new TokenJwtInvalidoException("ID da pessoa cliente não está disponível no token de autenticação");
         }
         
+        // Verificar se é criação ou edição
+        boolean isEdicao = request.getIdUtilizacaoContrato() != null && request.getIdUtilizacaoContrato() > 0;
+        
         // Delega toda a lógica de negócio para o service
         ReservaSemanaResponse reserva = reservarSemanaService.criarReserva(request, idPessoaCliente);
 
+        // Definir status e mensagem com base na operação
+        HttpStatus status = isEdicao ? HttpStatus.OK : HttpStatus.CREATED;
+        String mensagem = isEdicao ? "Reserva editada com sucesso" : "Reserva criada com sucesso";
+
         ApiResponseDto<ReservaSemanaResponse> responseApi = new ApiResponseDto<>(
-                HttpStatus.CREATED.value(),
+                status.value(),
                 true,
                 reserva,
-                "Reserva criada com sucesso"
+                mensagem
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(responseApi);
+        return ResponseEntity.status(status).body(responseApi);
+    }
+    
+    @Operation(summary = "Buscar utilização de contrato", 
+               description = "Busca os dados de uma utilização de contrato existente (RESERVA, RCI ou POOL)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Utilização encontrada com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Utilização não encontrada"),
+            @ApiResponse(responseCode = "403", description = "Contrato não pertence ao cliente")
+    })
+    @GetMapping("/reservar/{idUtilizacaoContrato}")
+    public ResponseEntity<ApiResponseDto<ReservaSemanaResponse>> buscarUtilizacao(
+            @Parameter(description = "ID da utilização de contrato a ser buscada", required = true)
+            @PathVariable Long idUtilizacaoContrato) {
+        
+        Long idPessoaCliente = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (idPessoaCliente == null) {
+            throw new TokenJwtInvalidoException("ID da pessoa cliente não está disponível no token de autenticação");
+        }
+        
+        ReservaSemanaResponse utilizacao = reservarSemanaService.buscarUtilizacao(idUtilizacaoContrato, idPessoaCliente);
+        
+        ApiResponseDto<ReservaSemanaResponse> responseApi = new ApiResponseDto<>(
+                HttpStatus.OK.value(),
+                true,
+                utilizacao,
+                "Utilização encontrada com sucesso"
+        );
+        
+        return ResponseEntity.ok(responseApi);
+    }
+    
+    @Operation(summary = "Listar reservas por ano", 
+               description = "Lista todas as utilizações (RESERVA, RCI, POOL) não canceladas de um ano específico")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de reservas retornada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Cliente não autenticado")
+    })
+    @GetMapping("/reservas/{ano}")
+    public ResponseEntity<ApiResponseDto<List<ReservaResumoResponse>>> listarReservasPorAno(
+            @Parameter(description = "Ano das reservas (ex: 2024)", required = true)
+            @PathVariable int ano) {
+        
+        Long idPessoaCliente = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (idPessoaCliente == null) {
+            throw new TokenJwtInvalidoException("ID da pessoa cliente não está disponível no token de autenticação");
+        }
+        
+        List<ReservaResumoResponse> reservas = reservarSemanaService.listarReservasPorAno(ano, idPessoaCliente);
+        
+        ApiResponseDto<List<ReservaResumoResponse>> responseApi = new ApiResponseDto<>(
+                HttpStatus.OK.value(),
+                true,
+                reservas,
+                String.format("Encontradas %d reservas para o ano %d", reservas.size(), ano)
+        );
+        
+        return ResponseEntity.ok(responseApi);
     }
 
     // ==================== ENDPOINTS DE CONTRATOS ====================

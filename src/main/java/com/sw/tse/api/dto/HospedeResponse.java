@@ -13,5 +13,10 @@ public class HospedeResponse {
     private String cpf;
     private Boolean isPrincipal;
     private String faixaEtaria;
+    
+    // Campos adicionais para hóspede principal
+    private EnderecoResponse endereco;
+    private String email;
+    private TelefoneResponse telefone;
 }
 
