@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.LoginClienteDto;
 import com.sw.tse.domain.model.api.response.LoginResponse;
-import com.sw.tse.domain.model.api.response.OperadorCriadoComEmailResponse;
+import com.sw.tse.domain.model.api.response.LoginUnificadoResponse;
 import com.sw.tse.domain.service.interfaces.LoginService;
 
 import lombok.RequiredArgsConstructor;
@@ -23,25 +23,18 @@ public class LoginController {
 	private final LoginService loginService;
 	
 	@PostMapping("/logar")
-	public ResponseEntity<ApiResponseDto<Object>> logar(@RequestBody LoginClienteDto loginRequest){
+	public ResponseEntity<ApiResponseDto<LoginUnificadoResponse>> logar(@RequestBody LoginClienteDto loginRequest){
 		
 		LoginResponse loginResponse = loginService.logarOperadorCliente(loginRequest.login(), loginRequest.password());
 		
-		Object responseData;
-		String message;
+		// Converte para resposta unificada
+		LoginUnificadoResponse responseData = loginResponse.toLoginUnificado();
 		
-		if(loginResponse.isNovoOperadorCriado()) {
-			responseData = OperadorCriadoComEmailResponse.fromOperadorResponse(
-				loginResponse.getOperadorResponse(), 
-				loginResponse.getEmailUsuario()
-			);
-			message = "Operador criado com sucesso";
-		} else {
-			responseData = loginResponse.getTokenResponse();
-			message = "Login realizado com sucesso";
-		}
+		String message = loginResponse.isNovoOperadorCriado() 
+			? "Operador criado com sucesso. Senha enviada para o email cadastrado." 
+			: "Login realizado com sucesso";
 		
-        ApiResponseDto<Object> responseApi = new ApiResponseDto<>(
+        ApiResponseDto<LoginUnificadoResponse> responseApi = new ApiResponseDto<>(
             HttpStatus.OK.value(),
             true,
             responseData,

@@ -28,4 +28,6 @@ public interface PessoaService {
 	}
 	
 	Optional<PessoaCpfApiResponse> buscarPorCpf(String cpf);
+	
+	Optional<PessoaCpfApiResponse> buscarPorId(Long idPessoa);
 }

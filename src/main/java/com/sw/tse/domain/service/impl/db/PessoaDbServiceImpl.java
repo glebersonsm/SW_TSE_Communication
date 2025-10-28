@@ -105,6 +105,17 @@ public class PessoaDbServiceImpl implements PessoaService {
 		
 		return  Optional.of(pessoaConverter.toPessoaCpfApiResponse(pessoa));
 	}
+
+	@Override
+	public Optional<PessoaCpfApiResponse> buscarPorId(Long idPessoa) {
+		Pessoa pessoa = pessoaRepository.findById(idPessoa).orElse(null);
+		
+		if(pessoa == null) {
+			return Optional.empty();
+		}
+		
+		return Optional.of(pessoaConverter.toPessoaCpfApiResponse(pessoa));
+	}
 	
 	
 	

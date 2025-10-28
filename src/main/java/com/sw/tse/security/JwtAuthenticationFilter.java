@@ -27,9 +27,11 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter{
 
     private final JwtService jwtService;
@@ -71,10 +73,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter{
 
                 UserDetails userDetails = new User(username, "", authorities);
 
+                // Ler claims como String e converter para Long (compatível com .NET)
+                String idUsuarioClienteStr = claims.get(CLAIM_ID_USUARIO_CLIENTE, String.class);
+                Long idUsuarioCliente = idUsuarioClienteStr != null ? Long.parseLong(idUsuarioClienteStr) : null;
 
-                Long idUsuarioCliente = claims.get(CLAIM_ID_USUARIO_CLIENTE, Long.class);
                 String tokenUsuarioCliente = claims.get(CLAIM_TOKEN_USUARIO_CLIENTE, String.class);
-                Long idPessoaCliente = claims.get(CLAIM_ID_PESSOA_CLIENTE, Long.class);
+
+                String idPessoaClienteStr = claims.get(CLAIM_ID_PESSOA_CLIENTE, String.class);
+                Long idPessoaCliente = idPessoaClienteStr != null ? Long.parseLong(idPessoaClienteStr) : null;
 
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
@@ -89,6 +95,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter{
                 filterChain.doFilter(request, response);
             }
         } catch (JwtException e) {
+            log.error("Erro ao validar JWT. Tipo: {}, Mensagem: {}", 
+                e.getClass().getSimpleName(), e.getMessage(), e);
             BadCredentialsException authException = new BadCredentialsException(traduzirJwtException(e), e);
             this.authenticationEntryPoint.commence(request, response, authException);
         }

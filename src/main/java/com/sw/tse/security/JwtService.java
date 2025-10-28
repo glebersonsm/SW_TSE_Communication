@@ -20,8 +20,10 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class JwtService {
 
     @Value("${jwt.secret.key}")
@@ -65,14 +67,27 @@ public class JwtService {
     }
     
     public Claims validarToken(String token) throws JwtException {
-        SecretKey key = getSignInKey();
-        return Jwts.parser()
-                .requireIssuer(issuer)
-                .requireAudience(audience)
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        log.debug("Validando token JWT. Issuer esperado: {}, Audience esperada: {}", issuer, audience);
+        log.debug("Secret key length: {}", secreteKey.length());
+        
+        try {
+            SecretKey key = getSignInKey();
+            Claims claims = Jwts.parser()
+                    .requireIssuer(issuer)
+                    .requireAudience(audience)
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            
+            log.info("Token validado com sucesso. Issuer: {}, Audience: {}", 
+                claims.getIssuer(), claims.getAudience());
+            return claims;
+        } catch (JwtException e) {
+            log.error("Falha na validação do token. Tipo: {}, Mensagem: {}", 
+                e.getClass().getSimpleName(), e.getMessage());
+            throw e;
+        }
     }
     
     private String gerarToken(Map<String, Object> claims, String subject) {

@@ -97,5 +97,36 @@ public class PessoaApiServiceImpl implements PessoaService {
 		}
 	}
 
+	@Override
+	public Optional<PessoaCpfApiResponse> buscarPorId(Long idPessoa) {
+		String bearerToken = "Bearer " + tokenTseService.gerarToken();
+		try {
+			PessoaApiRequest pessoaRequest = pessoaApiClient.buscarPorId(idPessoa, bearerToken);
+			
+			// Extrair email principal
+			String email = null;
+			if (pessoaRequest.enderecosEmail() != null && !pessoaRequest.enderecosEmail().isEmpty()) {
+				email = pessoaRequest.enderecosEmail().get(0).email();
+			}
+			
+			// Converter PessoaApiRequest para PessoaCpfApiResponse
+			PessoaCpfApiResponse pessoaCpf = new PessoaCpfApiResponse(
+				pessoaRequest.idPessoa(),
+				pessoaRequest.razaoSocial(),
+				email
+			);
+			
+			return Optional.of(pessoaCpf);
+		} catch (FeignException e) {
+			if(e.status() == 400 || e.status() == 404) {
+				return Optional.empty();
+			}
+			String errorContent = e.contentUTF8();
+			String errorMessage = (errorContent != null && !errorContent.trim().isEmpty()) 
+				? errorContent 
+				: "Erro ao buscar pessoa por ID (HTTP " + e.status() + ")";
+			throw new ApiTseException(errorMessage);
+		}
+	}
 	
 }

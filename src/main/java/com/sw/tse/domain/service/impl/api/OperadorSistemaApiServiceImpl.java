@@ -129,10 +129,37 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
 		try {
 			List<BuscaOperadorSistemPessoaResponse> listaOperadorSistemPessoa = 
 					relatorioCustomizadoApiService.buscarRelatorioGenerico(idRelatorioOperadorSistema, filtros, BuscaOperadorSistemPessoaResponse.class);
-			return listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(0L, null, null, null, false));
+			return listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(0L, idPessoa, null, null, null, false));
 			
 		} catch (FeignException e) {
 			log.error("erro ao chamar a api de operador de sistema cliente");
+            throw new ApiTseException(String.format("Erro: %s ao obter operador sistema cliente pela api do TSE", e.contentUTF8()));
+		}
+	}
+
+	@Override
+	public BuscaOperadorSistemPessoaResponse buscarPorIdOperador(Long idOperador) {
+
+		if(idRelatorioOperadorSistema == null || idRelatorioOperadorSistema.equals(0L)) {
+			throw new ApiTseException("Relatório customizado para operador não parametrizado");
+		}
+		
+		FiltroRelatorioCustomizadoApiRequest filtroIdOperador = FiltroRelatorioCustomizadoApiRequest.builder()
+				.nomeParametro("idoperadorsistema")
+				.valor(idOperador.toString())
+				.tipo(TipoValorRelatorioCustomizado.INTETEIRO)
+				.criptografar(false)
+				.build();
+		
+		List<FiltroRelatorioCustomizadoApiRequest> filtros = Arrays.asList(filtroIdOperador);
+		
+		try {
+			List<BuscaOperadorSistemPessoaResponse> listaOperadorSistemPessoa = 
+					relatorioCustomizadoApiService.buscarRelatorioGenerico(idRelatorioOperadorSistema, filtros, BuscaOperadorSistemPessoaResponse.class);
+			return listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(idOperador, 0L, null, null, null, false));
+			
+		} catch (FeignException e) {
+			log.error("erro ao chamar a api de operador de sistema cliente por id");
             throw new ApiTseException(String.format("Erro: %s ao obter operador sistema cliente pela api do TSE", e.contentUTF8()));
 		}
 	}
@@ -156,7 +183,7 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
 		try {
 			List<BuscaOperadorSistemPessoaResponse> listaOperadorSistemPessoa = 
 					relatorioCustomizadoApiService.buscarRelatorioGenerico(idRelatorioOperadorSistema, filtros, BuscaOperadorSistemPessoaResponse.class);
-			return listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(0L, null, null, null, false));
+			return listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(0L, 0L, null, null, null, false));
 			
 		} catch (FeignException e) {
 			log.error("erro ao chamar a api de operador de sistema cliente por login");

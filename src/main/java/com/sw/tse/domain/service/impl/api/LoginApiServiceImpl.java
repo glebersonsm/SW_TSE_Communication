@@ -45,7 +45,11 @@ public class LoginApiServiceImpl implements LoginService {
         TokenApiResponse tokenResponse = tokenTseService.gerarTokenClient(login, password);
 
         if (!tokenResponse.isError()) {
-            return LoginResponse.fromToken(tokenResponse);
+            // Login bem-sucedido - buscar dados da pessoa pelo CPF (login/userName do token)
+            PessoaCpfApiResponse pessoa = pessoaService.buscarPorCpf(login)
+                    .orElseThrow(() -> new ApiTseException("Não foi possível localizar os dados da pessoa"));
+            
+            return LoginResponse.fromToken(tokenResponse, pessoa, login);
         }
 
         log.warn("Falha na tentativa inicial de login para '{}'. Mensagem da API: {}", login, tokenResponse.descricaoErro());
@@ -65,28 +69,28 @@ public class LoginApiServiceImpl implements LoginService {
         throw new LoginInvalidoTseException(erroAutenticacao);
     }
 
-    private LoginResponse tentarCriarNovoOperador(String login, String password) {
-        log.info("Tentando fluxo de criação de operador para o login: {}", login);
+    private LoginResponse tentarCriarNovoOperador(String cpf, String password) {
+        log.info("Tentando fluxo de criação de operador para o login: {}", cpf);
 
-        if (!CpfUtil.isValid(login)) {
+        if (!CpfUtil.isValid(cpf)) {
             throw new LoginInvalidoTseException("CPF inválido. Não é possível prosseguir com o cadastro.");
         }
 
-        PessoaCpfApiResponse pessoa = pessoaService.buscarPorCpf(login)
+        PessoaCpfApiResponse pessoa = pessoaService.buscarPorCpf(cpf)
         		.orElseThrow(() -> new ApiTseException("Não localizado em nossa base de clientes, um cliente com cpf informado"));
 
-        List<ContratoPessoaApiResponse> contratosAtivos = contratoService.buscarContratoPorCPF(login).stream()
+        List<ContratoPessoaApiResponse> contratosAtivos = contratoService.buscarContratoPorCPF(cpf).stream()
                 .filter(contrato -> "ATIVO".equals(contrato.status()) || "ATIVOREV".equals(contrato.status()))
                 .toList();
 
         if (contratosAtivos.isEmpty()) {
-            log.warn("Pessoa com CPF {} não possui contratos ativos.", login);
+            log.warn("Pessoa com CPF {} não possui contratos ativos.", cpf);
             throw new PessoaSemContratoTseException("Você não possui contratos ativos para acessar o portal.");
         }
 
         BuscaOperadorSistemPessoaResponse operadorExistente = operadorSistemaService.buscarPorIdPessoa(pessoa.idPessoa());
         if (operadorExistente.idOperador() != null && operadorExistente.idOperador() > 0) {
-            return lidarComOperadorExistente(operadorExistente, password);
+            return lidarComOperadorExistente(operadorExistente, password, pessoa, cpf);
         }
 
         List<Long> idsEmpresas = contratosAtivos.stream()
@@ -94,10 +98,10 @@ public class LoginApiServiceImpl implements LoginService {
                 .distinct()
                 .collect(Collectors.toList());
 
-        return criarEretornarNovoOperador(login, pessoa, idsEmpresas);
+        return criarEretornarNovoOperador(cpf, pessoa, idsEmpresas);
     }
 
-    private LoginResponse lidarComOperadorExistente(BuscaOperadorSistemPessoaResponse operador, String password) {
+    private LoginResponse lidarComOperadorExistente(BuscaOperadorSistemPessoaResponse operador, String password, PessoaCpfApiResponse pessoa, String cpf) {
         if (!operador.habilitado()) {
             throw new LoginInvalidoTseException("Seu acesso está desabilitado. Por favor, entre em contato com a Central de Relacionamento.");
         }
@@ -108,10 +112,10 @@ public class LoginApiServiceImpl implements LoginService {
         if (novoToken.isError()) {
             throw new LoginInvalidoTseException("A senha fornecida está incorreta.");
         }
-        return LoginResponse.fromToken(novoToken);
+        return LoginResponse.fromToken(novoToken, pessoa, cpf);
     }
 
-    private LoginResponse criarEretornarNovoOperador(String login, PessoaCpfApiResponse pessoa, List<Long> idsEmpresas) {
+    private LoginResponse criarEretornarNovoOperador(String cpf, PessoaCpfApiResponse pessoa, List<Long> idsEmpresas) {
         log.info("Criando novo operador para a pessoa: {} com acesso às empresas: {}", pessoa.nome(), idsEmpresas);
         
         if(!StringUtils.hasText(pessoa.email())) {
@@ -119,9 +123,9 @@ public class LoginApiServiceImpl implements LoginService {
         }
         
         OperadorSistemaRequestDto request = new OperadorSistemaRequestDto(
-                login, 1, pessoa.email(), idsEmpresas, pessoa.idPessoa()
+                cpf, 1, pessoa.email(), idsEmpresas, pessoa.idPessoa()
         );
         OperadorSistemaCriadoApiResponse novoOperador = operadorSistemaService.criarOperadorSistema(request);
-        return LoginResponse.fromNovoOperadorCliente(novoOperador, pessoa.email());
+        return LoginResponse.fromNovoOperadorCliente(novoOperador, pessoa.email(), pessoa, cpf);
     }
 }
