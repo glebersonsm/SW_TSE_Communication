@@ -1,8 +1,10 @@
 package com.sw.tse.api.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -13,10 +15,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.ContaFinanceiraClienteDto;
+import com.sw.tse.api.dto.PaginatedResponseDto;
 import com.sw.tse.api.dto.ReservaResumoResponse;
 import com.sw.tse.api.dto.ReservaSemanaResponse;
 import com.sw.tse.api.dto.ReservarSemanaRequest;
@@ -227,23 +231,45 @@ public class PainelClienteController {
     // ==================== ENDPOINTS DE CONTAS FINANCEIRAS ====================
     
     @Operation(summary = "Listar contas financeiras do cliente", 
-               description = "Lista todas as contas financeiras do cliente, excluindo contas com tipo histórico RENEGOCIADA, EXCLUIDO ou CANCELADO")
+               description = "Lista todas as contas financeiras do cliente com filtros e paginação opcionais, excluindo contas com tipo histórico RENEGOCIADA, EXCLUIDO ou CANCELADO")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Contas financeiras listadas com sucesso",
-                    content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
+                    content = @Content(schema = @Schema(implementation = PaginatedResponseDto.class))),
             @ApiResponse(responseCode = "400", description = "Dados inválidos", content = @Content),
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor", content = @Content)
     })
     @GetMapping("/contasfinanceiras")
-    public ResponseEntity<ApiResponseDto<List<ContaFinanceiraClienteDto>>> listarContasFinanceiras() {
+    public ResponseEntity<PaginatedResponseDto<ContaFinanceiraClienteDto>> listarContasFinanceiras(
+            @Parameter(description = "Data inicial de vencimento (formato: yyyy-MM-dd)", required = false)
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate vencimentoInicial,
+            
+            @Parameter(description = "Data final de vencimento (formato: yyyy-MM-dd)", required = false)
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate vencimentoFinal,
+            
+            @Parameter(description = "Status da conta: B (Paga), P (Em aberto), V (Vencida)", required = false)
+            @RequestParam(required = false) String status,
+            
+            @Parameter(description = "Número da página (inicia em 1)", required = false)
+            @RequestParam(required = false, defaultValue = "1") Integer numeroDaPagina,
+            
+            @Parameter(description = "Quantidade de registros por página", required = false)
+            @RequestParam(required = false, defaultValue = "30") Integer quantidadeRegistrosRetornar) {
         
-        List<ContaFinanceiraClienteDto> contasDto = contaFinanceiraService.buscarContasClienteDto();
+        var resultado = contaFinanceiraService.buscarContasClienteDtoComPaginacao(
+                vencimentoInicial, 
+                vencimentoFinal, 
+                status,
+                numeroDaPagina,
+                quantidadeRegistrosRetornar
+        );
         
-        ApiResponseDto<List<ContaFinanceiraClienteDto>> responseApi = new ApiResponseDto<>(
+        PaginatedResponseDto<ContaFinanceiraClienteDto> responseApi = new PaginatedResponseDto<>(
                 HttpStatus.OK.value(),
                 true,
-                contasDto,
-                "Contas financeiras listadas com sucesso"
+                resultado.getContas(),
+                "Contas financeiras listadas com sucesso",
+                resultado.getPageNumber(),
+                resultado.getLastPageNumber()
         );
         
         return ResponseEntity.ok(responseApi);

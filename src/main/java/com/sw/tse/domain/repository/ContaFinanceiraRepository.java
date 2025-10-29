@@ -1,6 +1,7 @@
 package com.sw.tse.domain.repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -154,4 +155,87 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
      */
     @Query("SELECT cf FROM ContaFinanceira cf WHERE cf.pessoa.idPessoa = :idCliente")
     List<ContaFinanceira> findContasPorCliente(@Param("idCliente") Long idCliente);
+    
+    /**
+     * Busca contas por cliente com filtros opcionais
+     * 
+     * @param idCliente ID do cliente
+     * @param vencimentoInicial Data inicial de vencimento (opcional)
+     * @param vencimentoFinal Data final de vencimento (opcional)
+     * @param status Status: B (Paga), P (Em aberto), V (Vencida)
+     * @return Lista de contas filtradas
+     */
+    @Query(value = """
+        SELECT * 
+        FROM contafinanceira cf 
+        WHERE cf.idpessoa = :idCliente
+          AND cf.tipohistorico NOT IN ('RENEGOCIADA', 'EXCLUIDO', 'CANCELADO')
+          AND (CAST(:vencimentoInicial AS date) IS NULL OR DATE(cf.datavencimento) >= CAST(:vencimentoInicial AS date))
+          AND (CAST(:vencimentoFinal AS date) IS NULL OR DATE(cf.datavencimento) <= CAST(:vencimentoFinal AS date))
+          AND (
+            :status IS NULL 
+            OR (:status = 'B' AND cf.pago = TRUE)
+            OR (:status = 'P' AND cf.pago = FALSE AND cf.valorreceber > 0)
+            OR (:status = 'V' AND cf.pago = FALSE AND cf.valorreceber > 0 AND cf.datavencimento < CURRENT_DATE)
+          )
+        ORDER BY cf.datavencimento DESC
+    """, nativeQuery = true)
+    List<ContaFinanceira> findContasPorClienteComFiltros(
+        @Param("idCliente") Long idCliente,
+        @Param("vencimentoInicial") LocalDate vencimentoInicial,
+        @Param("vencimentoFinal") LocalDate vencimentoFinal,
+        @Param("status") String status
+    );
+    
+    /**
+     * Conta total de registros filtrados para paginação
+     */
+    @Query(value = """
+        SELECT COUNT(*) 
+        FROM contafinanceira cf 
+        WHERE cf.idpessoa = :idCliente
+          AND cf.tipohistorico NOT IN ('RENEGOCIADA', 'EXCLUIDO', 'CANCELADO')
+          AND (CAST(:vencimentoInicial AS date) IS NULL OR DATE(cf.datavencimento) >= CAST(:vencimentoInicial AS date))
+          AND (CAST(:vencimentoFinal AS date) IS NULL OR DATE(cf.datavencimento) <= CAST(:vencimentoFinal AS date))
+          AND (
+            :status IS NULL 
+            OR (:status = 'B' AND cf.pago = TRUE)
+            OR (:status = 'P' AND cf.pago = FALSE AND cf.valorreceber > 0)
+            OR (:status = 'V' AND cf.pago = FALSE AND cf.valorreceber > 0 AND cf.datavencimento < CURRENT_DATE)
+          )
+    """, nativeQuery = true)
+    Long countContasPorClienteComFiltros(
+        @Param("idCliente") Long idCliente,
+        @Param("vencimentoInicial") LocalDate vencimentoInicial,
+        @Param("vencimentoFinal") LocalDate vencimentoFinal,
+        @Param("status") String status
+    );
+    
+    /**
+     * Busca contas por cliente com filtros e paginação
+     */
+    @Query(value = """
+        SELECT * 
+        FROM contafinanceira cf 
+        WHERE cf.idpessoa = :idCliente
+          AND cf.tipohistorico NOT IN ('RENEGOCIADA', 'EXCLUIDO', 'CANCELADO')
+          AND (CAST(:vencimentoInicial AS date) IS NULL OR DATE(cf.datavencimento) >= CAST(:vencimentoInicial AS date))
+          AND (CAST(:vencimentoFinal AS date) IS NULL OR DATE(cf.datavencimento) <= CAST(:vencimentoFinal AS date))
+          AND (
+            :status IS NULL 
+            OR (:status = 'B' AND cf.pago = TRUE)
+            OR (:status = 'P' AND cf.pago = FALSE AND cf.valorreceber > 0)
+            OR (:status = 'V' AND cf.pago = FALSE AND cf.valorreceber > 0 AND cf.datavencimento < CURRENT_DATE)
+          )
+        ORDER BY cf.datavencimento DESC
+        LIMIT :limite OFFSET :offset
+    """, nativeQuery = true)
+    List<ContaFinanceira> findContasPorClienteComFiltrosPaginado(
+        @Param("idCliente") Long idCliente,
+        @Param("vencimentoInicial") LocalDate vencimentoInicial,
+        @Param("vencimentoFinal") LocalDate vencimentoFinal,
+        @Param("status") String status,
+        @Param("limite") Integer limite,
+        @Param("offset") Integer offset
+    );
 }

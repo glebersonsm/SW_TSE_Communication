@@ -1,5 +1,6 @@
 package com.sw.tse.domain.service.impl.api;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -10,6 +11,7 @@ import com.sw.tse.api.dto.ContaFinanceiraClienteDto;
 import com.sw.tse.client.SegundaViaBoletoApiClient;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.TokenJwtInvalidoException;
+import com.sw.tse.domain.model.dto.ContasPaginadasDto;
 import com.sw.tse.domain.service.interfaces.ContaFinanceiraService;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
 import com.sw.tse.security.JwtTokenUtil;
@@ -69,7 +71,17 @@ public class ContaFinanceiraApiServiceImpl implements ContaFinanceiraService {
     }
 
     @Override
-    public List<ContaFinanceiraClienteDto> buscarContasClienteDto() {
+    public List<ContaFinanceiraClienteDto> buscarContasClienteDto(LocalDate vencimentoInicial, LocalDate vencimentoFinal, String status) {
+        throw new UnsupportedOperationException("Operação não suportada na implementação API");
+    }
+    
+    @Override
+    public ContasPaginadasDto buscarContasClienteDtoComPaginacao(
+            LocalDate vencimentoInicial, 
+            LocalDate vencimentoFinal, 
+            String status,
+            Integer numeroDaPagina,
+            Integer quantidadeRegistrosRetornar) {
         throw new UnsupportedOperationException("Operação não suportada na implementação API");
     }
 }

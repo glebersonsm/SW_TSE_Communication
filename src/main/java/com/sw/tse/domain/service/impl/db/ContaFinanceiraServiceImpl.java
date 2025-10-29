@@ -1,5 +1,6 @@
 package com.sw.tse.domain.service.impl.db;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -15,6 +16,7 @@ import com.sw.tse.domain.converter.ContaFinanceiraConverter;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 import com.sw.tse.domain.model.db.ContaFinanceira;
+import com.sw.tse.domain.model.dto.ContasPaginadasDto;
 import com.sw.tse.domain.repository.ContaFinanceiraRepository;
 import com.sw.tse.domain.service.interfaces.ContaFinanceiraService;
 import com.sw.tse.domain.service.interfaces.TokenTseService;
@@ -46,18 +48,81 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ContaFinanceiraClienteDto> buscarContasClienteDto() {
+    public List<ContaFinanceiraClienteDto> buscarContasClienteDto(LocalDate vencimentoInicial, LocalDate vencimentoFinal, String status) {
         Long idCliente = JwtTokenUtil.getIdPessoaCliente();
         
         if (idCliente == null) {
             throw new TokenJwtInvalidoException("ID do cliente não está disponível no token de autenticação");
         }
         
-        List<ContaFinanceira> contasFinanceiras = contaFinanceiraRepository.findContasPorCliente(idCliente);
+        List<ContaFinanceira> contasFinanceiras = contaFinanceiraRepository.findContasPorClienteComFiltros(
+                idCliente, 
+                vencimentoInicial, 
+                vencimentoFinal, 
+                status
+        );
         
         return contasFinanceiras.stream()
                 .map(contaFinanceiraConverter::toDto)
                 .collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public ContasPaginadasDto buscarContasClienteDtoComPaginacao(
+            LocalDate vencimentoInicial, 
+            LocalDate vencimentoFinal, 
+            String status,
+            Integer numeroDaPagina,
+            Integer quantidadeRegistrosRetornar) {
+        
+        Long idCliente = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (idCliente == null) {
+            throw new TokenJwtInvalidoException("ID do cliente não está disponível no token de autenticação");
+        }
+        
+        if (numeroDaPagina == null || numeroDaPagina < 1) {
+            numeroDaPagina = 1;
+        }
+        
+        if (quantidadeRegistrosRetornar == null || quantidadeRegistrosRetornar < 1) {
+            quantidadeRegistrosRetornar = 30;
+        }
+        
+        Long totalRegistros = contaFinanceiraRepository.countContasPorClienteComFiltros(
+                idCliente, 
+                vencimentoInicial, 
+                vencimentoFinal, 
+                status
+        );
+        
+        int totalPages = (int) Math.ceil((double) totalRegistros / quantidadeRegistrosRetornar);
+        
+        if (totalPages == 0) {
+            totalPages = 1;
+        }
+        
+        if (numeroDaPagina > totalPages) {
+            numeroDaPagina = totalPages;
+        }
+        
+        int offset = (numeroDaPagina - 1) * quantidadeRegistrosRetornar;
+        
+        List<ContaFinanceira> contasFinanceiras = contaFinanceiraRepository.findContasPorClienteComFiltrosPaginado(
+                idCliente, 
+                vencimentoInicial, 
+                vencimentoFinal, 
+                status,
+                quantidadeRegistrosRetornar,
+                offset
+        );
+        
+        List<ContaFinanceiraClienteDto> contasDto = contasFinanceiras.stream()
+                .map(contaFinanceiraConverter::toDto)
+                .collect(Collectors.toList());
+        
+        return new ContasPaginadasDto(contasDto, numeroDaPagina, totalPages);
     }
 
     @Override
