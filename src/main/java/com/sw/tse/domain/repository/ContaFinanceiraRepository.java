@@ -178,7 +178,7 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
             OR (:status = 'P' AND cf.pago = FALSE AND cf.valorreceber > 0)
             OR (:status = 'V' AND cf.pago = FALSE AND cf.valorreceber > 0 AND cf.datavencimento < CURRENT_DATE)
           )
-        ORDER BY cf.datavencimento DESC
+        ORDER BY cf.datavencimento ASC
     """, nativeQuery = true)
     List<ContaFinanceira> findContasPorClienteComFiltros(
         @Param("idCliente") Long idCliente,
@@ -227,7 +227,7 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
             OR (:status = 'P' AND cf.pago = FALSE AND cf.valorreceber > 0)
             OR (:status = 'V' AND cf.pago = FALSE AND cf.valorreceber > 0 AND cf.datavencimento < CURRENT_DATE)
           )
-        ORDER BY cf.datavencimento DESC
+        ORDER BY cf.datavencimento ASC
         LIMIT :limite OFFSET :offset
     """, nativeQuery = true)
     List<ContaFinanceira> findContasPorClienteComFiltrosPaginado(
