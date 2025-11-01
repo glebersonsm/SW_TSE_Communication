@@ -669,6 +669,8 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
             .idPeriodoModeloCota(utilizacaoContrato.getPeriodoModeloCota().getId())
             .numeroContrato(contrato.getNumeroContrato())
             .tipoUtilizacao(tipoUtilizacaoResponse)
+            .tipoSemana(utilizacaoContrato.getTipoPeriodoUtilizacao() != null ? 
+                utilizacaoContrato.getTipoPeriodoUtilizacao().getDescricao() : null)
             .checkin(utilizacaoContrato.getDataCheckin().toLocalDate())
             .checkout(utilizacaoContrato.getDataCheckout().toLocalDate())
             .descricaoPeriodo(periodoUtilizacao.getDescricaoPeriodo())
@@ -684,6 +686,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
             .nome(hospede.getNome())
             .sobrenome(hospede.getSobrenome())
             .cpf(hospede.getCpf())
+            .dataNascimento(hospede.getDataNascimento())
             .isPrincipal(hospede.getIsPrincipal())
             .faixaEtaria(hospede.getFaixaEtariaSigla());
         
@@ -699,6 +702,12 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
                     .orElse(pessoa.getEnderecos().get(0));
                 
                 if (enderecoCorrespondencia != null) {
+                    // Se UF estiver vazio no endereço, buscar da cidade relacionada
+                    String uf = enderecoCorrespondencia.getUf();
+                    if ((uf == null || uf.isEmpty()) && enderecoCorrespondencia.getCidade() != null) {
+                        uf = enderecoCorrespondencia.getCidade().getUf();
+                    }
+                    
                     builder.endereco(EnderecoResponse.builder()
                         .logradouro(enderecoCorrespondencia.getLogradouro())
                         .numero(enderecoCorrespondencia.getNumero())
@@ -706,7 +715,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
                         .bairro(enderecoCorrespondencia.getBairro())
                         .cep(enderecoCorrespondencia.getCep())
                         .cidade(enderecoCorrespondencia.getCidade() != null ? enderecoCorrespondencia.getCidade().getNome() : null)
-                        .uf(enderecoCorrespondencia.getUf())
+                        .uf(uf)
                         .build());
                 }
             }
@@ -1064,6 +1073,20 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
             .collect(Collectors.toList());
     }
     
+    @Override
+    public List<ReservaResumoResponse> listarReservasPorContratoEAno(Long idContrato, int ano, Long idPessoaCliente) {
+        log.info("Listando reservas do contrato {} no ano {} para cliente {}", idContrato, ano, idPessoaCliente);
+        
+        List<UtilizacaoContrato> utilizacoes = utilizacaoContratoRepository
+            .findUtilizacoesPorContratoAnoECliente(idContrato, ano, idPessoaCliente);
+        
+        log.info("Encontradas {} utilizações para o contrato {} no ano {}", utilizacoes.size(), idContrato, ano);
+        
+        return utilizacoes.stream()
+            .map(this::mapearParaResumo)
+            .collect(Collectors.toList());
+    }
+    
     private ReservaResumoResponse mapearParaResumo(UtilizacaoContrato utilizacao) {
         PeriodoUtilizacao periodo = utilizacao.getPeriodoModeloCota() != null ?
             utilizacao.getPeriodoModeloCota().getPeriodoUtilizacao() : null;
@@ -1083,6 +1106,12 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
                 utilizacao.getDataCheckout().toLocalDate() : null)
             .descricaoPeriodo(descricaoPeriodo)
             .status(utilizacao.getStatus())
+            .contrato(utilizacao.getContrato() != null ? 
+                utilizacao.getContrato().getNumeroContrato() : null)
+            .empresa(utilizacao.getEmpresa() != null ? 
+                utilizacao.getEmpresa().getSigla() : null)
+            .tipoSemana(utilizacao.getTipoPeriodoUtilizacao() != null ? 
+                utilizacao.getTipoPeriodoUtilizacao().getDescricao() : null)
             .build();
     }
 }

@@ -59,5 +59,6 @@ public interface ReservarSemanaService {
      * @return Lista de utilizações resumidas ordenadas por check-in
      */
     List<ReservaResumoResponse> listarReservasPorAno(int ano, Long idPessoaCliente);
+    List<ReservaResumoResponse> listarReservasPorContratoEAno(Long idContrato, int ano, Long idPessoaCliente);
 }
 

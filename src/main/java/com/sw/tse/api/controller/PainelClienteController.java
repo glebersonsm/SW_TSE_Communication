@@ -203,6 +203,38 @@ public class PainelClienteController {
         
         return ResponseEntity.ok(responseApi);
     }
+    
+    @Operation(summary = "Listar reservas por contrato e ano", 
+               description = "Lista todas as utilizações (RESERVA, RCI, POOL) não canceladas de um contrato específico em um ano")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de reservas retornada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Cliente não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Contrato não pertence ao cliente")
+    })
+    @GetMapping("/reservas/{idContrato}/{ano}")
+    public ResponseEntity<ApiResponseDto<List<ReservaResumoResponse>>> listarReservasPorContratoEAno(
+            @Parameter(description = "ID do contrato", required = true)
+            @PathVariable Long idContrato,
+            @Parameter(description = "Ano das reservas (ex: 2024)", required = true)
+            @PathVariable int ano) {
+        
+        Long idPessoaCliente = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (idPessoaCliente == null) {
+            throw new TokenJwtInvalidoException("ID da pessoa cliente não está disponível no token de autenticação");
+        }
+        
+        List<ReservaResumoResponse> reservas = reservarSemanaService.listarReservasPorContratoEAno(idContrato, ano, idPessoaCliente);
+        
+        ApiResponseDto<List<ReservaResumoResponse>> responseApi = new ApiResponseDto<>(
+                HttpStatus.OK.value(),
+                true,
+                reservas,
+                String.format("Encontradas %d reservas para o contrato %d no ano %d", reservas.size(), idContrato, ano)
+        );
+        
+        return ResponseEntity.ok(responseApi);
+    }
 
     // ==================== ENDPOINTS DE CONTRATOS ====================
     

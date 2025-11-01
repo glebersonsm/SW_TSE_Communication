@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sw.tse.api.dto.ApiResponseDto;
-import com.sw.tse.domain.model.api.response.CidadeApiResponse;
-import com.sw.tse.domain.service.interfaces.CidadeService;
+import com.sw.tse.api.dto.EnderecoCompletoCepResponse;
+import com.sw.tse.domain.service.impl.db.CidadeDbServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 
@@ -18,17 +18,17 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CidadeController {
 
-	private final CidadeService cidadeService;
+	private final CidadeDbServiceImpl cidadeDbService;
 	
 	@GetMapping("/{cep}")
-	public ResponseEntity<ApiResponseDto<CidadeApiResponse>> buscarPorCep(@PathVariable String cep) {
-		CidadeApiResponse cidadeDto = cidadeService.buscarPorCep(cep);
+	public ResponseEntity<ApiResponseDto<EnderecoCompletoCepResponse>> buscarPorCep(@PathVariable String cep) {
+		EnderecoCompletoCepResponse endereco = cidadeDbService.buscarEnderecoCompletoPorCep(cep);
 	
-		ApiResponseDto<CidadeApiResponse> responseApi = new ApiResponseDto<>(
+		ApiResponseDto<EnderecoCompletoCepResponse> responseApi = new ApiResponseDto<>(
 		    HttpStatus.OK.value(),  
 		    true,                       
-		    cidadeDto,  
-		    "Cidade localizada com sucesso"
+		    endereco,  
+		    "Endereço localizado com sucesso"
 		);
 		
 		return ResponseEntity.ok(responseApi);

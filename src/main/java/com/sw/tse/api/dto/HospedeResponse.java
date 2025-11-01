@@ -1,5 +1,6 @@
 package com.sw.tse.api.dto;
 
+import java.time.LocalDate;
 import lombok.Builder;
 import lombok.Data;
 
@@ -11,6 +12,7 @@ public class HospedeResponse {
     private String nome;
     private String sobrenome;
     private String cpf;
+    private LocalDate dataNascimento;
     private Boolean isPrincipal;
     private String faixaEtaria;
     

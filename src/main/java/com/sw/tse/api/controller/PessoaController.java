@@ -1,10 +1,15 @@
 package com.sw.tse.api.controller;
 
+import java.util.Optional;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +21,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.HospedeDto;
+import com.sw.tse.api.dto.PessoaComProprietarioResponse;
 import com.sw.tse.domain.converter.PessoaConverter;
 import com.sw.tse.domain.model.api.request.PessoaApiRequest;
 import com.sw.tse.domain.service.interfaces.PessoaService;
@@ -58,5 +64,41 @@ public class PessoaController {
 	public PessoaApiRequest jsonPessoa(@RequestBody HospedeDto hospedeDto) {
 		PessoaApiRequest request = pessoaConverter.toPessoaApiHospedeDto(hospedeDto);
 		return request;
+	}
+	
+	@Operation(summary = "Buscar pessoa por CPF", description = "Busca pessoa por CPF com informações completas e verifica se é proprietário do contrato")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Pessoa encontrada",
+					content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
+			@ApiResponse(responseCode = "404", description = "Pessoa não encontrada",
+					content = @Content),
+			@ApiResponse(responseCode = "500", description = "Erro interno do servidor",
+					content = @Content)
+	})
+	@GetMapping("/buscarPorCpf/{cpf}")
+	public ResponseEntity<ApiResponseDto<PessoaComProprietarioResponse>> buscarPorCpf(
+			@PathVariable String cpf,
+			@RequestParam(required = false) Long idContrato) {
+		
+		Optional<PessoaComProprietarioResponse> pessoaOpt = pessoaService.buscarPorCpfCompleto(cpf, idContrato);
+		
+		if (pessoaOpt.isEmpty()) {
+			ApiResponseDto<PessoaComProprietarioResponse> respostaApi = new ApiResponseDto<>(
+				HttpStatus.NOT_FOUND.value(),
+				false,
+				null,
+				"Pessoa não encontrada com o CPF informado."
+			);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(respostaApi);
+		}
+		
+		ApiResponseDto<PessoaComProprietarioResponse> respostaApi = new ApiResponseDto<>(
+			HttpStatus.OK.value(),
+			true,
+			pessoaOpt.get(),
+			"Pessoa encontrada com sucesso."
+		);
+		
+		return ResponseEntity.ok(respostaApi);
 	}
 }

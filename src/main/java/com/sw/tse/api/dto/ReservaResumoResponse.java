@@ -13,4 +13,7 @@ public class ReservaResumoResponse {
     private LocalDate checkout;
     private String descricaoPeriodo;
     private String status;
+    private String contrato;
+    private String empresa;
+    private String tipoSemana;
 }

@@ -30,4 +30,13 @@ public interface PessoaService {
 	Optional<PessoaCpfApiResponse> buscarPorCpf(String cpf);
 	
 	Optional<PessoaCpfApiResponse> buscarPorId(Long idPessoa);
+	
+	/**
+	 * Busca pessoa por CPF com informações completas e verifica se é proprietário do contrato
+	 * 
+	 * @param cpf CPF da pessoa
+	 * @param idContrato ID do contrato para verificar se é proprietário
+	 * @return Dados completos da pessoa com flag isProprietario
+	 */
+	Optional<com.sw.tse.api.dto.PessoaComProprietarioResponse> buscarPorCpfCompleto(String cpf, Long idContrato);
 }

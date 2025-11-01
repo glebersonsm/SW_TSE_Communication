@@ -28,4 +28,23 @@ public interface UtilizacaoContratoRepository extends JpaRepository<UtilizacaoCo
         @Param("ano") int ano,
         @Param("idPessoaCliente") Long idPessoaCliente
     );
+    
+    @Query("""
+        SELECT u FROM UtilizacaoContrato u
+        WHERE u.contrato.id = :idContrato
+        AND u.contrato.id IN (
+            SELECT c.id FROM Contrato c 
+            WHERE c.pessoaCessionario.id = :idPessoaCliente 
+            OR c.pessaoCocessionario.id = :idPessoaCliente
+        )
+        AND YEAR(u.dataCheckin) = :ano
+        AND u.status != 'CANCELADO'
+        AND u.tipoUtilizacaoContrato.sigla IN ('RESERVA', 'RCI', 'POOL')
+        ORDER BY u.dataCheckin ASC
+        """)
+    List<UtilizacaoContrato> findUtilizacoesPorContratoAnoECliente(
+        @Param("idContrato") Long idContrato,
+        @Param("ano") int ano,
+        @Param("idPessoaCliente") Long idPessoaCliente
+    );
 }

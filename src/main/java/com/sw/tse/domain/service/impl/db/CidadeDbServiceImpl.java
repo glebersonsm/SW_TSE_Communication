@@ -4,6 +4,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import com.sw.tse.api.dto.EnderecoCompletoCepResponse;
 import com.sw.tse.client.BuscaCepBrasilApiClient;
 import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.expection.ApiTseException;
@@ -30,16 +31,13 @@ public class CidadeDbServiceImpl implements CidadeService {
 
 	@Override
 	public CidadeApiResponse buscarPorCep(String cep) {
-		BuscaCepBrasilApiResponse buscaCep = buscarCepApiBrasil(cep);
+		// Reutiliza a busca completa para validar o CEP
+		EnderecoCompletoCepResponse enderecoCompleto = buscarEnderecoCompletoPorCep(cep);
 		
-		CidadeApiResponse cidadeDto = buscarCidadeTse(buscaCep);
-		return cidadeDto;
-	}
-	
-	public CidadeApiResponse buscarCidadeTse(BuscaCepBrasilApiResponse buscaCep){
-		Cidade cidade = cidadeRepository.findByNomeAndUfOrdenado(buscaCep.cidade(), buscaCep.uf())
-				.stream().findFirst().orElseThrow(() -> new CidadeNotFoundException(String.format("Não encontrado a cidade %s para o estado %s", buscaCep.cidade(), buscaCep.uf())));
-		
+		// Busca a cidade no banco TSE para retornar o ID
+		Cidade cidade = cidadeRepository.findByNomeAndUfOrdenado(enderecoCompleto.getCidade(), enderecoCompleto.getUf())
+				.stream().findFirst().orElseThrow(() -> new CidadeNotFoundException(
+					String.format("Não encontrado a cidade %s para o estado %s", enderecoCompleto.getCidade(), enderecoCompleto.getUf())));
 
 		return CidadeApiResponse.builder()
 				.idCidade(cidade.getId())
@@ -49,6 +47,17 @@ public class CidadeDbServiceImpl implements CidadeService {
 				.build();
 	}
 	
+	public EnderecoCompletoCepResponse buscarEnderecoCompletoPorCep(String cep) {
+		BuscaCepBrasilApiResponse buscaCep = buscarCepApiBrasil(cep);
+		
+		return EnderecoCompletoCepResponse.builder()
+				.cep(buscaCep.cep())
+				.logradouro(buscaCep.logradouro())
+				.bairro(buscaCep.bairro())
+				.cidade(buscaCep.cidade())
+				.uf(buscaCep.uf())
+				.build();
+	}
 	
 	private BuscaCepBrasilApiResponse buscarCepApiBrasil(String cep) {
 		

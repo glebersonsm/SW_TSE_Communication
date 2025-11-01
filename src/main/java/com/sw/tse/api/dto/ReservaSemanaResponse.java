@@ -15,6 +15,7 @@ public class ReservaSemanaResponse {
     private Long idPeriodoModeloCota;
     private String numeroContrato;
     private String tipoUtilizacao;
+    private String tipoSemana;
     private LocalDate checkin;
     private LocalDate checkout;
     private String descricaoPeriodo;
