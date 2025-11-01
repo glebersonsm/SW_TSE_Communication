@@ -167,4 +167,8 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
            "AND (c.pessoaCessionario.idPessoa = :idPessoaCliente OR c.pessaoCocessionario.idPessoa = :idPessoaCliente)")
     boolean contratoPerteceAoCliente(@Param("idContrato") Long idContrato, @Param("idPessoaCliente") Long idPessoaCliente);
 
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Contrato c " +
+           "WHERE (c.pessoaCessionario.idPessoa = :idPessoa OR c.pessaoCocessionario.idPessoa = :idPessoa)")
+    boolean pessoaEhProprietariaDeAlgumContrato(@Param("idPessoa") Long idPessoa);
+
 }

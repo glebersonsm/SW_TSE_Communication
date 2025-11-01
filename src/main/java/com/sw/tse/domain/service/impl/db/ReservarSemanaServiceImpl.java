@@ -667,6 +667,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         return ReservaSemanaResponse.builder()
             .idUtilizacaoContrato(utilizacaoContrato.getId())
             .idPeriodoModeloCota(utilizacaoContrato.getPeriodoModeloCota().getId())
+            .idContrato(contrato.getId())
             .numeroContrato(contrato.getNumeroContrato())
             .tipoUtilizacao(tipoUtilizacaoResponse)
             .tipoSemana(utilizacaoContrato.getTipoPeriodoUtilizacao() != null ? 

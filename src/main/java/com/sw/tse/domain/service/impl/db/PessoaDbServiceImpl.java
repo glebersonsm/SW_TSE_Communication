@@ -140,27 +140,14 @@ public class PessoaDbServiceImpl implements PessoaService {
 			return Optional.empty();
 		}
 		
-		// Verificar se é proprietário do contrato
-		boolean isProprietario = false;
+		// Verificar se a pessoa é proprietária de QUALQUER contrato no sistema
+		// (cessionário OU cocessionário de algum contrato)
+		boolean isProprietario = contratoRepository.pessoaEhProprietariaDeAlgumContrato(pessoa.getIdPessoa());
 		
-		if (idContrato != null) {
-			Contrato contrato = contratoRepository.findById(idContrato).orElse(null);
-			
-			if (contrato != null) {
-				// Verificar se é cessionário
-				if (contrato.getPessoaCessionario() != null && 
-					pessoa.getIdPessoa().equals(contrato.getPessoaCessionario().getIdPessoa())) {
-					isProprietario = true;
-					log.info("Pessoa {} é cessionário do contrato {}", pessoa.getIdPessoa(), idContrato);
-				}
-				
-				// Verificar se é cocessionário
-				if (contrato.getPessaoCocessionario() != null && 
-					pessoa.getIdPessoa().equals(contrato.getPessaoCocessionario().getIdPessoa())) {
-					isProprietario = true;
-					log.info("Pessoa {} é cocessionário do contrato {}", pessoa.getIdPessoa(), idContrato);
-				}
-			}
+		if (isProprietario) {
+			log.info("🔒 Pessoa {} é PROPRIETÁRIA de algum contrato no sistema - dados protegidos contra edição", pessoa.getIdPessoa());
+		} else {
+			log.info("✏️ Pessoa {} NÃO é proprietária de nenhum contrato - dados podem ser editados", pessoa.getIdPessoa());
 		}
 		
 		// Montar response com dados completos

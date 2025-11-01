@@ -13,6 +13,7 @@ public class ReservaSemanaResponse {
     
     private Long idUtilizacaoContrato;
     private Long idPeriodoModeloCota;
+    private Long idContrato;  // ID do contrato para verificação de proprietário
     private String numeroContrato;
     private String tipoUtilizacao;
     private String tipoSemana;

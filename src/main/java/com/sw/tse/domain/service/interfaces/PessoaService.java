@@ -32,10 +32,13 @@ public interface PessoaService {
 	Optional<PessoaCpfApiResponse> buscarPorId(Long idPessoa);
 	
 	/**
-	 * Busca pessoa por CPF com informações completas e verifica se é proprietário do contrato
+	 * Busca pessoa por CPF com informações completas e verifica se é proprietária de ALGUM contrato
+	 * 
+	 * A verificação de proprietário é GLOBAL - se a pessoa for cessionária ou cocessionária
+	 * de QUALQUER contrato no sistema, a flag isProprietario será true.
 	 * 
 	 * @param cpf CPF da pessoa
-	 * @param idContrato ID do contrato para verificar se é proprietário
+	 * @param idContrato ID do contrato (parâmetro mantido para compatibilidade, mas não usado na verificação)
 	 * @return Dados completos da pessoa com flag isProprietario
 	 */
 	Optional<com.sw.tse.api.dto.PessoaComProprietarioResponse> buscarPorCpfCompleto(String cpf, Long idContrato);
