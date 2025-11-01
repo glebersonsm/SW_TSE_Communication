@@ -22,6 +22,7 @@ import com.sw.tse.api.dto.ReservaResumoResponse;
 import com.sw.tse.api.dto.ReservaSemanaResponse;
 import com.sw.tse.api.dto.ReservarSemanaRequest;
 import com.sw.tse.api.dto.TelefoneResponse;
+import com.sw.tse.core.config.CancelamentoParametros;
 import com.sw.tse.core.config.UtilizacaoContratoPropertiesCustom;
 import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.expection.ApiTseException;
@@ -107,6 +108,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
     private final ContratoIntercambioRepository contratoIntercambioRepository;
     private final CidadeService cidadeService;
     private final UtilizacaoContratoPropertiesCustom utilizacaoContratoConfig;
+    private final CancelamentoParametros cancelamentoParametros;
     
     private final ObjectMapper objectMapper = new ObjectMapper();
     
@@ -1101,6 +1103,74 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
             .collect(Collectors.toList());
     }
     
+    private Boolean podeEditarUtilizacao(UtilizacaoContrato utilizacao) {
+        // Regra 1: Não pode estar cancelada
+        if (utilizacao.isCancelada()) {
+            return false;
+        }
+        
+        // Regra 2: Check-in não pode ter passado ou ser hoje
+        if (utilizacao.getDataCheckin() != null) {
+            LocalDate dataCheckin = utilizacao.getDataCheckin().toLocalDate();
+            LocalDate hoje = LocalDate.now();
+            
+            if (dataCheckin.isBefore(hoje) || dataCheckin.isEqual(hoje)) {
+                return false;
+            }
+        }
+        
+        // Regra 3: Apenas RESERVA pode ser editada
+        if (utilizacao.getTipoUtilizacaoContrato() == null || 
+            !"RESERVA".equals(utilizacao.getTipoUtilizacaoContrato().getSigla())) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private Boolean podeCancelarUtilizacao(UtilizacaoContrato utilizacao) {
+        // Regra 1: Não pode estar cancelada
+        if (utilizacao.isCancelada()) {
+            return false;
+        }
+        
+        // Regra 2: Verificar data do check-in
+        if (utilizacao.getDataCheckin() == null) {
+            return false;
+        }
+        
+        LocalDate dataCheckin = utilizacao.getDataCheckin().toLocalDate();
+        LocalDate hoje = LocalDate.now();
+        
+        // Check-in já passou
+        if (dataCheckin.isBefore(hoje) || dataCheckin.isEqual(hoje)) {
+            return false;
+        }
+        
+        // Calcular dias até o check-in
+        long diasAteCheckin = ChronoUnit.DAYS.between(hoje, dataCheckin);
+        
+        // Regra 3: Verificar regras específicas por tipo de utilização
+        if (utilizacao.getTipoUtilizacaoContrato() == null) {
+            return false;
+        }
+        
+        String tipoUtilizacao = utilizacao.getTipoUtilizacaoContrato().getSigla();
+        
+        if ("RESERVA".equals(tipoUtilizacao)) {
+            return cancelamentoParametros.getReservaPermitido() && 
+                   diasAteCheckin >= cancelamentoParametros.getReservaDiasMinimos();
+        } else if ("RCI".equals(tipoUtilizacao)) {
+            return cancelamentoParametros.getRciPermitido() && 
+                   diasAteCheckin >= cancelamentoParametros.getRciDiasMinimos();
+        } else if ("POOL".equals(tipoUtilizacao)) {
+            return cancelamentoParametros.getPoolPermitido() && 
+                   diasAteCheckin >= cancelamentoParametros.getPoolDiasMinimos();
+        }
+        
+        return false;
+    }
+    
     private ReservaResumoResponse mapearParaResumo(UtilizacaoContrato utilizacao) {
         PeriodoUtilizacao periodo = utilizacao.getPeriodoModeloCota() != null ?
             utilizacao.getPeriodoModeloCota().getPeriodoUtilizacao() : null;
@@ -1126,6 +1196,8 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
                 utilizacao.getEmpresa().getSigla() : null)
             .tipoSemana(utilizacao.getTipoPeriodoUtilizacao() != null ? 
                 utilizacao.getTipoPeriodoUtilizacao().getDescricao() : null)
+            .podeEditar(podeEditarUtilizacao(utilizacao))
+            .podeCancelar(podeCancelarUtilizacao(utilizacao))
             .build();
     }
 }

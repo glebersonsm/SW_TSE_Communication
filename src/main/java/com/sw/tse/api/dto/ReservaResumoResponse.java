@@ -16,4 +16,6 @@ public class ReservaResumoResponse {
     private String contrato;
     private String empresa;
     private String tipoSemana;
+    private Boolean podeEditar;
+    private Boolean podeCancelar;
 }
