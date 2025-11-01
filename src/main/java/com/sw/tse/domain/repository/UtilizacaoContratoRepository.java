@@ -21,7 +21,7 @@ public interface UtilizacaoContratoRepository extends JpaRepository<UtilizacaoCo
         )
         AND YEAR(u.dataCheckin) = :ano
         AND u.status != 'CANCELADO'
-        AND u.tipoUtilizacaoContrato.sigla IN ('RESERVA', 'RCI', 'POOL')
+        AND u.tipoUtilizacaoContrato.sigla IN ('RESERVA', 'DEPSEMANA', 'DEPPOOL')
         ORDER BY u.dataCheckin ASC
         """)
     List<UtilizacaoContrato> findUtilizacoesPorAnoECliente(

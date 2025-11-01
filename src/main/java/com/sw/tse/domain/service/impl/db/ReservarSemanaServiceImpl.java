@@ -23,6 +23,7 @@ import com.sw.tse.api.dto.ReservaSemanaResponse;
 import com.sw.tse.api.dto.ReservarSemanaRequest;
 import com.sw.tse.api.dto.TelefoneResponse;
 import com.sw.tse.core.config.CancelamentoParametros;
+import com.sw.tse.core.config.EdicaoParametros;
 import com.sw.tse.core.config.UtilizacaoContratoPropertiesCustom;
 import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.expection.ApiTseException;
@@ -109,6 +110,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
     private final CidadeService cidadeService;
     private final UtilizacaoContratoPropertiesCustom utilizacaoContratoConfig;
     private final CancelamentoParametros cancelamentoParametros;
+    private final EdicaoParametros edicaoParametros;
     
     private final ObjectMapper objectMapper = new ObjectMapper();
     
@@ -1109,23 +1111,40 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
             return false;
         }
         
-        // Regra 2: Check-in não pode ter passado ou ser hoje
-        if (utilizacao.getDataCheckin() != null) {
-            LocalDate dataCheckin = utilizacao.getDataCheckin().toLocalDate();
-            LocalDate hoje = LocalDate.now();
-            
-            if (dataCheckin.isBefore(hoje) || dataCheckin.isEqual(hoje)) {
-                return false;
-            }
-        }
-        
-        // Regra 3: Apenas RESERVA pode ser editada
-        if (utilizacao.getTipoUtilizacaoContrato() == null || 
-            !"RESERVA".equals(utilizacao.getTipoUtilizacaoContrato().getSigla())) {
+        // Regra 2: Verificar data do check-in
+        if (utilizacao.getDataCheckin() == null) {
             return false;
         }
         
-        return true;
+        LocalDate dataCheckin = utilizacao.getDataCheckin().toLocalDate();
+        LocalDate hoje = LocalDate.now();
+        
+        // Check-in já passou ou é hoje
+        if (dataCheckin.isBefore(hoje) || dataCheckin.isEqual(hoje)) {
+            return false;
+        }
+        
+        // Regra 3: Verificar por tipo de utilização
+        if (utilizacao.getTipoUtilizacaoContrato() == null) {
+            return false;
+        }
+        
+        String tipoUtilizacao = utilizacao.getTipoUtilizacaoContrato().getSigla();
+        
+        // RESERVA: mantém lógica atual (apenas check-in não passou)
+        if ("RESERVA".equals(tipoUtilizacao)) {
+            return true;
+        } 
+        // RCI: verifica parâmetro de configuração
+        else if ("DEPSEMANA".equals(tipoUtilizacao)) {
+            return edicaoParametros.getRciPermitido();
+        } 
+        // POOL: verifica parâmetro de configuração
+        else if ("DEPPOOL".equals(tipoUtilizacao)) {
+            return edicaoParametros.getPoolPermitido();
+        }
+        
+        return false;
     }
     
     private Boolean podeCancelarUtilizacao(UtilizacaoContrato utilizacao) {
@@ -1160,10 +1179,10 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         if ("RESERVA".equals(tipoUtilizacao)) {
             return cancelamentoParametros.getReservaPermitido() && 
                    diasAteCheckin >= cancelamentoParametros.getReservaDiasMinimos();
-        } else if ("RCI".equals(tipoUtilizacao)) {
+        } else if ("DEPSEMANA".equals(tipoUtilizacao)) {
             return cancelamentoParametros.getRciPermitido() && 
                    diasAteCheckin >= cancelamentoParametros.getRciDiasMinimos();
-        } else if ("POOL".equals(tipoUtilizacao)) {
+        } else if ("DEPPOOL".equals(tipoUtilizacao)) {
             return cancelamentoParametros.getPoolPermitido() && 
                    diasAteCheckin >= cancelamentoParametros.getPoolDiasMinimos();
         }
@@ -1183,7 +1202,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         return ReservaResumoResponse.builder()
             .idUtilizacaoContrato(utilizacao.getId())
             .tipoUtilizacao(utilizacao.getTipoUtilizacaoContrato() != null ? 
-                utilizacao.getTipoUtilizacaoContrato().getSigla() : "")
+                utilizacao.getTipoUtilizacaoContrato().getDescricao() : "")
             .checkin(utilizacao.getDataCheckin() != null ? 
                 utilizacao.getDataCheckin().toLocalDate() : null)
             .checkout(utilizacao.getDataCheckout() != null ? 
