@@ -16,6 +16,7 @@ public class PessoaComProprietarioResponse {
     private String sobrenome;
     private String cpf;
     private String dataNascimento;
+    private String sexo;
     private String email;
     private TelefoneResponse telefone;
     private EnderecoResponse endereco;

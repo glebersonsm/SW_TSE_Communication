@@ -22,6 +22,7 @@ public class ReservaSemanaResponse {
     private String descricaoPeriodo;
     private String status;
     private LocalDateTime dataCriacao;
+    private Integer capacidade;  // Capacidade máxima da UH
     
     // Hóspedes (apenas se houver)
     private List<HospedeResponse> hospedes;

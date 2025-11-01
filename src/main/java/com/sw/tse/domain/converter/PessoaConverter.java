@@ -262,6 +262,17 @@ public class PessoaConverter {
 		
 		if(pessoa.getIdPessoa() == null) {
 			pessoa = novaPessoa(hospedeDto, pessoa, responsavelCadastro);
+		} else {
+
+			pessoa.setNome(hospedeDto.nome().toUpperCase());
+			pessoa.setDataNascimento(hospedeDto.dataNascimento());
+			
+			if (hospedeDto.sexo() != null && !hospedeDto.sexo().isBlank()) {
+				SexoEnum sexo = "M".equalsIgnoreCase(hospedeDto.sexo()) 
+					? SexoEnum.MASCULINO 
+					: SexoEnum.FEMININO;
+				pessoa.setSexo(sexo);
+			}
 		}
 		
 		// Validar CEP antes de processar endereço

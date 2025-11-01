@@ -677,17 +677,26 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
             .descricaoPeriodo(periodoUtilizacao.getDescricaoPeriodo())
             .status(utilizacaoContrato.getStatus())
             .dataCriacao(utilizacaoContrato.getDataCadastro())
+            .capacidade(utilizacaoContrato.getUnidadeHoteleira() != null ? 
+                utilizacaoContrato.getUnidadeHoteleira().getCapacidade() : null)
             .hospedes(hospedesResponse)
             .build();
     }
     
     private HospedeResponse mapearHospedeParaResponse(UtilizacaoContratoHospede hospede) {
+        // Converter sexo: 0 (Integer) -> "M" (String), 1 (Integer) -> "F" (String)
+        String sexoConvertido = null;
+        if (hospede.getSexo() != null) {
+            sexoConvertido = hospede.getSexo() == 0 ? "M" : hospede.getSexo() == 1 ? "F" : null;
+        }
+        
         HospedeResponse.HospedeResponseBuilder builder = HospedeResponse.builder()
             .idHospede(hospede.getId())
             .nome(hospede.getNome())
             .sobrenome(hospede.getSobrenome())
             .cpf(hospede.getCpf())
             .dataNascimento(hospede.getDataNascimento())
+            .sexo(sexoConvertido)
             .isPrincipal(hospede.getIsPrincipal())
             .faixaEtaria(hospede.getFaixaEtariaSigla());
         
@@ -725,6 +734,10 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
             if (pessoa.getEmails() != null && !pessoa.getEmails().isEmpty()) {
                 builder.email(pessoa.getEmails().get(0).getEmail());
             }
+            
+            // Verificar se é proprietário (para bloquear edição de dados sensíveis no frontend)
+            boolean isProprietario = contratoRepository.pessoaEhProprietariaDeAlgumContrato(pessoa.getIdPessoa());
+            builder.isProprietario(isProprietario);
             
             // Buscar primeiro telefone
             if (pessoa.getTelefones() != null && !pessoa.getTelefones().isEmpty()) {

@@ -13,6 +13,7 @@ public class HospedeResponse {
     private String sobrenome;
     private String cpf;
     private LocalDate dataNascimento;
+    private String sexo;
     private Boolean isPrincipal;
     private String faixaEtaria;
     
@@ -20,5 +21,6 @@ public class HospedeResponse {
     private EnderecoResponse endereco;
     private String email;
     private TelefoneResponse telefone;
+    private Boolean isProprietario; // Indica se o hóspede principal é proprietário do contrato
 }
 

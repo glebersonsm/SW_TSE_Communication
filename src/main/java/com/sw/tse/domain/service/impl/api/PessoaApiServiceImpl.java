@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import com.sw.tse.api.dto.HospedeDto;
+import com.sw.tse.api.dto.PessoaComProprietarioResponse;
 import com.sw.tse.client.PessoaApiClient;
 import com.sw.tse.domain.converter.PessoaConverter;
 import com.sw.tse.domain.expection.ApiTseException;
@@ -127,6 +128,13 @@ public class PessoaApiServiceImpl implements PessoaService {
 				: "Erro ao buscar pessoa por ID (HTTP " + e.status() + ")";
 			throw new ApiTseException(errorMessage);
 		}
+	}
+
+
+	@Override
+	public Optional<PessoaComProprietarioResponse> buscarPorCpfCompleto(String cpf, Long idContrato) {
+		// TODO Auto-generated method stub
+		return Optional.empty();
 	}
 	
 }

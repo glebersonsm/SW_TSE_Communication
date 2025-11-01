@@ -16,8 +16,8 @@ import com.sw.tse.api.dto.TelefoneResponse;
 import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.converter.PessoaConverter;
 import com.sw.tse.domain.model.api.response.PessoaCpfApiResponse;
-import com.sw.tse.domain.model.db.Contrato;
 import com.sw.tse.domain.model.db.ContatoTelefonico;
+import com.sw.tse.domain.model.db.Contrato;
 import com.sw.tse.domain.model.db.EnderecoPessoa;
 import com.sw.tse.domain.model.db.OperadorSistema;
 import com.sw.tse.domain.model.db.Pessoa;
@@ -55,8 +55,6 @@ public class PessoaDbServiceImpl implements PessoaService {
 			
 			if(hospedeDto.tipoDocumento() == null || hospedeDto.tipoDocumento().equals("CPF")) {
 				listaPessoa = pessoaRepository.findFirstByCpfCnpjOrderByIdPessoa(numeroDocumento);
-			} else {
-				
 			}
 			
 			if(!listaPessoa.isEmpty()) {
@@ -151,6 +149,13 @@ public class PessoaDbServiceImpl implements PessoaService {
 		}
 		
 		// Montar response com dados completos
+		// Converter sexo: MASCULINO (código 0) -> "M", FEMININO (código 1) -> "F"
+		String sexoConvertido = null;
+		if (pessoa.getSexo() != null) {
+			sexoConvertido = pessoa.getSexo().getCodigo() == 0 ? "M" : 
+							 pessoa.getSexo().getCodigo() == 1 ? "F" : null;
+		}
+		
 		PessoaComProprietarioResponse.PessoaComProprietarioResponseBuilder builder = PessoaComProprietarioResponse.builder()
 			.idPessoa(pessoa.getIdPessoa())
 			.nome(pessoa.getNome())
@@ -158,6 +163,7 @@ public class PessoaDbServiceImpl implements PessoaService {
 			.cpf(pessoa.getCpfCnpj())
 			.dataNascimento(pessoa.getDataNascimento() != null ? 
 				pessoa.getDataNascimento().format(DateTimeFormatter.ISO_LOCAL_DATE) : null)
+			.sexo(sexoConvertido)
 			.isProprietario(isProprietario);
 		
 		// Buscar email (primeiro da lista)
