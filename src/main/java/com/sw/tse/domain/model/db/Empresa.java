@@ -56,6 +56,10 @@ public class Empresa {
     @JoinColumn(name = "idrespalteracao")
     private OperadorSistema responsavelAlteracao;
 
+    @ManyToOne
+    @JoinColumn(name = "idrespadministracaocondominio")
+    private Empresa empresaAdministracaoCondominio;
+
     // Método estático para criar nova empresa
     static Empresa novaEmpresa(String sigla, Pessoa pessoa, OperadorSistema responsavelCadastro) {
         Empresa novaEmpresa = new Empresa();
