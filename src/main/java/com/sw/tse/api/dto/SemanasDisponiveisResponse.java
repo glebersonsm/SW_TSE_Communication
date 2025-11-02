@@ -23,4 +23,5 @@ public class SemanasDisponiveisResponse {
     private Integer reserva;
     private Integer rci;
     private Integer pool;
+    private Integer capacidade;
 }

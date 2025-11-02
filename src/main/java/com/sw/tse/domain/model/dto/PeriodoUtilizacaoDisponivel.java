@@ -24,4 +24,5 @@ public class PeriodoUtilizacaoDisponivel {
     private Integer reserva;
     private Integer rci;
     private Integer pool;
+    private Integer capacidade;
 }

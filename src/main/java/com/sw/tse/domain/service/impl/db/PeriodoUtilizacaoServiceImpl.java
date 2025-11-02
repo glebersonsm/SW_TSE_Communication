@@ -86,6 +86,7 @@ public class PeriodoUtilizacaoServiceImpl implements PeriodoUtilizacaoService {
         dto.setReserva(row[7] != null ? ((Number) row[7]).intValue() : null);
         dto.setRci(row[8] != null ? ((Number) row[8]).intValue() : null);
         dto.setPool(row[9] != null ? ((Number) row[9]).intValue() : null);
+        dto.setCapacidade(row[10] != null ? ((Number) row[10]).intValue() : null);
         
         return dto;
     }

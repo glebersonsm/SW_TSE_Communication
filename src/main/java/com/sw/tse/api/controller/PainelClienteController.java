@@ -102,6 +102,7 @@ public class PainelClienteController {
                 .reserva(dto.getReserva())
                 .rci(dto.getRci())
                 .pool(dto.getPool())
+                .capacidade(dto.getCapacidade())
                 .build();
     }
     

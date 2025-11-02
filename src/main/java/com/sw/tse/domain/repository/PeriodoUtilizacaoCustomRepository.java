@@ -54,7 +54,12 @@ public class PeriodoUtilizacaoCustomRepository {
                     THEN 1 
                     ELSE 0 
                 END) AS RCI,
-                (CASE WHEN pe.anoinicio > EXTRACT(YEAR FROM CURRENT_DATE) AND CAST(CURRENT_DATE AS DATE) <= CAST((lpad(CAST(:poolDiaLimite AS VARCHAR), 2, '0') || '/' || lpad(CAST(:poolMesLimite AS VARCHAR), 2, '0') || '/' || EXTRACT(YEAR FROM CURRENT_DATE)) AS DATE) THEN 1 ELSE 0 END) AS pool
+                (CASE WHEN pe.anoinicio > EXTRACT(YEAR FROM CURRENT_DATE) AND CAST(CURRENT_DATE AS DATE) <= CAST((lpad(CAST(:poolDiaLimite AS VARCHAR), 2, '0') || '/' || lpad(CAST(:poolMesLimite AS VARCHAR), 2, '0') || '/' || EXTRACT(YEAR FROM CURRENT_DATE)) AS DATE) THEN 1 ELSE 0 END) AS pool,
+                (SELECT uh.capacidade 
+                 FROM contrato ct 
+                 INNER JOIN cotauh co ON co.idcotauh = ct.idcotaadquirida 
+                 INNER JOIN unidadehoteleira uh ON uh.idunidadehoteleira = co.idunidadehoteleira 
+                 WHERE ct.idcontrato = :idContrato) AS capacidade
             FROM 
                 periodoutilizacao pe
             INNER JOIN
