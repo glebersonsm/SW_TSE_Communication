@@ -200,9 +200,10 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
           AND (:empresaId IS NULL OR cf.idtenant = :empresaId)
           AND (
             :status IS NULL 
+            OR (:status = 'A' AND cf.pago = FALSE)
             OR (:status = 'B' AND cf.pago = TRUE)
-            OR (:status = 'P' AND cf.pago = FALSE AND cf.valorreceber > 0)
-            OR (:status = 'V' AND cf.pago = FALSE AND cf.valorreceber > 0 AND cf.datavencimento < CURRENT_DATE)
+            OR (:status = 'P' AND cf.pago = FALSE AND cf.datavencimento >= CURRENT_DATE)
+            OR (:status = 'V' AND cf.pago = FALSE AND cf.datavencimento < CURRENT_DATE)
           )
     """, nativeQuery = true)
     Long countContasPorClienteComFiltros(
@@ -226,9 +227,10 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
           AND (:empresaId IS NULL OR cf.idtenant = :empresaId)
           AND (
             :status IS NULL 
+            OR (:status = 'A' AND cf.pago = FALSE)
             OR (:status = 'B' AND cf.pago = TRUE)
-            OR (:status = 'P' AND cf.pago = FALSE AND cf.valorreceber > 0)
-            OR (:status = 'V' AND cf.pago = FALSE AND cf.valorreceber > 0 AND cf.datavencimento < CURRENT_DATE)
+            OR (:status = 'P' AND cf.pago = FALSE AND cf.datavencimento >= CURRENT_DATE)
+            OR (:status = 'V' AND cf.pago = FALSE AND cf.datavencimento < CURRENT_DATE)
           )
         ORDER BY cf.datavencimento ASC
         LIMIT :limite OFFSET :offset

@@ -19,11 +19,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sw.tse.api.dto.ApiResponseDto;
+import com.sw.tse.api.dto.BandeiraAceitaDto;
+import com.sw.tse.api.dto.CartaoParaPagamentoDto;
+import com.sw.tse.api.dto.CartaoVinculadoResponseDto;
 import com.sw.tse.api.dto.ContaFinanceiraClienteDto;
 import com.sw.tse.api.dto.PaginatedResponseDto;
 import com.sw.tse.api.dto.ReservaResumoResponse;
 import com.sw.tse.api.dto.ReservaSemanaResponse;
 import com.sw.tse.api.dto.ReservarSemanaRequest;
+import com.sw.tse.api.dto.SalvarCartaoRequestDto;
 import com.sw.tse.api.dto.SemanasDisponiveisRequest;
 import com.sw.tse.api.dto.SemanasDisponiveisResponse;
 import com.sw.tse.domain.model.dto.CancelarReservaRequest;
@@ -59,6 +63,7 @@ public class PainelClienteController {
     private final ReservarSemanaService reservarSemanaService;
     private final CancelarReservaService cancelarReservaService;
     private final com.sw.tse.domain.repository.ContratoRepository contratoRepository;
+    private final com.sw.tse.domain.service.interfaces.CartaoVinculadoPessoaService cartaoVinculadoPessoaService;
 
     // ==================== ENDPOINTS DE SEMANAS DISPONÍVEIS ====================
     
@@ -405,5 +410,142 @@ public class PainelClienteController {
         );
         
         return ResponseEntity.ok(responseApi);
+    }
+    
+    // ==================== ENDPOINTS DE CARTÕES SALVOS ====================
+    
+    @Operation(summary = "Salvar cartão de crédito", 
+               description = "Salva um cartão de crédito criptografado para o cliente logado")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Cartão salvo com sucesso",
+                    content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
+            @ApiResponse(responseCode = "401", description = "Não autorizado", content = @Content),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor", content = @Content)
+    })
+    @PostMapping("/cartao/salvar")
+    public ResponseEntity<ApiResponseDto<CartaoVinculadoResponseDto>> salvarCartao(
+            @Valid @RequestBody SalvarCartaoRequestDto dto) {
+        
+        Long pessoaId = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (pessoaId == null) {
+            throw new TokenJwtInvalidoException("ID da pessoa cliente não está disponível no token");
+        }
+        
+        CartaoVinculadoResponseDto resultado = cartaoVinculadoPessoaService.salvarCartao(dto, pessoaId);
+        
+        ApiResponseDto<CartaoVinculadoResponseDto> response = new ApiResponseDto<>(
+            HttpStatus.OK.value(),
+            true,
+            resultado,
+            "Cartão salvo com sucesso"
+        );
+        return ResponseEntity.ok(response);
+    }
+    
+    @Operation(summary = "Listar cartões salvos", 
+               description = "Lista os cartões de crédito salvos do cliente logado (dados ofuscados)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Cartões listados com sucesso",
+                    content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
+            @ApiResponse(responseCode = "401", description = "Não autorizado", content = @Content),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor", content = @Content)
+    })
+    @GetMapping("/cartao/meus-cartoes")
+    public ResponseEntity<ApiResponseDto<List<CartaoVinculadoResponseDto>>> listarMeusCartoes() {
+        
+        Long pessoaId = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (pessoaId == null) {
+            throw new TokenJwtInvalidoException("ID da pessoa cliente não está disponível no token");
+        }
+        
+        List<CartaoVinculadoResponseDto> cartoes = cartaoVinculadoPessoaService.listarCartoesPessoa(pessoaId);
+        
+        ApiResponseDto<List<CartaoVinculadoResponseDto>> response = new ApiResponseDto<>(
+            HttpStatus.OK.value(),
+            true,
+            cartoes,
+            "Cartões listados com sucesso"
+        );
+        return ResponseEntity.ok(response);
+    }
+    
+    @Operation(summary = "Obter dados do cartão para pagamento (uso interno)", 
+               description = "Retorna os dados descriptografados do cartão para processar pagamento")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Dados obtidos com sucesso",
+                    content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
+            @ApiResponse(responseCode = "401", description = "Não autorizado", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Cartão não encontrado", content = @Content),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor", content = @Content)
+    })
+    @GetMapping("/cartao/{id}/dados-pagamento")
+    public ResponseEntity<ApiResponseDto<CartaoParaPagamentoDto>> obterDadosParaPagamento(
+            @PathVariable Long id) {
+        
+        Long pessoaId = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (pessoaId == null) {
+            throw new TokenJwtInvalidoException("ID da pessoa cliente não está disponível no token");
+        }
+        
+        CartaoParaPagamentoDto dados = cartaoVinculadoPessoaService.obterCartaoParaPagamento(id, pessoaId);
+        
+        ApiResponseDto<CartaoParaPagamentoDto> response = new ApiResponseDto<>(
+            HttpStatus.OK.value(),
+            true,
+            dados,
+            "Dados do cartão obtidos com sucesso"
+        );
+        return ResponseEntity.ok(response);
+    }
+    
+    @Operation(summary = "Remover cartão salvo", 
+               description = "Remove (soft delete) um cartão de crédito salvo do cliente logado")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Cartão removido com sucesso",
+                    content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
+            @ApiResponse(responseCode = "401", description = "Não autorizado", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Cartão não encontrado", content = @Content),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor", content = @Content)
+    })
+    @DeleteMapping("/cartao/{id}")
+    public ResponseEntity<ApiResponseDto<Void>> removerCartao(@PathVariable Long id) {
+        
+        Long pessoaId = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (pessoaId == null) {
+            throw new TokenJwtInvalidoException("ID da pessoa cliente não está disponível no token");
+        }
+        
+        cartaoVinculadoPessoaService.removerCartao(id, pessoaId);
+        
+        ApiResponseDto<Void> response = new ApiResponseDto<>(
+            HttpStatus.OK.value(),
+            true,
+            null,
+            "Cartão removido com sucesso"
+        );
+        return ResponseEntity.ok(response);
+    }
+    
+    @Operation(summary = "Listar bandeiras de cartão aceitas", 
+               description = "Lista todas as bandeiras de cartão de crédito aceitas pelo sistema")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Bandeiras listadas com sucesso",
+                    content = @Content(schema = @Schema(implementation = ApiResponseDto.class)))
+    })
+    @GetMapping("/cartao/bandeiras-aceitas")
+    public ResponseEntity<ApiResponseDto<List<BandeiraAceitaDto>>> listarBandeirasAceitas() {
+        List<BandeiraAceitaDto> bandeiras = cartaoVinculadoPessoaService.listarBandeirasAceitas();
+        
+        ApiResponseDto<List<BandeiraAceitaDto>> response = new ApiResponseDto<>(
+            HttpStatus.OK.value(),
+            true,
+            bandeiras,
+            "Bandeiras listadas com sucesso"
+        );
+        return ResponseEntity.ok(response);
     }
 }
