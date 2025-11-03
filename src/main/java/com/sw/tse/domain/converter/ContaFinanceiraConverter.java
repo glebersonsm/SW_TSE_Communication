@@ -92,9 +92,10 @@ public class ContaFinanceiraConverter {
                 // NumeroImovel
                 dto.setNumeroImovel(uh.getDescricao());
                 
-                // BlocoCodigo (via UnidadeHoteleira → EdificioHotel)
+                // BlocoCodigo e IdTorre (via UnidadeHoteleira → EdificioHotel)
                 if (uh.getEdificioHotel() != null) {
                     dto.setBlocoCodigo(uh.getEdificioHotel().getDescricao());
+                    dto.setIdTorre(uh.getEdificioHotel().getId());
                 }
             }
         }

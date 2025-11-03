@@ -171,4 +171,12 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
            "WHERE (c.pessoaCessionario.idPessoa = :idPessoa OR c.pessaoCocessionario.idPessoa = :idPessoa)")
     boolean pessoaEhProprietariaDeAlgumContrato(@Param("idPessoa") Long idPessoa);
 
+    @Query("SELECT DISTINCT new com.sw.tse.api.model.EmpresaTseDto(e.id, e.sigla) " +
+           "FROM Contrato c " +
+           "JOIN c.empresa e " +
+           "WHERE c.pessoaCessionario.idPessoa = :idPessoa " +
+           "AND (c.status = 'ATIVO' OR c.status = 'ATIVOREV') " +
+           "ORDER BY e.sigla")
+    List<com.sw.tse.api.model.EmpresaTseDto> findEmpresasByPessoaComContratosAtivos(@Param("idPessoa") Long idPessoa);
+
 }

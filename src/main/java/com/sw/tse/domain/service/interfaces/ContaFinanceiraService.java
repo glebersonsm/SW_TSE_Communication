@@ -24,6 +24,7 @@ public interface ContaFinanceiraService {
      * @param vencimentoInicial Data inicial de vencimento (opcional)
      * @param vencimentoFinal Data final de vencimento (opcional)
      * @param status Status da conta: B (Paga), P (Em aberto), V (Vencida) (opcional)
+     * @param empresaId ID da empresa para filtrar (opcional)
      * @param numeroDaPagina Número da página (inicia em 1)
      * @param quantidadeRegistrosRetornar Quantidade de registros por página
      * @return DTO com lista paginada e informações de paginação
@@ -32,6 +33,7 @@ public interface ContaFinanceiraService {
         LocalDate vencimentoInicial, 
         LocalDate vencimentoFinal, 
         String status,
+        Long empresaId,
         Integer numeroDaPagina,
         Integer quantidadeRegistrosRetornar
     );

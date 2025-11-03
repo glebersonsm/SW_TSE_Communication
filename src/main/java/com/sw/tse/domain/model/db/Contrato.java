@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -29,10 +30,10 @@ public class Contrato {
     @SequenceGenerator(name = "seqcontrato", sequenceName = "seqcontrato", allocationSize = 1)
  	@Column(name = "idcontrato")
 	private Long id;
-	@ManyToOne()
+	@ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idpessoacessionario")
 	private Pessoa pessoaCessionario;
-	@ManyToOne
+	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "idpessoacocessionario")
 	private Pessoa pessaoCocessionario;
 	@Column(name ="numerocontrato")
@@ -41,11 +42,11 @@ public class Contrato {
 	private String status;
 	@Column(name = "valornegociado")
 	private BigDecimal valorNegociado;
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idtenant")
 	private Empresa empresa;
 	
-	@ManyToOne()
+	@ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idcotaadquirida")
 	private CotaUh cotaUh;
 	

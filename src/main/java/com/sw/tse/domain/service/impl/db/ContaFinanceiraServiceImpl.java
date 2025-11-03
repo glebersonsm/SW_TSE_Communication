@@ -73,6 +73,7 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
             LocalDate vencimentoInicial, 
             LocalDate vencimentoFinal, 
             String status,
+            Long empresaId,
             Integer numeroDaPagina,
             Integer quantidadeRegistrosRetornar) {
         
@@ -94,7 +95,8 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
                 idCliente, 
                 vencimentoInicial, 
                 vencimentoFinal, 
-                status
+                status,
+                empresaId
         );
         
         int totalPages = (int) Math.ceil((double) totalRegistros / quantidadeRegistrosRetornar);
@@ -114,6 +116,7 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
                 vencimentoInicial, 
                 vencimentoFinal, 
                 status,
+                empresaId,
                 quantidadeRegistrosRetornar,
                 offset
         );

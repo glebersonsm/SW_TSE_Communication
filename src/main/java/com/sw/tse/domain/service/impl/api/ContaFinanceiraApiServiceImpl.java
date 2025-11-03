@@ -80,6 +80,7 @@ public class ContaFinanceiraApiServiceImpl implements ContaFinanceiraService {
             LocalDate vencimentoInicial, 
             LocalDate vencimentoFinal, 
             String status,
+            Long empresaId,
             Integer numeroDaPagina,
             Integer quantidadeRegistrosRetornar) {
         throw new UnsupportedOperationException("Operação não suportada na implementação API");

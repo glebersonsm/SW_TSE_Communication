@@ -94,6 +94,9 @@ public class ContaFinanceiraClienteDto {
     @JsonProperty("FracaoCota")
     private String fracaoCota;
     
+    @JsonProperty("IdTorre")
+    private Long idTorre;
+    
     @JsonProperty("BlocoCodigo")
     private String blocoCodigo;
     

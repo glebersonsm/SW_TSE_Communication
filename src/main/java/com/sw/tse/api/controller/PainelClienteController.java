@@ -58,6 +58,7 @@ public class PainelClienteController {
     private final ContratoClienteService contratoClienteService;
     private final ReservarSemanaService reservarSemanaService;
     private final CancelarReservaService cancelarReservaService;
+    private final com.sw.tse.domain.repository.ContratoRepository contratoRepository;
 
     // ==================== ENDPOINTS DE SEMANAS DISPONÍVEIS ====================
     
@@ -282,6 +283,9 @@ public class PainelClienteController {
             @Parameter(description = "Status da conta: B (Paga), P (Em aberto), V (Vencida)", required = false)
             @RequestParam(required = false) String status,
             
+            @Parameter(description = "ID da empresa para filtrar contas", required = false)
+            @RequestParam(required = false) Long empresaId,
+            
             @Parameter(description = "Número da página (inicia em 1)", required = false)
             @RequestParam(required = false, defaultValue = "1") Integer numeroDaPagina,
             
@@ -292,6 +296,7 @@ public class PainelClienteController {
                 vencimentoInicial, 
                 vencimentoFinal, 
                 status,
+                empresaId,
                 numeroDaPagina,
                 quantidadeRegistrosRetornar
         );
@@ -366,6 +371,37 @@ public class PainelClienteController {
             true,
             null,
             "Reserva cancelada com sucesso"
+        );
+        
+        return ResponseEntity.ok(responseApi);
+    }
+
+    // ==================== ENDPOINTS DE EMPRESAS DO USUÁRIO ====================
+    
+    @Operation(summary = "Listar empresas do usuário logado", 
+               description = "Lista as empresas onde o usuário tem contratos com status ATIVO ou ATIVOREV")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Empresas listadas com sucesso",
+                    content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
+            @ApiResponse(responseCode = "401", description = "Não autorizado", content = @Content),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor", content = @Content)
+    })
+    @GetMapping("/empresas-usuario-logado")
+    public ResponseEntity<ApiResponseDto<List<com.sw.tse.api.model.EmpresaTseDto>>> listarEmpresasDoUsuario() {
+        
+        Long idCliente = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (idCliente == null) {
+            throw new TokenJwtInvalidoException("ID da pessoa cliente não está disponível no token");
+        }
+        
+        List<com.sw.tse.api.model.EmpresaTseDto> empresas = contratoRepository.findEmpresasByPessoaComContratosAtivos(idCliente);
+        
+        ApiResponseDto<List<com.sw.tse.api.model.EmpresaTseDto>> responseApi = new ApiResponseDto<>(
+            HttpStatus.OK.value(),
+            true,
+            empresas,
+            "Empresas listadas com sucesso"
         );
         
         return ResponseEntity.ok(responseApi);

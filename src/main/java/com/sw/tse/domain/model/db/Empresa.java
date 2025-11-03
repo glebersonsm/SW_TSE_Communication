@@ -7,6 +7,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -44,19 +45,19 @@ public class Empresa {
     private LocalDateTime dataAlteracao;
 
     // Relacionamento com Pessoa (baseado na FK idpessoa)
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idpessoa")
     private Pessoa pessoa;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idrespcadastro")
     private OperadorSistema responsavelCadastro;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idrespalteracao")
     private OperadorSistema responsavelAlteracao;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idrespadministracaocondominio")
     private Empresa empresaAdministracaoCondominio;
 

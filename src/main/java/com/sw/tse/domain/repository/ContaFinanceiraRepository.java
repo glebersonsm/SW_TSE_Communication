@@ -197,6 +197,7 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
           AND cf.tipohistorico NOT IN ('RENEGOCIADA', 'EXCLUIDO', 'CANCELADO')
           AND (CAST(:vencimentoInicial AS date) IS NULL OR DATE(cf.datavencimento) >= CAST(:vencimentoInicial AS date))
           AND (CAST(:vencimentoFinal AS date) IS NULL OR DATE(cf.datavencimento) <= CAST(:vencimentoFinal AS date))
+          AND (:empresaId IS NULL OR cf.idtenant = :empresaId)
           AND (
             :status IS NULL 
             OR (:status = 'B' AND cf.pago = TRUE)
@@ -208,7 +209,8 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
         @Param("idCliente") Long idCliente,
         @Param("vencimentoInicial") LocalDate vencimentoInicial,
         @Param("vencimentoFinal") LocalDate vencimentoFinal,
-        @Param("status") String status
+        @Param("status") String status,
+        @Param("empresaId") Long empresaId
     );
     
     /**
@@ -221,6 +223,7 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
           AND cf.tipohistorico NOT IN ('RENEGOCIADA', 'EXCLUIDO', 'CANCELADO')
           AND (CAST(:vencimentoInicial AS date) IS NULL OR DATE(cf.datavencimento) >= CAST(:vencimentoInicial AS date))
           AND (CAST(:vencimentoFinal AS date) IS NULL OR DATE(cf.datavencimento) <= CAST(:vencimentoFinal AS date))
+          AND (:empresaId IS NULL OR cf.idtenant = :empresaId)
           AND (
             :status IS NULL 
             OR (:status = 'B' AND cf.pago = TRUE)
@@ -235,6 +238,7 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
         @Param("vencimentoInicial") LocalDate vencimentoInicial,
         @Param("vencimentoFinal") LocalDate vencimentoFinal,
         @Param("status") String status,
+        @Param("empresaId") Long empresaId,
         @Param("limite") Integer limite,
         @Param("offset") Integer offset
     );
