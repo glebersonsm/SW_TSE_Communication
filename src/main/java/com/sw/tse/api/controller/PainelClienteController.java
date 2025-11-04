@@ -23,6 +23,8 @@ import com.sw.tse.api.dto.BandeiraAceitaDto;
 import com.sw.tse.api.dto.CartaoParaPagamentoDto;
 import com.sw.tse.api.dto.CartaoVinculadoResponseDto;
 import com.sw.tse.api.dto.ContaFinanceiraClienteDto;
+import com.sw.tse.api.dto.DadosPessoaDto;
+import com.sw.tse.api.dto.EnderecoDto;
 import com.sw.tse.api.dto.PaginatedResponseDto;
 import com.sw.tse.api.dto.ReservaResumoResponse;
 import com.sw.tse.api.dto.ReservaSemanaResponse;
@@ -30,9 +32,9 @@ import com.sw.tse.api.dto.ReservarSemanaRequest;
 import com.sw.tse.api.dto.SalvarCartaoRequestDto;
 import com.sw.tse.api.dto.SemanasDisponiveisRequest;
 import com.sw.tse.api.dto.SemanasDisponiveisResponse;
-import com.sw.tse.domain.model.dto.CancelarReservaRequest;
 import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 import com.sw.tse.domain.model.api.dto.ContratoClienteApiResponse;
+import com.sw.tse.domain.model.dto.CancelarReservaRequest;
 import com.sw.tse.domain.model.dto.PeriodoUtilizacaoDisponivel;
 import com.sw.tse.domain.service.interfaces.CancelarReservaService;
 import com.sw.tse.domain.service.interfaces.ContaFinanceiraService;
@@ -64,6 +66,7 @@ public class PainelClienteController {
     private final CancelarReservaService cancelarReservaService;
     private final com.sw.tse.domain.repository.ContratoRepository contratoRepository;
     private final com.sw.tse.domain.service.interfaces.CartaoVinculadoPessoaService cartaoVinculadoPessoaService;
+    private final com.sw.tse.domain.service.interfaces.PessoaService pessoaService;
 
     // ==================== ENDPOINTS DE SEMANAS DISPONÍVEIS ====================
     
@@ -547,5 +550,44 @@ public class PainelClienteController {
             "Bandeiras listadas com sucesso"
         );
         return ResponseEntity.ok(response);
+    }
+    
+    @Operation(summary = "Obter dados da pessoa logada",
+               description = "Retorna os dados cadastrais da pessoa logada, incluindo endereço")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Dados retornados com sucesso",
+                    content = @Content(schema = @Schema(implementation = ApiResponseDto.class))),
+            @ApiResponse(responseCode = "404", description = "Pessoa não encontrada", content = @Content)
+    })
+    @GetMapping("/meus-dados")
+    public ResponseEntity<ApiResponseDto<DadosPessoaDto>> obterMeusDados() {
+        try {
+            Long pessoaId = JwtTokenUtil.getIdPessoaCliente();
+            DadosPessoaDto dadosPessoa = pessoaService.obterDadosPessoaLogada(pessoaId);
+            
+            ApiResponseDto<DadosPessoaDto> response = new ApiResponseDto<>(
+                HttpStatus.OK.value(),
+                true,
+                dadosPessoa,
+                "Dados retornados com sucesso"
+            );
+            return ResponseEntity.ok(response);
+        } catch (TokenJwtInvalidoException e) {
+            ApiResponseDto<DadosPessoaDto> response = new ApiResponseDto<>(
+                HttpStatus.UNAUTHORIZED.value(),
+                false,
+                null,
+                "Token inválido ou expirado"
+            );
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        } catch (Exception e) {
+            ApiResponseDto<DadosPessoaDto> response = new ApiResponseDto<>(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                false,
+                null,
+                "Erro ao buscar dados da pessoa: " + e.getMessage()
+            );
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
     }
 }

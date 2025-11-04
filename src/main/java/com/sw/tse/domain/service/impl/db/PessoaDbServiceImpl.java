@@ -9,6 +9,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import com.sw.tse.api.dto.DadosPessoaDto;
+import com.sw.tse.api.dto.EnderecoDto;
 import com.sw.tse.api.dto.EnderecoResponse;
 import com.sw.tse.api.dto.HospedeDto;
 import com.sw.tse.api.dto.PessoaComProprietarioResponse;
@@ -211,7 +213,56 @@ public class PessoaDbServiceImpl implements PessoaService {
 		return Optional.of(builder.build());
 	}
 	
-	
-	
+	@Override
+	public DadosPessoaDto obterDadosPessoaLogada(Long pessoaId) {
+		log.info("Buscando dados da pessoa ID: {}", pessoaId);
+		
+		var pessoa = pessoaRepository.findById(pessoaId)
+				.orElseThrow(() -> new RuntimeException("Pessoa não encontrada"));
+		
+		DadosPessoaDto dadosPessoa = new DadosPessoaDto();
+		dadosPessoa.setId(pessoa.getIdPessoa());
+		dadosPessoa.setNome(pessoa.getNome() != null ? pessoa.getNome() : "");
+		dadosPessoa.setCpf(pessoa.getCpfCnpj() != null ? pessoa.getCpfCnpj() : "");
+		
+		// Pegar primeiro email da lista (se existir)
+		if (pessoa.getEmails() != null && !pessoa.getEmails().isEmpty()) {
+			dadosPessoa.setEmail(pessoa.getEmails().get(0).getEmail() != null ? 
+								pessoa.getEmails().get(0).getEmail() : "");
+		} else {
+			dadosPessoa.setEmail("");
+		}
+		
+		// Pegar primeiro telefone da lista (se existir) e formatar
+		if (pessoa.getTelefones() != null && !pessoa.getTelefones().isEmpty()) {
+			var telefone = pessoa.getTelefones().get(0);
+			var numeroCompleto = (telefone.getDdd() != null ? telefone.getDdd() : "") + 
+								(telefone.getNumero() != null ? telefone.getNumero() : "");
+			dadosPessoa.setTelefone(numeroCompleto);
+		} else {
+			dadosPessoa.setTelefone("");
+		}
+		
+		// Mapear primeiro endereço se existir
+		if (pessoa.getEnderecos() != null && !pessoa.getEnderecos().isEmpty()) {
+			var enderecoPessoa = pessoa.getEnderecos().get(0);
+			
+			EnderecoDto endereco = new EnderecoDto();
+			endereco.setLogradouro(enderecoPessoa.getLogradouro() != null ? enderecoPessoa.getLogradouro() : "");
+			endereco.setNumero(enderecoPessoa.getNumero() != null ? enderecoPessoa.getNumero() : "");
+			endereco.setComplemento(enderecoPessoa.getComplemento() != null ? enderecoPessoa.getComplemento() : "");
+			endereco.setBairro(enderecoPessoa.getBairro() != null ? enderecoPessoa.getBairro() : "");
+			endereco.setCidade(enderecoPessoa.getCidade() != null ? 
+							  enderecoPessoa.getCidade().getNome() : "");
+			endereco.setUf(enderecoPessoa.getCidade() != null ?
+						  enderecoPessoa.getCidade().getUf() : "");
+			endereco.setCep(enderecoPessoa.getCep() != null ? enderecoPessoa.getCep() : "");
+			
+			dadosPessoa.setEndereco(endereco);
+		}
+		
+		log.info("Dados da pessoa ID: {} retornados com sucesso", pessoaId);
+		return dadosPessoa;
+	}
 
 }

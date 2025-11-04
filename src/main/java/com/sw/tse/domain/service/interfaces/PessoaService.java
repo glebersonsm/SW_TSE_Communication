@@ -2,7 +2,9 @@ package com.sw.tse.domain.service.interfaces;
 
 import java.util.Optional;
 
+import com.sw.tse.api.dto.DadosPessoaDto;
 import com.sw.tse.api.dto.HospedeDto;
+import com.sw.tse.api.dto.PessoaComProprietarioResponse;
 import com.sw.tse.domain.model.api.response.PessoaCpfApiResponse;
 import com.sw.tse.domain.model.db.Contrato;
 
@@ -41,5 +43,13 @@ public interface PessoaService {
 	 * @param idContrato ID do contrato (parâmetro mantido para compatibilidade, mas não usado na verificação)
 	 * @return Dados completos da pessoa com flag isProprietario
 	 */
-	Optional<com.sw.tse.api.dto.PessoaComProprietarioResponse> buscarPorCpfCompleto(String cpf, Long idContrato);
+	Optional<PessoaComProprietarioResponse> buscarPorCpfCompleto(String cpf, Long idContrato);
+	
+	/**
+	 * Retorna os dados da pessoa logada incluindo endereço, email e telefone
+	 * 
+	 * @param pessoaId ID da pessoa
+	 * @return Dados da pessoa com endereço
+	 */
+	DadosPessoaDto obterDadosPessoaLogada(Long pessoaId);
 }

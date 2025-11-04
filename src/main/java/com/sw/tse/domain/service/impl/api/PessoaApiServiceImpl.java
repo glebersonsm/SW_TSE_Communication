@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
+import com.sw.tse.api.dto.DadosPessoaDto;
 import com.sw.tse.api.dto.HospedeDto;
 import com.sw.tse.api.dto.PessoaComProprietarioResponse;
 import com.sw.tse.client.PessoaApiClient;
@@ -135,6 +136,15 @@ public class PessoaApiServiceImpl implements PessoaService {
 	public Optional<PessoaComProprietarioResponse> buscarPorCpfCompleto(String cpf, Long idContrato) {
 		// TODO Auto-generated method stub
 		return Optional.empty();
+	}
+	
+	@Override
+	public DadosPessoaDto obterDadosPessoaLogada(Long pessoaId) {
+		log.warn("Tentativa de obter dados da pessoa via API - método não implementado. PessoaId: {}", pessoaId);
+		throw new UnsupportedOperationException(
+			"Método obterDadosPessoaLogada não implementado para PessoaApiServiceImpl. " +
+			"Configure database.enabled=true para usar PessoaDbServiceImpl"
+		);
 	}
 	
 }
