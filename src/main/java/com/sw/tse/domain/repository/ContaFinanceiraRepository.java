@@ -193,6 +193,7 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
     @Query(value = """
         SELECT COUNT(*) 
         FROM contafinanceira cf 
+        LEFT JOIN meiopagamento mp ON cf.idmeiopagamento = mp.idmeiopagamento
         WHERE cf.idpessoa = :idCliente
           AND cf.tipohistorico NOT IN ('RENEGOCIADA', 'EXCLUIDO', 'CANCELADO')
           AND (CAST(:vencimentoInicial AS date) IS NULL OR DATE(cf.datavencimento) >= CAST(:vencimentoInicial AS date))
@@ -200,10 +201,33 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
           AND (:empresaId IS NULL OR cf.idtenant = :empresaId)
           AND (
             :status IS NULL 
-            OR (:status = 'A' AND cf.pago = FALSE)
-            OR (:status = 'B' AND cf.pago = TRUE)
-            OR (:status = 'P' AND cf.pago = FALSE AND cf.datavencimento >= CURRENT_DATE)
-            OR (:status = 'V' AND cf.pago = FALSE AND cf.datavencimento < CURRENT_DATE)
+            OR (
+                :status = 'A' AND cf.pago = FALSE
+                AND cf.tipohistorico NOT IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
+                -- Excluir contas que são consideradas pagas por outras regras
+                AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
+                AND NOT (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
+                AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = TRUE AND cf.recorrenciaautorizada = TRUE)
+            )
+            OR (:status = 'B' AND (
+                cf.pago = TRUE 
+                OR cf.tipohistorico IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
+                OR (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
+                OR (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
+                OR (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = TRUE AND cf.recorrenciaautorizada = TRUE)
+            ))
+            OR (:status = 'P' AND cf.pago = FALSE AND cf.datavencimento >= CURRENT_DATE
+                AND cf.tipohistorico NOT IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
+                AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
+                AND NOT (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
+                AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = TRUE AND cf.recorrenciaautorizada = TRUE)
+            )
+            OR (:status = 'V' AND cf.pago = FALSE AND cf.datavencimento < CURRENT_DATE
+                AND cf.tipohistorico NOT IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
+                AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
+                AND NOT (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
+                AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = TRUE AND cf.recorrenciaautorizada = TRUE)
+            )
           )
     """, nativeQuery = true)
     Long countContasPorClienteComFiltros(
@@ -218,8 +242,9 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
      * Busca contas por cliente com filtros e paginação
      */
     @Query(value = """
-        SELECT * 
+        SELECT cf.* 
         FROM contafinanceira cf 
+        LEFT JOIN meiopagamento mp ON cf.idmeiopagamento = mp.idmeiopagamento
         WHERE cf.idpessoa = :idCliente
           AND cf.tipohistorico NOT IN ('RENEGOCIADA', 'EXCLUIDO', 'CANCELADO')
           AND (CAST(:vencimentoInicial AS date) IS NULL OR DATE(cf.datavencimento) >= CAST(:vencimentoInicial AS date))
@@ -227,10 +252,33 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
           AND (:empresaId IS NULL OR cf.idtenant = :empresaId)
           AND (
             :status IS NULL 
-            OR (:status = 'A' AND cf.pago = FALSE)
-            OR (:status = 'B' AND cf.pago = TRUE)
-            OR (:status = 'P' AND cf.pago = FALSE AND cf.datavencimento >= CURRENT_DATE)
-            OR (:status = 'V' AND cf.pago = FALSE AND cf.datavencimento < CURRENT_DATE)
+            OR (
+                :status = 'A' AND cf.pago = FALSE
+                AND cf.tipohistorico NOT IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
+                -- Excluir contas que são consideradas pagas por outras regras
+                AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
+                AND NOT (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
+                AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = TRUE AND cf.recorrenciaautorizada = TRUE)
+            )
+            OR (:status = 'B' AND (
+                cf.pago = TRUE 
+                OR cf.tipohistorico IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
+                OR (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
+                OR (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
+                OR (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = TRUE AND cf.recorrenciaautorizada = TRUE)
+            ))
+            OR (:status = 'P' AND cf.pago = FALSE AND cf.datavencimento >= CURRENT_DATE
+                AND cf.tipohistorico NOT IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
+                AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
+                AND NOT (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
+                AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = TRUE AND cf.recorrenciaautorizada = TRUE)
+            )
+            OR (:status = 'V' AND cf.pago = FALSE AND cf.datavencimento < CURRENT_DATE
+                AND cf.tipohistorico NOT IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
+                AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
+                AND NOT (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
+                AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = TRUE AND cf.recorrenciaautorizada = TRUE)
+            )
           )
         ORDER BY cf.datavencimento ASC
         LIMIT :limite OFFSET :offset
