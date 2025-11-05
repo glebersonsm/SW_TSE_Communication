@@ -139,6 +139,10 @@ public class ContaFinanceiraConverter {
         // Status CRC - valor padrão
         dto.setStatusCrcBloqueiaPagamento("N");
         
+        // Juros e Multa calculados (valores totais)
+        dto.setJuros(contaFinanceira.calcularJuros()); // Juros total acumulado
+        dto.setMulta(contaFinanceira.calcularMulta()); // Multa total
+        
         // LimitePagamentoTransmitido - calcular para contas vencidas
         if (contaFinanceira.getCarteiraBoleto() != null && 
             contaFinanceira.getCarteiraBoleto().getQtdDiasNaoReceberAposVencimento() != null) {

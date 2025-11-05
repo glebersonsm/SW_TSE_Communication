@@ -244,4 +244,10 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
         @Param("limite") Integer limite,
         @Param("offset") Integer offset
     );
+    
+    /**
+     * Obtém o último número de parcela para um contrato e origem específicos
+     */
+    @Query("SELECT MAX(cf.numeroParcela) FROM ContaFinanceira cf WHERE cf.contrato.id = :idContrato AND cf.origemConta.idTipoOrigemContaFinanceira = :idOrigemConta AND cf.tipoHistorico = 'ATIVO'")
+    Integer obterUltimoNroParcelaContratoOrigem(@Param("idContrato") Long idContrato, @Param("idOrigemConta") Integer idOrigemConta);
 }

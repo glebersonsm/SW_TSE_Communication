@@ -80,12 +80,17 @@ public class CartaoVinculadoPessoaServiceImpl implements CartaoVinculadoPessoaSe
         CartaoVinculadoPessoa cartao = cartaoRepository.findByIdAndPessoaIdAndAtivoTrue(cartaoId, pessoaId)
             .orElseThrow(() -> new RuntimeException("Cartão não encontrado"));
         
+        Integer idBandeirasAceitas = cartao.getBandeira() != null 
+            ? cartao.getBandeira().getId().intValue() 
+            : null;
+        
         return CartaoParaPagamentoDto.builder()
             .numeroCartao(cartao.getNumeroCartao())
             .codigoSeguranca(cartao.getCodigoSeguranca())
             .mesValidade(cartao.getMesValidade())
             .anoValidade(cartao.getAnoValidade())
             .nomeNoCartao(cartao.getNomeNoCartao())
+            .idBandeirasAceitas(idBandeirasAceitas) // ID da bandeira aceita
             .build();
     }
     

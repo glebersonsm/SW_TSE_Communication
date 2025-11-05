@@ -24,5 +24,8 @@ public class CartaoParaPagamentoDto {
     
     @JsonProperty("nomeNoCartao")
     private String nomeNoCartao;
+    
+    @JsonProperty("idBandeirasAceitas")
+    private Integer idBandeirasAceitas;
 }
 

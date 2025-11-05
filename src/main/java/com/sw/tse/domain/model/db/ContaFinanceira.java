@@ -177,6 +177,30 @@ public class ContaFinanceira {
 
     @Column(name = "boletoregistrado")
     private Boolean boletoRegistrado;
+    
+    @Column(name = "chequecompensado")
+    private Boolean chequeCompensado;
+    
+    @Column(name = "chequedevolvido")
+    private Boolean chequeDevolvido;
+    
+    @Column(name = "retidocomomultadecancelamento")
+    private Boolean retidoComoMultaCancelamento;
+    
+    @Column(name = "tituloantecipado")
+    private Boolean tituloAntecipado;
+    
+    @Column(name = "valorretidocomomultacancelamento", precision = 15, scale = 2)
+    private BigDecimal valorRetidoComoMultaCancelamento;
+    
+    @Column(name = "saldotransferido", precision = 15, scale = 2)
+    private BigDecimal saldoTransferido;
+    
+    @Column(name = "pontosconsumidosbaixa")
+    private Integer pontosConsumidoBaixa;
+    
+    @Column(name = "idunidadenegocio")
+    private Long idUnidadeNegocio;
 
     @Column(name = "enviadoparacobranca")
     private Boolean enviadoParaCobranca;
@@ -388,16 +412,33 @@ public class ContaFinanceira {
         }
         
         if (this.carteiraBoleto != null && this.carteiraBoleto.getValorJurosDeMora() != null) {
-            return this.carteiraBoleto.getValorJurosDeMora()
-                .multiply(BigDecimal.valueOf(diasAtraso));
+        	
+        	if(this.carteiraBoleto.getValorJurosDeMora().equals(BigDecimal.ZERO)) {
+        		return BigDecimal.ZERO;
+        	}
+        	
+        	BigDecimal percentualTaxaJuros = this.carteiraBoleto.getValorJurosDeMora()
+        			.divide(BigDecimal.valueOf(30), 6, RoundingMode.HALF_UP)
+        			.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+        	
+     
+    		BigDecimal valorJurosDia = valorBase
+    				.multiply(percentualTaxaJuros);
+        		
+    		BigDecimal valorJurosTotal = valorJurosDia.multiply(BigDecimal.valueOf(diasAtraso));
+        
+            return valorJurosTotal;
+            
         } else if (this.empresa != null) {
             ParametroFinanceiro parametro = ParametroFinanceiroHelper.buscarPorEmpresa(this.empresa.getId());
             if (parametro != null && parametro.getPercentualJuro() != null) {
                 BigDecimal taxaDiaria = parametro.getPercentualJuro()
                     .divide(BigDecimal.valueOf(30), 6, RoundingMode.HALF_UP)  // Converte mensal para diário
                     .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP); // Converte percentual para decimal
-                return valorBase.multiply(taxaDiaria)
+                BigDecimal valorJuros = valorBase.multiply(taxaDiaria)
                     .multiply(BigDecimal.valueOf(diasAtraso));
+                
+                return valorJuros;
             }
         }
         
@@ -445,7 +486,9 @@ public class ContaFinanceira {
         BigDecimal valorBase = calcularValorTotal();
         
         if (this.carteiraBoleto != null && this.carteiraBoleto.getValorMulta() != null) {
-            return this.carteiraBoleto.getValorMulta();
+        	BigDecimal taxaMulta = this.carteiraBoleto.getValorMulta()
+        			.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+        	return valorBase.multiply(taxaMulta);
         } else if (this.empresa != null) {
             ParametroFinanceiro parametro = ParametroFinanceiroHelper.buscarPorEmpresa(this.empresa.getId());
             if (parametro != null && parametro.getPercentualMora() != null) {
@@ -530,5 +573,176 @@ public class ContaFinanceira {
             return percentualMensal.divide(BigDecimal.valueOf(30), 6, RoundingMode.HALF_UP);
         }
         return null;
+    }
+    
+    /**
+     * Cria uma nova conta financeira consolidada para pagamento via portal
+     * @param contaBase Conta base para copiar dados principais
+     * @param valorTotal Valor total do pagamento
+     * @param totalAcrescimo Total de acréscimos
+     * @param totalJuros Total de juros
+     * @param totalMulta Total de multas
+     * @param totalCorrecao Total de correções
+     * @param transacaoId ID da transação de débito/crédito
+     * @param codigoAutorizacao Código de autorização do gateway
+     * @param adquirente Nome da adquirente (GETNET ou REDE)
+     * @param nsu NSU da transação
+     * @param idPedidoPortal ID do pedido do portal (para guidMerchantOrderId)
+     * @param meioPagamento Meio de pagamento (CARTAO)
+     * @param origemConta Tipo de origem da conta
+     * @param responsavel Operador responsável
+     * @param bandeiraCartao Bandeira do cartão (para determinar prazo de pagamento)
+     * @param dataAutorizacao Data da autorização do pagamento
+     * @return Nova conta consolidada
+     */
+    public static ContaFinanceira criarContaConsolidadaPagamentoPortal(
+            ContaFinanceira contaBase,
+            BigDecimal valorTotal,
+            BigDecimal totalAcrescimo,
+            BigDecimal totalJuros,
+            BigDecimal totalMulta,
+            BigDecimal totalCorrecao,
+            Long transacaoId,
+            String codigoAutorizacao,
+            String adquirente,
+            String nsu,
+            String idPedidoPortal,
+            MeioPagamento meioPagamento,
+            TipoOrigemContaFinanceira origemConta,
+            OperadorSistema responsavel,
+            BandeiraCartao bandeiraCartao,
+            LocalDateTime dataAutorizacao) {
+        
+        ContaFinanceira contaNova = new ContaFinanceira();
+        
+        // Dados básicos da conta base
+        contaNova.empresa = contaBase.getEmpresa();
+        contaNova.pessoa = contaBase.getPessoa();
+        contaNova.contrato = contaBase.getContrato();
+        contaNova.contaMovimentacaoBancaria = contaBase.getContaMovimentacaoBancaria();
+        contaNova.responsavelCadastro = responsavel;
+        contaNova.meioPagamento = meioPagamento;
+        contaNova.origemConta = origemConta;
+        
+        // Valores
+        contaNova.valorReceber = valorTotal;
+        contaNova.valorParcela = valorTotal;
+        contaNova.valorAcrescimo = totalAcrescimo;
+        contaNova.valorJuros = totalJuros;
+        contaNova.valorMulta = totalMulta;
+        contaNova.valorAcrescimoAcumuladoCorrecaoMonetaria = totalCorrecao; // Soma dos descontos das parcelas canceladas
+        
+        // Data de vencimento baseada na bandeira do cartão
+        LocalDateTime dataVencimento = calcularDataVencimento(bandeiraCartao, dataAutorizacao);
+        
+        // Configurações
+        contaNova.tipoHistorico = "ATIVO";
+        contaNova.recorrenciaAutorizada = true;
+        contaNova.numeroDocumento = codigoAutorizacao;
+        contaNova.dataVencimento = dataVencimento;
+        contaNova.historico = "Pagamento Portal - Cartão " + adquirente + " - NSU: " + nsu;
+        contaNova.destinoContaFinanceira = "R";
+        contaNova.pago = false;
+        contaNova.idTransacaoCartaoCreditoDebito = transacaoId;
+        contaNova.guidMerchantOrderId = idPedidoPortal; // ID do pedido do portal
+        
+        return contaNova;
+    }
+    
+    /**
+     * Calcula a data de vencimento baseada na configuração da bandeira do cartão
+     * Retorna apenas data (sem hora, minuto, segundo) - meia-noite do dia
+     * @param bandeiraCartao Bandeira do cartão
+     * @param dataAutorizacao Data da autorização
+     * @return Data de vencimento calculada (sem hora)
+     */
+    private static LocalDateTime calcularDataVencimento(BandeiraCartao bandeiraCartao, LocalDateTime dataAutorizacao) {
+        int diasParaAdicionar;
+        
+        // Se a bandeira tem quantidade de dias configurada e é maior que zero
+        if (bandeiraCartao != null 
+                && bandeiraCartao.getQuantidadeDiaPagamento() != null 
+                && bandeiraCartao.getQuantidadeDiaPagamento() > 0) {
+            diasParaAdicionar = bandeiraCartao.getQuantidadeDiaPagamento();
+        } else {
+            // Caso contrário, usa 30 dias como padrão
+            diasParaAdicionar = 30;
+        }
+        
+        // Retorna apenas data (sem hora) - meia-noite do dia
+        return dataAutorizacao.toLocalDate()
+                .plusDays(diasParaAdicionar)
+                .atStartOfDay(); // Retorna LocalDateTime com hora 00:00:00
+    }
+    
+    /**
+     * Cancela esta conta financeira
+     * @param responsavel Operador responsável pelo cancelamento
+     * @param motivo Motivo do cancelamento
+     */
+    public void cancelar(OperadorSistema responsavel, String motivo) {
+        this.tipoHistorico = "CANCELADO";
+        this.historicoCancelamento = motivo;
+        this.dataCancelamento = LocalDateTime.now();
+        this.responsavelCancelamento = responsavel;
+    }
+    
+    /**
+     * Configura campos específicos para conta de negociação via portal
+     */
+    public void configurarCamposNegociacaoPortal(
+            Long idUnidadeNegocio,
+            Integer numeroParcela,
+            BigDecimal taxaCartao,
+            BigDecimal descontoTaxaCartao,
+            BigDecimal valorReceber,
+            BigDecimal valorParcela,
+            BigDecimal valorDesconto,
+            BigDecimal valorAcrescimo,
+            BigDecimal valorDescontoManual,
+            BigDecimal valorJuros,
+            BigDecimal valorMulta,
+            Long idBandeirasAceitas) {
+        
+        this.idUnidadeNegocio = idUnidadeNegocio;
+        this.numeroParcela = numeroParcela;
+        this.historico = "Pagamento feito via portal cliente";
+        
+        // Configurações de cartão
+        this.assinaturaEmArquivoCartao = false;
+        this.qtdParcelasCartao = 0;
+        this.codSegurancaCartao = 0;
+        this.taxaCartao = taxaCartao;
+        this.descontoTaxaCartao = descontoTaxaCartao;
+        this.idBandeirasAceitas = idBandeirasAceitas;
+        
+        // Campos booleanos
+        this.chequeCompensado = false;
+        this.chequeDevolvido = false;
+        this.boletoRegistrado = false;
+        this.retidoComoMultaCancelamento = false;
+        this.tituloAntecipado = false;
+        
+        // Taxa boleto
+        this.taxaBoleto = BigDecimal.ZERO;
+        
+        // Valores
+        this.valorReceber = valorReceber;
+        this.valorParcela = valorParcela;
+        this.valorDesconto = valorDesconto;
+        this.valorAcrescimo = valorAcrescimo;
+        this.valorDescontoManual = valorDescontoManual;
+        this.valorJuros = valorJuros;
+        this.valorMulta = valorMulta;
+        
+        // Campos zerados
+        this.taxaJurosFinancMensal = 0.0;
+        this.valorJurosFinanc = BigDecimal.ZERO;
+        this.valorCapital = BigDecimal.ZERO;
+        this.taxaJuros = 0.0;
+        this.pontosConsumidoBaixa = 0;
+        this.valorRecebido = BigDecimal.ZERO;
+        this.saldoTransferido = BigDecimal.ZERO;
+        this.valorRetidoComoMultaCancelamento = BigDecimal.ZERO;
     }
 }

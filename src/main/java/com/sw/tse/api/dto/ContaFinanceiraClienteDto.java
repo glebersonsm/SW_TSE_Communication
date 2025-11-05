@@ -160,4 +160,10 @@ public class ContaFinanceiraClienteDto {
     private Long idMeioPagamento;
     
     private String meioPagamento;
+    
+    @JsonProperty("Juros")
+    private BigDecimal juros; // Valor de juros calculado para esta conta
+    
+    @JsonProperty("Multa")
+    private BigDecimal multa; // Valor de multa calculada para esta conta
 }
