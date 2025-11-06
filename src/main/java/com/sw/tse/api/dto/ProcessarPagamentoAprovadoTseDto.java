@@ -28,6 +28,7 @@ public class ProcessarPagamentoAprovadoTseDto {
     private String codigoRetorno; // Código de retorno da operadora
     private String mensagemRetorno; // Mensagem de retorno da operadora
     private String status; // Status da operadora (APROVADA, NEGADA, ERRO)
+    private String meioPagamento; // CARTAO ou PIX
     private BigDecimal valorTotal;
     private Integer numeroParcelas;
     private String numeroCartaoMascarado; // Formato: primeiros4 **** **** ultimos4

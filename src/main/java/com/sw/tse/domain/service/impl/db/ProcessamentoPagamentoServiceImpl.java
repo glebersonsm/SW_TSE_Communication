@@ -45,10 +45,13 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @ConditionalOnProperty(name = "database.enabled", havingValue = "true")
 @Slf4j
-public class PagamentoCartaoServiceImpl implements PagamentoCartaoService {
+public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService {
     
     @Value("${sw.tse.portal.pagamento-cartao.id-meio-pagamento}")
     private Long idMeioPagamentoPortalCartao;
+    
+    @Value("${sw.tse.portal.pagamento-pix.id-meio-pagamento}")
+    private Long idMeioPagamentoPortalPix;
     
     @Autowired
     private ContaFinanceiraRepository contaFinanceiraRepository;
@@ -114,36 +117,47 @@ public class PagamentoCartaoServiceImpl implements PagamentoCartaoService {
             
             log.info("Encontradas {} contas originais para processar", contasOriginais.size());
             log.info("IdBandeira recebido no DTO: {}", dto.getIdBandeira());
+            log.info("Meio de pagamento recebido: {}", dto.getMeioPagamento());
             
-            // 3. Buscar BandeiraCartao (para taxa e configurações) - OBRIGATÓRIO
-            BandeiraCartao bandeiraCartao = buscarBandeiraCartao(
-                    contasOriginais.get(0).getEmpresa().getId(),
-                    dto.getIdBandeira(),
-                    dto.getAdquirente());
+            // Verificar se é pagamento PIX (não precisa de bandeira nem transação de cartão)
+            boolean isPix = "PIX".equalsIgnoreCase(dto.getMeioPagamento());
             
-            if (bandeiraCartao != null) {
-                log.info("BandeiraCartao encontrada: ID {}, Taxa: {}", 
-                        bandeiraCartao.getIdBandeiraCartao(), bandeiraCartao.getTaxaOperacao());
+            BandeiraCartao bandeiraCartao = null;
+            TransacaoDebitoCredito transacao = null;
+            
+            if (!isPix) {
+                // 3. Buscar BandeiraCartao (para taxa e configurações) - OBRIGATÓRIO para CARTAO
+                bandeiraCartao = buscarBandeiraCartao(
+                        contasOriginais.get(0).getEmpresa().getId(),
+                        dto.getIdBandeira(),
+                        dto.getAdquirente());
+                
+                if (bandeiraCartao != null) {
+                    log.info("BandeiraCartao encontrada: ID {}, Taxa: {}", 
+                            bandeiraCartao.getIdBandeiraCartao(), bandeiraCartao.getTaxaOperacao());
+                } else {
+                    throw new PagamentoCartaoException(
+                            String.format("Configuração de bandeira não encontrada. Tenant: %d, IdBandeira: %d, Gateway: %s. " +
+                                    "Cadastre uma configuração ativa em 'bandeiracartao' com operacao='CREDAV'",
+                                    contasOriginais.get(0).getEmpresa().getId(), dto.getIdBandeira(), dto.getAdquirente()));
+                }
+                
+                // 4. Criar TransacaoDebitoCredito (apenas para CARTAO)
+                transacao = criarTransacaoDebitoCredito(
+                        dto, contasOriginais.get(0), responsavel, bandeiraCartao);
+                transacaoRepository.save(transacao);
+                log.info("TransacaoDebitoCredito criada com ID: {}, Status: InProgress", transacao.getId());
+                
+                // 4.1. Atualizar transação com resultado do pagamento aprovado
+                atualizarTransacaoComResultado(transacao, dto);
+                transacaoRepository.save(transacao);
+                log.info("TransacaoDebitoCredito atualizada - Status: {}, NSU: {}", transacao.getStatus(), transacao.getNsu());
             } else {
-                throw new PagamentoCartaoException(
-                        String.format("Configuração de bandeira não encontrada. Tenant: %d, IdBandeira: %d, Gateway: %s. " +
-                                "Cadastre uma configuração ativa em 'bandeiracartao' com operacao='CREDAV'",
-                                contasOriginais.get(0).getEmpresa().getId(), dto.getIdBandeira(), dto.getAdquirente()));
+                log.info("Pagamento PIX - Não será criada TransacaoDebitoCredito");
             }
             
-            // 4. Criar TransacaoDebitoCredito (status inicial = InProgress)
-            TransacaoDebitoCredito transacao = criarTransacaoDebitoCredito(
-                    dto, contasOriginais.get(0), responsavel, bandeiraCartao);
-            transacaoRepository.save(transacao);
-            log.info("TransacaoDebitoCredito criada com ID: {}, Status: InProgress", transacao.getId());
-            
-            // 4.1. Atualizar transação com resultado do pagamento aprovado
-            atualizarTransacaoComResultado(transacao, dto);
-            transacaoRepository.save(transacao);
-            log.info("TransacaoDebitoCredito atualizada - Status: {}, NSU: {}", transacao.getStatus(), transacao.getNsu());
-            
-            // 5. Criar conta consolidada
-            ContaFinanceira contaNova = criarContaConsolidada(contasOriginais, transacao, dto, responsavel, bandeiraCartao);
+            // 5. Criar conta consolidada (passa null para transacao se for PIX)
+            ContaFinanceira contaNova = criarContaConsolidada(contasOriginais, transacao, dto, responsavel, bandeiraCartao, isPix);
             contaFinanceiraRepository.save(contaNova);
             log.info("Conta consolidada criada com ID: {}, Valor: {}", contaNova.getId(), contaNova.getValorReceber());
             
@@ -350,7 +364,8 @@ public class PagamentoCartaoServiceImpl implements PagamentoCartaoService {
             TransacaoDebitoCredito transacao,
             ProcessarPagamentoAprovadoTseDto dto,
             OperadorSistema responsavel,
-            BandeiraCartao bandeiraCartao) {
+            BandeiraCartao bandeiraCartao,
+            boolean isPix) {
         
         // Usar a primeira conta como base
         ContaFinanceira base = contasOriginais.get(0);
@@ -382,6 +397,23 @@ public class PagamentoCartaoServiceImpl implements PagamentoCartaoService {
         log.info("Valores de juros e multa CALCULADOS das contas vencidas - Juros: {}, Multa: {}", 
                 valorJurosCalculado, valorMultaCalculado);
         
+        // Buscar meio de pagamento apropriado
+        MeioPagamento meioPagamento;
+        if (isPix) {
+            // Para PIX, usar o meio de pagamento configurado
+            meioPagamento = meioPagamentoRepository.findById(idMeioPagamentoPortalPix)
+                    .orElseThrow(() -> new PagamentoCartaoException(
+                            "Meio de pagamento PIX não encontrado para ID: " + idMeioPagamentoPortalPix));
+            
+            log.info("Usando meio de pagamento PIX - ID: {}, Código: {}", 
+                    idMeioPagamentoPortalPix, meioPagamento.getCodMeioPagamento());
+        } else {
+            // Para cartão, usar o configurado (MANTÉM FLUXO ORIGINAL)
+            meioPagamento = meioPagamentoRepository.findById(idMeioPagamentoPortalCartao)
+                    .orElseThrow(() -> new PagamentoCartaoException(
+                            "Meio de pagamento CARTÃO não encontrado para ID: " + idMeioPagamentoPortalCartao));
+        }
+        
         // Usar método factory do Aggregate Root
         ContaFinanceira contaNova = ContaFinanceira.criarContaConsolidadaPagamentoPortal(
                 base,
@@ -390,20 +422,20 @@ public class PagamentoCartaoServiceImpl implements PagamentoCartaoService {
                 valorJurosCalculado, // Soma dos juros calculados em tela
                 valorMultaCalculado, // Soma das multas calculadas em tela
                 valores.totalDescontos, // Soma dos descontos das parcelas canceladas
-                transacao.getId(),
-                transacao.getCodigoAutorizacao(),
-                dto.getAdquirente(),
+                isPix ? null : transacao.getId(), // Para PIX, não há transação de cartão
+                dto.getCodigoAutorizacao(),
+                isPix ? "PIX" : dto.getAdquirente(),
                 dto.getNsu(),
                 dto.getIdTransacao(), // ID do pedido do portal para guidMerchantOrderId
-                meioPagamentoCartao,
+                meioPagamento,
                 origemConta,
                 responsavel,
-                bandeiraCartao, // Bandeira do cartão para calcular data de vencimento
+                isPix ? null : bandeiraCartao, // Para PIX, não há bandeira de cartão
                 LocalDateTime.now() // Data da autorização (momento atual)
         );
         
         // Configurar campos adicionais conforme especificação
-        configurarCamposAdicionaisContaNova(contaNova, contasOriginais, bandeiraCartao, numeroParcela, dto);
+        configurarCamposAdicionaisContaNova(contaNova, contasOriginais, bandeiraCartao, numeroParcela, dto, isPix);
         
         return contaNova;
     }
@@ -421,7 +453,8 @@ public class PagamentoCartaoServiceImpl implements PagamentoCartaoService {
             List<ContaFinanceira> contasOriginais,
             BandeiraCartao bandeiraCartao,
             Integer numeroParcela,
-            ProcessarPagamentoAprovadoTseDto dto) {
+            ProcessarPagamentoAprovadoTseDto dto,
+            boolean isPix) {
         
         // Pegar idUnidadeNegocio de uma das parcelas canceladas
         Long idUnidadeNegocio = contasOriginais.stream()
@@ -457,20 +490,26 @@ public class PagamentoCartaoServiceImpl implements PagamentoCartaoService {
                 .filter(v -> v != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
-        // Taxa do cartão (da tabela bandeiracartao)
-        BigDecimal taxaCartao = bandeiraCartao.getTaxaOperacao() != null 
-                ? BigDecimal.valueOf(bandeiraCartao.getTaxaOperacao()) 
-                : BigDecimal.ZERO;
+        // Taxa do cartão (da tabela bandeiracartao) - apenas para CARTAO
+        BigDecimal taxaCartao = BigDecimal.ZERO;
+        BigDecimal descontoTaxaCartao = BigDecimal.ZERO;
+        Long idBandeirasAceitas = null;
         
-        // Desconto taxa cartão = valorPago * taxaCartao / 100
-        BigDecimal descontoTaxaCartao = dto.getValorTotal()
-                .multiply(taxaCartao)
-                .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
-        
-        // ID bandeira aceitas (converter Integer para Long)
-        Long idBandeirasAceitas = bandeiraCartao.getIdBandeirasAceitas() != null 
-                ? bandeiraCartao.getIdBandeirasAceitas().longValue() 
-                : null;
+        if (!isPix && bandeiraCartao != null) {
+            taxaCartao = bandeiraCartao.getTaxaOperacao() != null 
+                    ? BigDecimal.valueOf(bandeiraCartao.getTaxaOperacao()) 
+                    : BigDecimal.ZERO;
+            
+            // Desconto taxa cartão = valorPago * taxaCartao / 100
+            descontoTaxaCartao = dto.getValorTotal()
+                    .multiply(taxaCartao)
+                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            
+            // ID bandeira aceitas (converter Integer para Long)
+            idBandeirasAceitas = bandeiraCartao.getIdBandeirasAceitas() != null 
+                    ? bandeiraCartao.getIdBandeirasAceitas().longValue() 
+                    : null;
+        }
         
         // Calcular juros e multa das contas originais (antes de cancelar)
         BigDecimal valorJuros = contasOriginais.stream()
