@@ -23,7 +23,10 @@ import com.sw.tse.domain.expection.PagamentoCartaoException;
 import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 import com.sw.tse.domain.model.db.BandeiraCartao;
 import com.sw.tse.domain.model.db.ContaFinanceira;
+import com.sw.tse.domain.model.db.ContaMovimentacaoBancaria;
 import com.sw.tse.domain.model.db.MeioPagamento;
+import com.sw.tse.domain.model.db.MovimentacaoBancaria;
+import com.sw.tse.domain.model.db.MovimentacaoBancariaContaFinanceira;
 import com.sw.tse.domain.model.db.Negociacao;
 import com.sw.tse.domain.model.db.NegociacaoContaFinanceira;
 import com.sw.tse.domain.model.db.OperadorSistema;
@@ -31,12 +34,16 @@ import com.sw.tse.domain.model.db.TipoOrigemContaFinanceira;
 import com.sw.tse.domain.model.db.TransacaoDebitoCredito;
 import com.sw.tse.domain.repository.BandeiraCartaoRepository;
 import com.sw.tse.domain.repository.ContaFinanceiraRepository;
+import com.sw.tse.domain.repository.ContaMovimentacaoBancariaRepository;
 import com.sw.tse.domain.repository.MeioPagamentoRepository;
+import com.sw.tse.domain.repository.MovimentacaoBancariaContaFinanceiraRepository;
+import com.sw.tse.domain.repository.MovimentacaoBancariaRepository;
 import com.sw.tse.domain.repository.NegociacaoContaFinanceiraRepository;
 import com.sw.tse.domain.repository.NegociacaoRepository;
 import com.sw.tse.domain.repository.OperadorSistemaRepository;
 import com.sw.tse.domain.repository.TipoOrigemContaFinanceiraRepository;
 import com.sw.tse.domain.repository.TransacaoDebitoCreditoRepository;
+import com.sw.tse.domain.service.interfaces.OperadorSistemaService;
 import com.sw.tse.domain.service.interfaces.PagamentoCartaoService;
 import com.sw.tse.security.JwtTokenUtil;
 
@@ -76,6 +83,18 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
     
     @Autowired
     private BandeiraCartaoRepository bandeiraCartaoRepository;
+    
+    @Autowired
+    private ContaMovimentacaoBancariaRepository contaMovimentacaoBancariaRepository;
+    
+    @Autowired
+    private MovimentacaoBancariaRepository movimentacaoBancariaRepository;
+    
+    @Autowired
+    private MovimentacaoBancariaContaFinanceiraRepository movimentacaoBancariaContaFinanceiraRepository;
+    
+    @Autowired
+    private OperadorSistemaService operadorSistemaService;
     
     @Autowired
     private ObjectMapper objectMapper;
@@ -159,7 +178,42 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
             // 5. Criar conta consolidada (passa null para transacao se for PIX)
             ContaFinanceira contaNova = criarContaConsolidada(contasOriginais, transacao, dto, responsavel, bandeiraCartao, isPix);
             contaFinanceiraRepository.save(contaNova);
-            log.info("Conta consolidada criada com ID: {}, Valor: {}", contaNova.getId(), contaNova.getValorReceber());
+            log.info("Conta consolidada criada com ID: {}, Valor: {}, Status: {}, Pago: {}", 
+                    contaNova.getId(), contaNova.getValorReceber(), contaNova.getTipoHistorico(), contaNova.getPago());
+            
+            // 5.1. Se for PIX, criar MovimentacaoBancaria (pagamento já foi recebido)
+            if (isPix && contaNova.getPago() && contaNova.getContaMovimentacaoBancaria() != null) {
+                OperadorSistema operadorPadrao = operadorSistemaService.operadorSistemaPadraoCadastro();
+                
+                // Criar MovimentacaoBancaria
+                MovimentacaoBancaria movimentacao = new MovimentacaoBancaria();
+                movimentacao.setEmpresa(contaNova.getEmpresa());
+                movimentacao.setContaMovimentacaoBancaria(contaNova.getContaMovimentacaoBancaria());
+                movimentacao.setData(LocalDateTime.now());
+                movimentacao.setHistorico("Recebimento PIX - Conta " + contaNova.getId() + " - NSU: " + dto.getNsu());
+                movimentacao.setValor(dto.getValorTotal());
+                movimentacao.setDebitoCreditoMovimentacaoBancaria(0); // 0 = Crédito (recebimento)
+                movimentacao.setLancamentoManual(false);
+                movimentacao.setResponsavelCadastro(operadorPadrao);
+                movimentacao.setTransferencia(false);
+                movimentacao.setEstornado(false);
+                
+                movimentacaoBancariaRepository.save(movimentacao);
+                log.info("MovimentacaoBancaria criada para PIX - ID: {}, Valor: {}", 
+                        movimentacao.getId(), movimentacao.getValor());
+                
+                // Vincular movimentação à conta financeira
+                MovimentacaoBancariaContaFinanceira vinculo = new MovimentacaoBancariaContaFinanceira();
+                vinculo.setMovimentacaoBancaria(movimentacao);
+                vinculo.setContaFinanceira(contaNova);
+                vinculo.setValor(dto.getValorTotal());
+                vinculo.setEstornado(false);
+                vinculo.setResponsavelCadastro(operadorPadrao);
+                vinculo.setEmpresa(contaNova.getEmpresa());
+                
+                movimentacaoBancariaContaFinanceiraRepository.save(vinculo);
+                log.info("Vínculo MovimentacaoBancariaContaFinanceira criado - ID: {}", vinculo.getId());
+            }
             
             // 6. Criar data de cadastro sem nanosegundos (regra TSE)
             // Mesma data para Negociacao e todas as NegociacaoContaFinanceira
@@ -370,11 +424,6 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
         // Usar a primeira conta como base
         ContaFinanceira base = contasOriginais.get(0);
         
-        // Buscar meio de pagamento pelo ID configurado
-        MeioPagamento meioPagamentoCartao = meioPagamentoRepository.findById(idMeioPagamentoPortalCartao)
-                .orElseThrow(() -> new PagamentoCartaoException(
-                        "Meio de pagamento não encontrado para ID: " + idMeioPagamentoPortalCartao));
-        
         // Buscar origem da conta - Se alguma conta for de SALDO, usar SALDO
         TipoOrigemContaFinanceira origemConta = determinarOrigemConta(contasOriginais, base);
         
@@ -414,6 +463,51 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                             "Meio de pagamento CARTÃO não encontrado para ID: " + idMeioPagamentoPortalCartao));
         }
         
+        // Determinar conta de movimentação bancária
+        ContaMovimentacaoBancaria contaMovimentacao = null;
+        if (isPix) {
+            // Para PIX: usar a conta configurada no gateway (vem do DTO)
+            if (dto.getIdContaMovimentacaoBancaria() != null) {
+                contaMovimentacao = contaMovimentacaoBancariaRepository.findById(dto.getIdContaMovimentacaoBancaria())
+                        .orElse(null);
+                
+                if (contaMovimentacao != null) {
+                    log.info("PIX: Usando conta de movimentação do gateway - ID: {}, Banco: {}", 
+                            contaMovimentacao.getId(), 
+                            contaMovimentacao.getBanco() != null ? contaMovimentacao.getBanco().getDescricao() : "N/A");
+                } else {
+                    log.warn("PIX: Conta de movimentação ID {} não encontrada, usando conta da base", 
+                            dto.getIdContaMovimentacaoBancaria());
+                    contaMovimentacao = base.getContaMovimentacaoBancaria();
+                }
+            } else {
+                log.warn("PIX: idContaMovimentacaoBancaria não informado no DTO, usando conta da base");
+                contaMovimentacao = base.getContaMovimentacaoBancaria();
+            }
+        } else {
+            // Para CARTÃO: usar a conta que está na BandeiraCartao (taxa)
+            if (bandeiraCartao != null && bandeiraCartao.getIdContaMovBancaria() != null) {
+                Integer idContaMov = bandeiraCartao.getIdContaMovBancaria();
+                contaMovimentacao = contaMovimentacaoBancariaRepository.findById(idContaMov.longValue())
+                        .orElse(null);
+                
+                if (contaMovimentacao != null) {
+                    log.info("CARTÃO: Usando conta de movimentação da BandeiraCartao - ID: {}, Banco: {}", 
+                            contaMovimentacao.getId(), 
+                            contaMovimentacao.getBanco() != null ? contaMovimentacao.getBanco().getDescricao() : "N/A");
+                } else {
+                    log.warn("CARTÃO: Conta de movimentação ID {} não encontrada, usando conta da base", idContaMov);
+                    contaMovimentacao = base.getContaMovimentacaoBancaria();
+                }
+            } else {
+                log.warn("CARTÃO: BandeiraCartao sem idContaMovBancaria, usando conta da base");
+                contaMovimentacao = base.getContaMovimentacaoBancaria();
+            }
+        }
+        
+        // Buscar operador padrão do sistema
+        OperadorSistema operadorPadrao = operadorSistemaService.operadorSistemaPadraoCadastro();
+        
         // Usar método factory do Aggregate Root
         ContaFinanceira contaNova = ContaFinanceira.criarContaConsolidadaPagamentoPortal(
                 base,
@@ -431,7 +525,12 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                 origemConta,
                 responsavel,
                 isPix ? null : bandeiraCartao, // Para PIX, não há bandeira de cartão
-                LocalDateTime.now() // Data da autorização (momento atual)
+                LocalDateTime.now(), // Data da autorização (momento atual)
+                contaMovimentacao, // Conta de movimentação definida acima
+                isPix, // Flag para diferenciar PIX de CARTÃO
+                dto.getPixCopiaECola(), // Código PIX copia e cola
+                dto.getDataGeracaoPix(), // Data de geração do PIX
+                operadorPadrao // Operador padrão do sistema
         );
         
         // Configurar campos adicionais conforme especificação

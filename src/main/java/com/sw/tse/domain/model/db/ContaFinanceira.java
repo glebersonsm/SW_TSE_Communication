@@ -2,6 +2,7 @@ package com.sw.tse.domain.model.db;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
@@ -611,7 +612,12 @@ public class ContaFinanceira {
             TipoOrigemContaFinanceira origemConta,
             OperadorSistema responsavel,
             BandeiraCartao bandeiraCartao,
-            LocalDateTime dataAutorizacao) {
+            LocalDateTime dataAutorizacao,
+            ContaMovimentacaoBancaria contaMovimentacaoBancaria,
+            boolean isPix,
+            String pixCopiaECola,
+            LocalDateTime dataGeracaoPix,
+            OperadorSistema operadorPadrao) {
         
         ContaFinanceira contaNova = new ContaFinanceira();
         
@@ -619,7 +625,7 @@ public class ContaFinanceira {
         contaNova.empresa = contaBase.getEmpresa();
         contaNova.pessoa = contaBase.getPessoa();
         contaNova.contrato = contaBase.getContrato();
-        contaNova.contaMovimentacaoBancaria = contaBase.getContaMovimentacaoBancaria();
+        contaNova.contaMovimentacaoBancaria = contaMovimentacaoBancaria; // Usar a conta passada como parâmetro
         contaNova.responsavelCadastro = responsavel;
         contaNova.meioPagamento = meioPagamento;
         contaNova.origemConta = origemConta;
@@ -630,21 +636,43 @@ public class ContaFinanceira {
         contaNova.valorAcrescimo = totalAcrescimo;
         contaNova.valorJuros = totalJuros;
         contaNova.valorMulta = totalMulta;
-        contaNova.valorAcrescimoAcumuladoCorrecaoMonetaria = totalCorrecao; // Soma dos descontos das parcelas canceladas
-        
-        // Data de vencimento baseada na bandeira do cartão
-        LocalDateTime dataVencimento = calcularDataVencimento(bandeiraCartao, dataAutorizacao);
-        
-        // Configurações
-        contaNova.tipoHistorico = "ATIVO";
-        contaNova.recorrenciaAutorizada = true;
-        contaNova.numeroDocumento = codigoAutorizacao;
-        contaNova.dataVencimento = dataVencimento;
-        contaNova.historico = "Pagamento Portal - Cartão " + adquirente + " - NSU: " + nsu;
+        contaNova.valorAcrescimoAcumuladoCorrecaoMonetaria = totalCorrecao;
         contaNova.destinoContaFinanceira = "R";
-        contaNova.pago = false;
-        contaNova.idTransacaoCartaoCreditoDebito = transacaoId;
-        contaNova.guidMerchantOrderId = idPedidoPortal; // ID do pedido do portal
+        contaNova.guidMerchantOrderId = idPedidoPortal;
+        
+        // Diferenciação PIX vs CARTÃO
+        if (isPix) {
+            // === PIX: Pagamento instantâneo, já recebido ===
+            contaNova.tipoHistorico = "BAIXADO";
+            contaNova.recorrenciaAutorizada = false;
+            contaNova.numeroDocumento = codigoAutorizacao;
+            contaNova.dataVencimento = LocalDate.now().atStartOfDay(); // Hoje, sem hora
+            contaNova.historico = "Pagamento Portal - PIX - NSU: " + nsu;
+            contaNova.pago = true;
+            contaNova.dataPagamento = dataAutorizacao;
+            contaNova.dataBaixa = dataAutorizacao;
+            contaNova.dataLiquidacao = dataAutorizacao;
+            contaNova.valorRecebido = valorTotal;
+            contaNova.historicoBaixa = "Pagamento PIX recebido - NSU: " + nsu;
+            contaNova.responsavelBaixa = operadorPadrao; // Usar operador padrão
+            contaNova.idTransacaoCartaoCreditoDebito = null; // PIX não tem transação de cartão
+            
+            // Campos PIX específicos
+            contaNova.pixCopiaECola = pixCopiaECola;
+            contaNova.pixQrCode = pixCopiaECola; // Mesmo valor do PIX copia e cola
+            contaNova.txId = codigoAutorizacao; // TxId = identificador único do PIX (usado nas consultas)
+            contaNova.dataGeracaoPix = dataGeracaoPix;
+        } else {
+            // === CARTÃO: Aguarda repasse da operadora ===
+            LocalDateTime dataVencimento = calcularDataVencimento(bandeiraCartao, dataAutorizacao);
+            contaNova.tipoHistorico = "ATIVO";
+            contaNova.recorrenciaAutorizada = true;
+            contaNova.numeroDocumento = codigoAutorizacao;
+            contaNova.dataVencimento = dataVencimento;
+            contaNova.historico = "Pagamento Portal - Cartão " + adquirente + " - NSU: " + nsu;
+            contaNova.pago = false;
+            contaNova.idTransacaoCartaoCreditoDebito = transacaoId;
+        }
         
         return contaNova;
     }

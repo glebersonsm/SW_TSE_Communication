@@ -24,4 +24,9 @@ public interface ContaMovimentacaoBancariaRepository extends JpaRepository<Conta
      * Busca contas de movimentação bancária por status (ativa/inativa)
      */
     List<ContaMovimentacaoBancaria> findByInativa(Boolean inativa);
+
+    /**
+     * Busca contas de movimentação bancária por empresa e status
+     */
+    List<ContaMovimentacaoBancaria> findByEmpresaIdAndInativa(Long idEmpresa, Boolean inativa);
 }

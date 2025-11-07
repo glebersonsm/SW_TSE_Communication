@@ -5,7 +5,10 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.sw.tse.core.util.GenericCryptoStringConverter;
+
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -48,21 +51,27 @@ public class ContaMovimentacaoBancaria {
     @JoinColumn(name = "idbanco")
     private Banco banco;
 
+    @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "titularconta", length = 80)
     private String titularConta;
 
+    @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "agencia", length = 128)
     private String agencia;
 
+    @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "digitoagencia", length = 64)
     private String digitoAgencia;
 
+    @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "nroconta", length = 128)
     private String numeroConta;
 
+    @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "digitoconta", length = 64)
     private String digitoConta;
 
+    @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "tipoconta", length = 64)
     private String tipoConta;
 
