@@ -47,4 +47,6 @@ public class ContratoClienteApiResponseRaw {
     private BigDecimal saldoPontosGeral;
     private BigDecimal valorBrutoRecebido;
     private BigDecimal valorReembolsoPago;
+    private Long idContratoOrigemAdm;
+    private String siglaEmpresa;
 }

@@ -117,4 +117,10 @@ public class ContratoClienteApiResponse {
     
     @JsonProperty("ValorReembolsoPago")
     private BigDecimal valorReembolsoPago;
+
+    @JsonProperty("IdContratoOrigemAdm")
+    private Long idContratoOrigemAdm;
+
+    @JsonProperty("EmpresaSigla")
+    private String siglaEmpresa;
 }

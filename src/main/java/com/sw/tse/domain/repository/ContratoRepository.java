@@ -65,10 +65,13 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
             COALESCE(ct.statuscontrato, 'ATIVO') AS statusContrato,
             CAST(0 AS DECIMAL(19,2)) AS saldoPontosGeral,
             CAST(COALESCE(financeiro.valorBrutoPago, 0) AS DECIMAL(19,2)) AS valorBrutoRecebido,
-            CAST(0 AS DECIMAL(19,2)) AS valorReembolsoPago
+            CAST(0 AS DECIMAL(19,2)) AS valorReembolsoPago,
+            ct.idcontratoorigemadm AS idContratoOrigemAdm,
+            COALESCE(em.sigla, '') AS siglaEmpresa
         FROM contrato ct
         LEFT JOIN pessoa ps ON ps.idpessoa = ct.idpessoacessionario
         INNER JOIN produto pro ON pro.idproduto = ct.idproduto
+        LEFT JOIN empresa em ON em.idempresa = ct.idtenant
         LEFT JOIN (
             SELECT 
                 cf.idcontrato,
@@ -106,6 +109,7 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
             GROUP BY uc.idContrato
         ) proximaUtilizacao ON proximaUtilizacao.idcontrato = ct.idcontrato
         WHERE (ct.idpessoacessionario = :idPessoaCliente OR ct.idpessoacocessionario = :idPessoaCliente)
+            AND ct.idcontratoorigemadm IS NULL
         """, nativeQuery = true)
     List<ContratoClienteApiResponseRaw> buscarContratosClientePorIdPessoaRaw(@Param("idPessoaCliente") Long idPessoaCliente);
 
@@ -151,7 +155,9 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
                 raw.getStatusContrato(),
                 raw.getSaldoPontosGeral(),
                 raw.getValorBrutoRecebido(),
-                raw.getValorReembolsoPago()
+                raw.getValorReembolsoPago(),
+                raw.getIdContratoOrigemAdm(),
+                raw.getSiglaEmpresa()
         );
     }
 
