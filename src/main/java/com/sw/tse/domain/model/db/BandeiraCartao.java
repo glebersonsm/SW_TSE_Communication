@@ -1,6 +1,7 @@
 package com.sw.tse.domain.model.db;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -108,5 +109,41 @@ public class BandeiraCartao {
 
     @Column(name = "idcentrocusto")
     private Integer idCentroCusto;
+    
+    /**
+     * Cria uma nova BandeiraCartao padrão para pagamentos via portal
+     * quando configuração específica não é encontrada
+     * 
+     * @param empresa Empresa dona da configuração
+     * @param nomeEstabelecimento Nome do estabelecimento (padrão: "CREDITO A VISTA - GATEWAY")
+     * @param nomeBandeira Nome da bandeira (ex: "Visa", "Mastercard")
+     * @param idBandeirasAceitas ID da bandeira aceita
+     * @param idContaMovBancaria ID da conta de movimentação bancária
+     * @return Nova instância de BandeiraCartao configurada
+     */
+    public static BandeiraCartao criarConfiguracaoPadrao(
+            Empresa empresa,
+            String nomeEstabelecimento,
+            String nomeBandeira,
+            Integer idBandeirasAceitas,
+            Integer idContaMovBancaria) {
+        
+        BandeiraCartao bandeira = new BandeiraCartao();
+        
+        bandeira.empresa = empresa;
+        bandeira.nomeEstabelecimento = nomeEstabelecimento;
+        bandeira.bandeira = nomeBandeira;
+        bandeira.operacao = "CREDAV";
+        bandeira.taxaOperacao = 2.0; // Taxa padrão 2%
+        bandeira.parcelaInicialContrato = 0;
+        bandeira.parcelaFinalContrato = 0;
+        bandeira.ativo = true;
+        bandeira.quantidadeDiaPagamento = 31;
+        bandeira.idContaMovBancaria = idContaMovBancaria;
+        bandeira.dataCadastro = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        bandeira.idBandeirasAceitas = idBandeirasAceitas;
+        
+        return bandeira;
+    }
 }
 

@@ -649,10 +649,10 @@ public class ContaFinanceira {
             contaNova.dataVencimento = LocalDate.now().atStartOfDay(); // Hoje, sem hora
             contaNova.historico = "Pagamento Portal - PIX - NSU: " + nsu;
             contaNova.pago = true;
-            contaNova.dataPagamento = dataAutorizacao;
-            contaNova.dataBaixa = dataAutorizacao;
-            contaNova.dataLiquidacao = dataAutorizacao;
-            contaNova.valorRecebido = valorTotal;
+            contaNova.dataPagamento = dataAutorizacao.toLocalDate().atStartOfDay(); // Sem hora
+            contaNova.dataBaixa = dataAutorizacao.truncatedTo(ChronoUnit.SECONDS); // Com hora, sem nanossegundos
+            contaNova.dataLiquidacao = dataAutorizacao.toLocalDate().atStartOfDay(); // Sem hora
+            contaNova.valorRecebido = valorTotal; // Valor pago no PIX
             contaNova.historicoBaixa = "Pagamento PIX recebido - NSU: " + nsu;
             contaNova.responsavelBaixa = operadorPadrao; // Usar operador padrão
             contaNova.idTransacaoCartaoCreditoDebito = null; // PIX não tem transação de cartão
@@ -769,7 +769,10 @@ public class ContaFinanceira {
         this.valorCapital = BigDecimal.ZERO;
         this.taxaJuros = 0.0;
         this.pontosConsumidoBaixa = 0;
-        this.valorRecebido = BigDecimal.ZERO;
+        // Preserva valorRecebido se já foi definido (PIX), só zera se ainda não foi (CARTAO)
+        if (this.valorRecebido == null || this.valorRecebido.compareTo(BigDecimal.ZERO) == 0) {
+            this.valorRecebido = BigDecimal.ZERO;
+        }
         this.saldoTransferido = BigDecimal.ZERO;
         this.valorRetidoComoMultaCancelamento = BigDecimal.ZERO;
     }
