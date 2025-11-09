@@ -32,6 +32,7 @@ import com.sw.tse.api.dto.ReservarSemanaRequest;
 import com.sw.tse.api.dto.SalvarCartaoRequestDto;
 import com.sw.tse.api.dto.SemanasDisponiveisRequest;
 import com.sw.tse.api.dto.SemanasDisponiveisResponse;
+import com.sw.tse.api.dto.VoucherReservaResponse;
 import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 import com.sw.tse.domain.model.api.dto.ContratoClienteApiResponse;
 import com.sw.tse.domain.model.dto.CancelarReservaRequest;
@@ -41,6 +42,7 @@ import com.sw.tse.domain.service.interfaces.ContaFinanceiraService;
 import com.sw.tse.domain.service.interfaces.ContratoClienteService;
 import com.sw.tse.domain.service.interfaces.PeriodoUtilizacaoService;
 import com.sw.tse.domain.service.interfaces.ReservarSemanaService;
+import com.sw.tse.domain.service.interfaces.VoucherReservaService;
 import com.sw.tse.security.JwtTokenUtil;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -63,6 +65,7 @@ public class PainelClienteController {
     private final ContaFinanceiraService contaFinanceiraService;
     private final ContratoClienteService contratoClienteService;
     private final ReservarSemanaService reservarSemanaService;
+    private final VoucherReservaService voucherReservaService;
     private final CancelarReservaService cancelarReservaService;
     private final com.sw.tse.domain.repository.ContratoRepository contratoRepository;
     private final com.sw.tse.domain.service.interfaces.CartaoVinculadoPessoaService cartaoVinculadoPessoaService;
@@ -180,6 +183,44 @@ public class PainelClienteController {
                 true,
                 utilizacao,
                 "Utilização encontrada com sucesso"
+        );
+        
+        return ResponseEntity.ok(responseApi);
+    }
+    
+    @Operation(summary = "Obter dados para voucher de reserva",
+               description = "Retorna os dados consolidados da reserva para geração de voucher em PDF")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Dados obtidos com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Reserva não encontrada"),
+            @ApiResponse(responseCode = "403", description = "Reserva não pertence ao cliente autenticado")
+    })
+    @GetMapping("/reservas/{idUtilizacaoContrato}/voucher")
+    public ResponseEntity<ApiResponseDto<VoucherReservaResponse>> obterDadosVoucherReserva(
+            @Parameter(description = "ID da utilização de contrato", required = true)
+            @PathVariable Long idUtilizacaoContrato) {
+        
+        Long idPessoaCliente = JwtTokenUtil.getIdPessoaCliente();
+        
+        if (idPessoaCliente == null) {
+            throw new TokenJwtInvalidoException("ID da pessoa cliente não está disponível no token de autenticação");
+        }
+        
+        var voucherOptional = voucherReservaService.obterDadosVoucherReserva(idUtilizacaoContrato, idPessoaCliente);
+        if (voucherOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponseDto<>(
+                            HttpStatus.NOT_FOUND.value(),
+                            false,
+                            null,
+                            "Contrato associado à reserva não encontrado"));
+        }
+
+        ApiResponseDto<VoucherReservaResponse> responseApi = new ApiResponseDto<>(
+                HttpStatus.OK.value(),
+                true,
+                voucherOptional.get(),
+                "Dados da reserva obtidos com sucesso"
         );
         
         return ResponseEntity.ok(responseApi);

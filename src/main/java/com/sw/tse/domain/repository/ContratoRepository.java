@@ -2,12 +2,14 @@ package com.sw.tse.domain.repository;
 
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.sw.tse.api.model.EmpresaTseDto;
 import com.sw.tse.domain.model.api.dto.ContratoClienteApiResponse;
 import com.sw.tse.domain.model.api.dto.ContratoClienteApiResponseRaw;
 import com.sw.tse.domain.model.db.Contrato;
@@ -161,6 +163,14 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
         );
     }
 
+    @Query("SELECT c FROM Contrato c "
+         + "LEFT JOIN FETCH c.pessoaCessionario "
+         + "LEFT JOIN FETCH c.pessaoCocessionario "
+         + "LEFT JOIN FETCH c.empresa e "
+         + "LEFT JOIN FETCH e.pessoa "
+         + "WHERE c.id = :idContrato")
+    Optional<Contrato> findByIdWithRelacionamentos(@Param("idContrato") Long idContrato);
+
     /**
      * Verifica se o contrato pertence ao cliente (cessionário ou cocessionário)
      * 
@@ -183,6 +193,6 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
            "WHERE c.pessoaCessionario.idPessoa = :idPessoa " +
            "AND (c.status = 'ATIVO' OR c.status = 'ATIVOREV') " +
            "ORDER BY e.sigla")
-    List<com.sw.tse.api.model.EmpresaTseDto> findEmpresasByPessoaComContratosAtivos(@Param("idPessoa") Long idPessoa);
+    List<EmpresaTseDto> findEmpresasByPessoaComContratosAtivos(@Param("idPessoa") Long idPessoa);
 
 }
