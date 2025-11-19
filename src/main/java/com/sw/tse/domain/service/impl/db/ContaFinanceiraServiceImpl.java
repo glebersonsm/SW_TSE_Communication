@@ -1,7 +1,9 @@
 package com.sw.tse.domain.service.impl.db;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +25,8 @@ import com.sw.tse.domain.service.interfaces.TokenTseService;
 import com.sw.tse.security.JwtTokenUtil;
 
 import feign.FeignException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -44,6 +48,9 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
 
     @Autowired
     private TokenTseService tokenTseService;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
 
     @Override
@@ -61,6 +68,9 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
                 vencimentoFinal, 
                 status
         );
+        
+        // Inicializar relacionamentos lazy necessários para cálculo de juros e multa
+        inicializarRelacionamentosParaCalculo(contasFinanceiras);
         
         return contasFinanceiras.stream()
                 .map(contaFinanceiraConverter::toDto)
@@ -120,6 +130,9 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
                 quantidadeRegistrosRetornar,
                 offset
         );
+        
+        // Inicializar relacionamentos lazy necessários para cálculo de juros e multa
+        inicializarRelacionamentosParaCalculo(contasFinanceiras);
         
         List<ContaFinanceiraClienteDto> contasDto = contasFinanceiras.stream()
                 .map(contaFinanceiraConverter::toDto)
@@ -193,6 +206,102 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
         } catch (Exception e) {
             log.error("Erro inesperado ao gerar segunda via de boleto", e);
             throw new ApiTseException("Erro inesperado ao gerar segunda via de boleto: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Inicializa os relacionamentos lazy necessários para o cálculo de juros e multa.
+     * Como as queries nativas não fazem fetch automático dos relacionamentos lazy,
+     * precisamos fazer fetch manual usando JPQL com JOIN FETCH e substituir as contas na lista.
+     * 
+     * @param contasFinanceiras Lista de contas financeiras a serem inicializadas
+     */
+    private void inicializarRelacionamentosParaCalculo(List<ContaFinanceira> contasFinanceiras) {
+        if (contasFinanceiras.isEmpty()) {
+            return;
+        }
+        
+        log.info("Inicializando relacionamentos para {} contas financeiras", contasFinanceiras.size());
+        
+        // Extrair IDs das contas
+        List<Long> idsContas = contasFinanceiras.stream()
+                .map(ContaFinanceira::getId)
+                .collect(Collectors.toList());
+        
+        // Buscar contas com JOIN FETCH para carregar relacionamentos
+        String jpql = """
+            SELECT DISTINCT cf 
+            FROM ContaFinanceira cf
+            LEFT JOIN FETCH cf.carteiraBoleto
+            LEFT JOIN FETCH cf.empresa
+            WHERE cf.id IN :ids
+            """;
+        
+        List<ContaFinanceira> contasComRelacionamentos = entityManager.createQuery(jpql, ContaFinanceira.class)
+                .setParameter("ids", idsContas)
+                .getResultList();
+        
+        log.info("Buscadas {} contas com relacionamentos carregados", contasComRelacionamentos.size());
+        
+        // Criar um mapa para acesso rápido
+        Map<Long, ContaFinanceira> mapaContas = contasComRelacionamentos.stream()
+                .collect(Collectors.toMap(ContaFinanceira::getId, conta -> conta, (a, b) -> a));
+        
+        // Substituir as contas na lista original pelas contas com relacionamentos carregados
+        for (int i = 0; i < contasFinanceiras.size(); i++) {
+            ContaFinanceira contaOriginal = contasFinanceiras.get(i);
+            ContaFinanceira contaComRelacionamentos = mapaContas.get(contaOriginal.getId());
+            if (contaComRelacionamentos != null) {
+                contasFinanceiras.set(i, contaComRelacionamentos);
+                
+                // Log detalhado para debug - especialmente para contas vencidas
+                String status = contaComRelacionamentos.calcularStatus();
+                BigDecimal juros = contaComRelacionamentos.calcularJuros();
+                BigDecimal multa = contaComRelacionamentos.calcularMulta();
+                
+                if ("VENCIDO".equals(status)) {
+                    // Informações detalhadas sobre a configuração
+                    String infoCarteira = "null";
+                    String infoEmpresa = "null";
+                    
+                    if (contaComRelacionamentos.getCarteiraBoleto() != null) {
+                        BigDecimal valorJurosMora = contaComRelacionamentos.getCarteiraBoleto().getValorJurosDeMora();
+                        BigDecimal valorMulta = contaComRelacionamentos.getCarteiraBoleto().getValorMulta();
+                        infoCarteira = String.format("ID %d, JurosMora: %s, Multa: %s", 
+                                contaComRelacionamentos.getCarteiraBoleto().getIdCarteiraBoleto(),
+                                valorJurosMora != null ? valorJurosMora.toString() : "null",
+                                valorMulta != null ? valorMulta.toString() : "null");
+                    }
+                    
+                    if (contaComRelacionamentos.getEmpresa() != null) {
+                        infoEmpresa = String.format("ID %d", contaComRelacionamentos.getEmpresa().getId());
+                    }
+                    
+                    log.info("Conta VENCIDA ID {} - CarteiraBoleto: {}, Empresa: {}, Juros: {}, Multa: {}, ValorAtualizado: {}", 
+                            contaComRelacionamentos.getId(), 
+                            infoCarteira,
+                            infoEmpresa,
+                            juros,
+                            multa,
+                            contaComRelacionamentos.calcularValorAtualizado());
+                    
+                    // Log adicional se não houver juros/multa calculados
+                    if (juros.compareTo(BigDecimal.ZERO) == 0 && multa.compareTo(BigDecimal.ZERO) == 0) {
+                        log.warn("ATENÇÃO: Conta VENCIDA ID {} não tem juros/multa calculados! CarteiraBoleto: {}, Empresa: {}", 
+                                contaComRelacionamentos.getId(),
+                                infoCarteira,
+                                infoEmpresa);
+                    }
+                } else {
+                    log.debug("Conta ID {} - Status: {}, CarteiraBoleto: {}, Empresa: {}", 
+                            contaComRelacionamentos.getId(), 
+                            status,
+                            contaComRelacionamentos.getCarteiraBoleto() != null ? "carregada" : "null",
+                            contaComRelacionamentos.getEmpresa() != null ? "carregada" : "null");
+                }
+            } else {
+                log.warn("Conta ID {} não foi encontrada no fetch com relacionamentos", contaOriginal.getId());
+            }
         }
     }
 }

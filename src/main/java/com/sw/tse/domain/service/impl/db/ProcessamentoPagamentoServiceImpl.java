@@ -8,7 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -99,6 +103,9 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
     @Autowired
     private MovimentacaoBancariaContaFinanceiraRepository movimentacaoBancariaContaFinanceiraRepository;
     
+    @PersistenceContext
+    private EntityManager entityManager;
+    
     @Autowired
     private OperadorSistemaService operadorSistemaService;
     
@@ -139,6 +146,9 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
             if (contasOriginais.isEmpty()) {
                 throw new ContaFinanceiraNaoEncontradaException(idsContas);
             }
+            
+            // Inicializar relacionamentos lazy necessários para cálculo de juros e multa
+            inicializarRelacionamentosParaCalculo(contasOriginais);
             
             log.info("Encontradas {} contas originais para processar", contasOriginais.size());
             log.info("IdBandeira recebido no DTO: {}", dto.getIdBandeira());
@@ -803,6 +813,61 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
             log.error("Erro ao criar BandeiraCartao padrão", e);
             throw new PagamentoCartaoException(
                     "Não foi possível criar configuração de bandeira automaticamente: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Inicializa os relacionamentos lazy necessários para o cálculo de juros e multa.
+     * Como findAllById não faz fetch automático dos relacionamentos lazy,
+     * precisamos fazer fetch manual usando JPQL com JOIN FETCH e substituir as contas na lista.
+     * 
+     * @param contasFinanceiras Lista de contas financeiras a serem inicializadas
+     */
+    private void inicializarRelacionamentosParaCalculo(List<ContaFinanceira> contasFinanceiras) {
+        if (contasFinanceiras.isEmpty()) {
+            return;
+        }
+        
+        // Extrair IDs das contas
+        List<Long> idsContas = contasFinanceiras.stream()
+                .map(ContaFinanceira::getId)
+                .collect(Collectors.toList());
+        
+        // Buscar contas com JOIN FETCH para carregar relacionamentos
+        String jpql = """
+            SELECT DISTINCT cf 
+            FROM ContaFinanceira cf
+            LEFT JOIN FETCH cf.carteiraBoleto
+            LEFT JOIN FETCH cf.empresa
+            WHERE cf.id IN :ids
+            """;
+        
+        List<ContaFinanceira> contasComRelacionamentos = entityManager.createQuery(jpql, ContaFinanceira.class)
+                .setParameter("ids", idsContas)
+                .getResultList();
+        
+        // Criar um mapa para acesso rápido
+        java.util.Map<Long, ContaFinanceira> mapaContas = contasComRelacionamentos.stream()
+                .collect(Collectors.toMap(ContaFinanceira::getId, conta -> conta, (a, b) -> a));
+        
+        // Substituir as contas na lista original pelas contas com relacionamentos carregados
+        for (int i = 0; i < contasFinanceiras.size(); i++) {
+            ContaFinanceira contaOriginal = contasFinanceiras.get(i);
+            ContaFinanceira contaComRelacionamentos = mapaContas.get(contaOriginal.getId());
+            if (contaComRelacionamentos != null) {
+                contasFinanceiras.set(i, contaComRelacionamentos);
+                
+                // Log para debug
+                log.debug("Conta ID {} - CarteiraBoleto: {}, Empresa: {}, Status: {}, Juros: {}, Multa: {}", 
+                        contaComRelacionamentos.getId(), 
+                        contaComRelacionamentos.getCarteiraBoleto() != null ? "carregada" : "null",
+                        contaComRelacionamentos.getEmpresa() != null ? "carregada" : "null",
+                        contaComRelacionamentos.calcularStatus(),
+                        contaComRelacionamentos.calcularJuros(),
+                        contaComRelacionamentos.calcularMulta());
+            } else {
+                log.warn("Conta ID {} não foi encontrada no fetch com relacionamentos", contaOriginal.getId());
+            }
         }
     }
     
