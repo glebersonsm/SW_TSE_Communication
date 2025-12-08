@@ -183,12 +183,19 @@ public class PessoaDbServiceImpl implements PessoaService {
 				.build());
 		}
 		
-		// Buscar endereço de correspondência
-		if (pessoa.getEnderecos() != null) {
+		// Buscar endereço de correspondência ou primeiro endereço disponível
+		if (pessoa.getEnderecos() != null && !pessoa.getEnderecos().isEmpty()) {
+			// Primeiro, tentar buscar endereço de correspondência
 			EnderecoPessoa enderecoCorrespondencia = pessoa.getEnderecos().stream()
 				.filter(e -> e.getParaCorrespondencia() != null && e.getParaCorrespondencia())
 				.findFirst()
 				.orElse(null);
+			
+			// Se não encontrar endereço de correspondência, buscar o primeiro endereço disponível
+			if (enderecoCorrespondencia == null) {
+				enderecoCorrespondencia = pessoa.getEnderecos().get(0);
+				log.debug("Endereço de correspondência não encontrado para pessoa {}. Usando primeiro endereço disponível.", pessoa.getIdPessoa());
+			}
 			
 			if (enderecoCorrespondencia != null) {
 				// Se UF estiver vazio no endereço, buscar da cidade relacionada
@@ -207,7 +214,16 @@ public class PessoaDbServiceImpl implements PessoaService {
 						enderecoCorrespondencia.getCidade().getNome() : null)
 					.uf(uf)
 					.build());
+				
+				log.debug("Endereço adicionado ao response para pessoa {}: {}, {} - {}/{}", 
+					pessoa.getIdPessoa(), 
+					enderecoCorrespondencia.getLogradouro(),
+					enderecoCorrespondencia.getNumero(),
+					enderecoCorrespondencia.getCidade() != null ? enderecoCorrespondencia.getCidade().getNome() : "",
+					uf);
 			}
+		} else {
+			log.debug("Nenhum endereço encontrado para pessoa {}", pessoa.getIdPessoa());
 		}
 		
 		return Optional.of(builder.build());

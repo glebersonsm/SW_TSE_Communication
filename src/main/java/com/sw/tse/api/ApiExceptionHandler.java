@@ -28,6 +28,9 @@ import com.sw.tse.domain.expection.DadoObrigatorioException;
 import com.sw.tse.domain.expection.LoginInvalidoTseException;
 import com.sw.tse.domain.expection.PessoaSemContratoTseException;
 import com.sw.tse.domain.expection.RecursoNaoEncontradoException;
+import com.sw.tse.domain.expection.ContratoBloqueadoPorTagException;
+import com.sw.tse.domain.expection.ContratoInadimplenteException;
+import com.sw.tse.domain.expection.ContratoIntegralizacaoInsuficienteException;
 import com.sw.tse.domain.expection.RegraDeNegocioException;
 import com.sw.tse.domain.expection.ReservaCanceladaNaoEditavelException;
 import com.sw.tse.domain.expection.ReservaCheckinPassadoException;
@@ -158,6 +161,61 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             ex.getMessage()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+    
+    // ========== Handlers Específicos para Validações de Disponibilidade - ANTES do genérico ==========
+    // Estes handlers devem vir ANTES do handler genérico RegraDeNegocioException
+    // para que sejam executados com prioridade e retornem status 200 ao invés de 400
+    
+    /**
+     * Handler para quando o contrato está bloqueado por tag.
+     * Retorna status OK com a mensagem amigável da exceção ao invés de erro.
+     */
+    @ExceptionHandler(ContratoBloqueadoPorTagException.class)
+    public ResponseEntity<ApiResponseDto<List<?>>> handleContratoBloqueadoPorTag(ContratoBloqueadoPorTagException ex, WebRequest request) {
+        log.warn("Contrato bloqueado por tag: {} - {}", ex.getNumeroContrato(), ex.getMessage());
+        
+        ApiResponseDto<List<?>> response = new ApiResponseDto<>(
+            HttpStatus.OK.value(),
+            true,
+            new ArrayList<>(),
+            ex.getMessage()  // Usa a mensagem amigável já definida na exceção
+        );
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Handler para quando o contrato está inadimplente.
+     * Retorna status OK com a mensagem amigável da exceção ao invés de erro.
+     */
+    @ExceptionHandler(ContratoInadimplenteException.class)
+    public ResponseEntity<ApiResponseDto<List<?>>> handleContratoInadimplente(ContratoInadimplenteException ex, WebRequest request) {
+        log.warn("Contrato inadimplente: {} - {}", ex.getNumeroContrato(), ex.getMessage());
+        
+        ApiResponseDto<List<?>> response = new ApiResponseDto<>(
+            HttpStatus.OK.value(),
+            true,
+            new ArrayList<>(),
+            ex.getMessage()  // Usa a mensagem amigável já definida na exceção
+        );
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Handler para quando a integralização do contrato é insuficiente.
+     * Retorna status OK com a mensagem amigável da exceção ao invés de erro.
+     */
+    @ExceptionHandler(ContratoIntegralizacaoInsuficienteException.class)
+    public ResponseEntity<ApiResponseDto<List<?>>> handleContratoIntegralizacaoInsuficiente(ContratoIntegralizacaoInsuficienteException ex, WebRequest request) {
+        log.warn("Integralização insuficiente: {} - {}", ex.getNumeroContrato(), ex.getMessage());
+        
+        ApiResponseDto<List<?>> response = new ApiResponseDto<>(
+            HttpStatus.OK.value(),
+            true,
+            new ArrayList<>(),
+            ex.getMessage()  // Usa a mensagem amigável já definida na exceção
+        );
+        return ResponseEntity.ok(response);
     }
     
     @ExceptionHandler(RegraDeNegocioException.class)

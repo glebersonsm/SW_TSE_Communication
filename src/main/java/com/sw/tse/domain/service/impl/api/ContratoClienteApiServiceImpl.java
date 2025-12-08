@@ -32,7 +32,15 @@ public class ContratoClienteApiServiceImpl implements ContratoClienteService{
 		}
 		
 		log.info("Buscando contratos usando token do JWT");
-		return contratoClienteApiClient.buscarMeusContratos(tokenCliente);
+		List<ContratoClienteApiResponse> todosContratos = contratoClienteApiClient.buscarMeusContratos(tokenCliente);
+		
+		// Filtrar apenas contratos com status ATIVO ou ATIVOREV
+		List<ContratoClienteApiResponse> contratosAtivos = todosContratos.stream()
+				.filter(contrato -> "ATIVO".equals(contrato.getStatusContrato()) || "ATIVOREV".equals(contrato.getStatusContrato()))
+				.toList();
+		
+		log.info("Filtrados {} contratos ativos de um total de {} contratos", contratosAtivos.size(), todosContratos.size());
+		return contratosAtivos;
 	}
 
 	@Override

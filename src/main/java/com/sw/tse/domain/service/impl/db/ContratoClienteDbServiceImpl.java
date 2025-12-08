@@ -33,11 +33,17 @@ public class ContratoClienteDbServiceImpl implements ContratoClienteService {
         
         log.info("Buscando contratos para a pessoa cliente com ID: {}", idPessoaCliente);
         
-        List<ContratoClienteApiResponse> contratos = contratoRepository.buscarContratosClientePorIdPessoa(idPessoaCliente);
+        List<ContratoClienteApiResponse> todosContratos = contratoRepository.buscarContratosClientePorIdPessoa(idPessoaCliente);
         
-        log.info("Encontrados {} contratos para a pessoa cliente ID: {}", contratos.size(), idPessoaCliente);
+        // Filtrar apenas contratos com status ATIVO ou ATIVOREV
+        List<ContratoClienteApiResponse> contratosAtivos = todosContratos.stream()
+                .filter(contrato -> "ATIVO".equals(contrato.getStatusContrato()) || "ATIVOREV".equals(contrato.getStatusContrato()))
+                .toList();
         
-        return contratos;
+        log.info("Filtrados {} contratos ativos de um total de {} contratos para a pessoa cliente ID: {}", 
+                contratosAtivos.size(), todosContratos.size(), idPessoaCliente);
+        
+        return contratosAtivos;
     }
 
     @Override
@@ -50,10 +56,16 @@ public class ContratoClienteDbServiceImpl implements ContratoClienteService {
         log.info("Buscando contratos para o usuário com ID: {}", idUsuario);
         
         // Assumindo que idUsuario corresponde ao idPessoa na implementação DB
-        List<ContratoClienteApiResponse> contratos = contratoRepository.buscarContratosClientePorIdPessoa(idUsuario);
+        List<ContratoClienteApiResponse> todosContratos = contratoRepository.buscarContratosClientePorIdPessoa(idUsuario);
         
-        log.info("Encontrados {} contratos para o usuário ID: {}", contratos.size(), idUsuario);
+        // Filtrar apenas contratos com status ATIVO ou ATIVOREV
+        List<ContratoClienteApiResponse> contratosAtivos = todosContratos.stream()
+                .filter(contrato -> "ATIVO".equals(contrato.getStatusContrato()) || "ATIVOREV".equals(contrato.getStatusContrato()))
+                .toList();
         
-        return contratos;
+        log.info("Filtrados {} contratos ativos de um total de {} contratos para o usuário ID: {}", 
+                contratosAtivos.size(), todosContratos.size(), idUsuario);
+        
+        return contratosAtivos;
     }
 }
