@@ -19,6 +19,7 @@ public class VoucherReservaResponse {
     private LocalDate checkout;
     private Integer capacidade;
     private String empresa;
+    private Long idEmpresa;
 
     private String nomeCessionario;
     private String cpfCessionario;

@@ -157,8 +157,10 @@ public class ContaFinanceiraClienteDto {
     @JsonProperty("DataProcessamento")
     private LocalDateTime dataProcessamento;
     
+    @JsonProperty("IdMeioPagamento")
     private Long idMeioPagamento;
     
+    @JsonProperty("MeioPagamento")
     private String meioPagamento;
     
     @JsonProperty("Juros")

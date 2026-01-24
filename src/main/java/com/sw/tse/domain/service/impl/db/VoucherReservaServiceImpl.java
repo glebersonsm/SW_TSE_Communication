@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 
 import com.sw.tse.api.dto.VoucherReservaResponse;
 import com.sw.tse.domain.model.db.Contrato;
-import com.sw.tse.domain.model.db.Empresa;
 import com.sw.tse.domain.model.db.Pessoa;
 import com.sw.tse.domain.repository.ContratoRepository;
 import com.sw.tse.domain.service.interfaces.ReservarSemanaService;
@@ -42,6 +41,12 @@ public class VoucherReservaServiceImpl implements VoucherReservaService {
         Pessoa cocessionario = contrato.getPessaoCocessionario();
         
         String hotelNome = contrato.getCotaUh().getUnidadeHoteleira().getEdificioHotel().getHotel().getDescricao();
+        
+        // Obter IdEmpresa do contrato
+        Long idEmpresa = null;
+        if (contrato.getEmpresa() != null) {
+            idEmpresa = contrato.getEmpresa().getId();
+        }
 
         var response = VoucherReservaResponse.builder()
                 .idUtilizacaoContrato(utilizacao.getIdUtilizacaoContrato())
@@ -53,6 +58,7 @@ public class VoucherReservaServiceImpl implements VoucherReservaService {
                 .checkout(utilizacao.getCheckout())
                 .capacidade(utilizacao.getCapacidade())
                 .empresa(hotelNome)
+                .idEmpresa(idEmpresa)
                 .nomeCessionario(cessionario != null ? cessionario.getNome() : null)
                 .cpfCessionario(cessionario != null ? cessionario.getCpfCnpj() : null)
                 .nomeCocessionario(cocessionario != null ? cocessionario.getNome() : null)
