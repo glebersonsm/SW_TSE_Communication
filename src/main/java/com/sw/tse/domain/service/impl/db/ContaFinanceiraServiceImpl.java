@@ -14,10 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.sw.tse.api.dto.ContaFinanceiraClienteDto;
 import com.sw.tse.client.OperadorSistemaApiClient;
 import com.sw.tse.client.SegundaViaBoletoApiClient;
+import com.sw.tse.core.util.ParametroFinanceiroHelper;
 import com.sw.tse.domain.converter.ContaFinanceiraConverter;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 import com.sw.tse.domain.model.db.ContaFinanceira;
+import com.sw.tse.domain.model.db.ParametroFinanceiro;
 import com.sw.tse.domain.model.dto.ContasPaginadasDto;
 import com.sw.tse.domain.repository.ContaFinanceiraRepository;
 import com.sw.tse.domain.service.interfaces.ContaFinanceiraService;
@@ -48,6 +50,9 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
 
     @Autowired
     private TokenTseService tokenTseService;
+    
+    @Autowired
+    private com.sw.tse.domain.repository.ParametroFinanceiroRepository parametroFinanceiroRepository;
     
     @PersistenceContext
     private EntityManager entityManager;
@@ -214,6 +219,8 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
      * Como as queries nativas não fazem fetch automático dos relacionamentos lazy,
      * precisamos fazer fetch manual usando JPQL com JOIN FETCH e substituir as contas na lista.
      * 
+     * Também pré-carrega os parâmetros financeiros em batch para evitar N+1 queries.
+     * 
      * @param contasFinanceiras Lista de contas financeiras a serem inicializadas
      */
     private void inicializarRelacionamentosParaCalculo(List<ContaFinanceira> contasFinanceiras) {
@@ -234,6 +241,7 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
             FROM ContaFinanceira cf
             LEFT JOIN FETCH cf.carteiraBoleto
             LEFT JOIN FETCH cf.empresa
+            LEFT JOIN FETCH cf.meioPagamento
             WHERE cf.id IN :ids
             """;
         
@@ -242,6 +250,36 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
                 .getResultList();
         
         log.info("Buscadas {} contas com relacionamentos carregados", contasComRelacionamentos.size());
+        
+        // Pré-carregar parâmetros financeiros em batch para evitar N+1 queries
+        // Extrair IDs únicos de empresas que não têm carteiraBoleto (precisam de ParametroFinanceiro)
+        List<Long> idsEmpresas = contasComRelacionamentos.stream()
+                .filter(cf -> cf.getEmpresa() != null && cf.getCarteiraBoleto() == null)
+                .map(cf -> cf.getEmpresa().getId())
+                .distinct()
+                .collect(Collectors.toList());
+        
+        if (!idsEmpresas.isEmpty()) {
+            log.info("Pré-carregando {} parâmetros financeiros em batch", idsEmpresas.size());
+            List<ParametroFinanceiro> parametros = parametroFinanceiroRepository.findByEmpresaIds(idsEmpresas);
+            
+            // Pré-popular cache do ParametroFinanceiroHelper para evitar N+1 queries
+            for (ParametroFinanceiro parametro : parametros) {
+                // Usar idTenant (que é o mesmo que idEmpresa) ou empresa.getId()
+                Long idEmpresa = null;
+                if (parametro.getEmpresa() != null) {
+                    idEmpresa = parametro.getEmpresa().getId();
+                } else if (parametro.getIdTenant() != null) {
+                    idEmpresa = parametro.getIdTenant().longValue();
+                }
+                
+                if (idEmpresa != null) {
+                    ParametroFinanceiroHelper.preencherCache(idEmpresa, parametro);
+                }
+            }
+            
+            log.info("Parâmetros financeiros pré-carregados e cache populado: {}", parametros.size());
+        }
         
         // Criar um mapa para acesso rápido
         Map<Long, ContaFinanceira> mapaContas = contasComRelacionamentos.stream()
@@ -253,6 +291,16 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
             ContaFinanceira contaComRelacionamentos = mapaContas.get(contaOriginal.getId());
             if (contaComRelacionamentos != null) {
                 contasFinanceiras.set(i, contaComRelacionamentos);
+                
+                // Verificar se meioPagamento foi carregado
+                if (contaComRelacionamentos.getMeioPagamento() != null) {
+                    log.debug("Conta ID {} - MeioPagamento carregado: {} (ID: {})", 
+                            contaComRelacionamentos.getId(),
+                            contaComRelacionamentos.getMeioPagamento().getDescricao(),
+                            contaComRelacionamentos.getMeioPagamento().getIdMeioPagamento());
+                } else {
+                    log.debug("Conta ID {} - MeioPagamento é NULL", contaComRelacionamentos.getId());
+                }
                 
                 // Log detalhado para debug - especialmente para contas vencidas
                 String status = contaComRelacionamentos.calcularStatus();

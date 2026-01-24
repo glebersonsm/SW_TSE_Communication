@@ -1,5 +1,6 @@
 package com.sw.tse.domain.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,4 +21,14 @@ public interface ParametroFinanceiroRepository extends JpaRepository<ParametroFi
      */
     @Query(value = "SELECT * FROM parametrizacaohistoricomovbancaria WHERE idtenant = :idTenant", nativeQuery = true)
     Optional<ParametroFinanceiro> findByEmpresaId(@Param("idTenant") Long idTenant);
+    
+    /**
+     * Busca parâmetros financeiros para múltiplas empresas (batch loading)
+     * Evita N+1 queries quando várias contas financeiras precisam calcular juros/multas
+     * 
+     * @param idsEmpresas Lista de IDs das empresas (idtenant)
+     * @return Lista de parâmetros financeiros encontrados
+     */
+    @Query(value = "SELECT * FROM parametrizacaohistoricomovbancaria WHERE idtenant IN :idsTenant", nativeQuery = true)
+    List<ParametroFinanceiro> findByEmpresaIds(@Param("idsTenant") List<Long> idsTenant);
 }

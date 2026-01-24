@@ -27,7 +27,15 @@ public class ContaFinanceiraConverter {
             "BOLETO".equalsIgnoreCase(contaFinanceira.getMeioPagamento().getCodMeioPagamento())) {
             dto.setBoletoId(contaFinanceira.getId());
         }
-        dto.setStatusParcela(contaFinanceira.calcularStatus());
+        
+        // Tratamento especial para destinocontafinanciera = 'P'
+        // Deve trazer como pago mesmo que não esteja pago
+        String statusCalculado = contaFinanceira.calcularStatus();
+        if ("P".equalsIgnoreCase(contaFinanceira.getDestinoContaFinanceira())) {
+            statusCalculado = "PAGO";
+        }
+        dto.setStatusParcela(statusCalculado);
+        
         dto.setDataHoraCriacao(contaFinanceira.getDataCadastro());
         dto.setDataCriacao(contaFinanceira.getDataCadastro());
         dto.setVencimento(contaFinanceira.getDataVencimento());
@@ -78,7 +86,12 @@ public class ContaFinanceiraConverter {
         // Meio Pagamento
         if (contaFinanceira.getMeioPagamento() != null) {
             dto.setIdMeioPagamento(contaFinanceira.getMeioPagamento().getIdMeioPagamento());
-            dto.setMeioPagamento(contaFinanceira.getMeioPagamento().getDescricao());
+            // Usar descricao se disponível, senão usar codMeioPagamento
+            String descricaoMeioPagamento = contaFinanceira.getMeioPagamento().getDescricao();
+            if (descricaoMeioPagamento == null || descricaoMeioPagamento.trim().isEmpty()) {
+                descricaoMeioPagamento = contaFinanceira.getMeioPagamento().getCodMeioPagamento();
+            }
+            dto.setMeioPagamento(descricaoMeioPagamento);
         }
         
         // Fracão Cota (via Contrato → CotaUh)
@@ -116,7 +129,8 @@ public class ContaFinanceiraConverter {
         dto.setPercentualMulta(contaFinanceira.getPercentualMultaCalculado());
         
         // PercentualMultaCar - valor da multa calculada para contas vencidas
-        if ("VENCIDO".equals(contaFinanceira.calcularStatus())) {
+        // Usar statusCalculado (já considera destinoContaFinanceira = 'P')
+        if ("VENCIDO".equals(statusCalculado)) {
             dto.setPercentualMultaCar(contaFinanceira.calcularMulta());
         }
         
@@ -124,7 +138,8 @@ public class ContaFinanceiraConverter {
         dto.setDataBaseAplicacaoJurosMultas(contaFinanceira.getDataVencimentoOriginal());
         
         // PodeAplicarMulta - true para contas vencidas
-        if ("VENCIDO".equals(contaFinanceira.calcularStatus())) {
+        // Usar statusCalculado (já considera destinoContaFinanceira = 'P')
+        if ("VENCIDO".equals(statusCalculado)) {
             dto.setPodeAplicarMulta("S"); // true como string
         } else {
             dto.setPodeAplicarMulta("N"); // false como string
@@ -134,7 +149,15 @@ public class ContaFinanceiraConverter {
         
         // Campos de data
         dto.setDataHoraBaixa(contaFinanceira.getDataBaixa());
-        dto.setDataProcessamento(contaFinanceira.getDataPagamento());
+        
+        // Tratamento especial para destinocontafinanciera = 'P'
+        // Se não estiver paga, a data de pagamento pode setar a mesma data de vencimento
+        LocalDateTime dataProcessamento = contaFinanceira.getDataPagamento();
+        if ("P".equalsIgnoreCase(contaFinanceira.getDestinoContaFinanceira()) && dataProcessamento == null) {
+            // Se destinoContaFinanceira = 'P' e não tem data de pagamento, usar data de vencimento
+            dataProcessamento = contaFinanceira.getDataVencimento();
+        }
+        dto.setDataProcessamento(dataProcessamento);
         
         // Status CRC - valor padrão
         dto.setStatusCrcBloqueiaPagamento("N");
@@ -147,8 +170,8 @@ public class ContaFinanceiraConverter {
         if (contaFinanceira.getCarteiraBoleto() != null && 
             contaFinanceira.getCarteiraBoleto().getQtdDiasNaoReceberAposVencimento() != null) {
             
-            // Verificar se a conta está vencida
-            if ("VENCIDO".equals(contaFinanceira.calcularStatus())) {
+            // Verificar se a conta está vencida usando statusCalculado (já considera destinoContaFinanceira = 'P')
+            if ("VENCIDO".equals(statusCalculado)) {
                 LocalDateTime dataBase = contaFinanceira.getDataVencimentoOriginal() != null ? 
                     contaFinanceira.getDataVencimentoOriginal() : 
                     contaFinanceira.getDataVencimento();

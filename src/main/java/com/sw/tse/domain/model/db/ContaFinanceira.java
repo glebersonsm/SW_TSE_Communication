@@ -376,6 +376,50 @@ public class ContaFinanceira {
         return dataBase != null && dataBase.isBefore(LocalDateTime.now());
     }
     
+    /**
+     * Verifica se a conta deve ter juros e multas calculados.
+     * Retorna true se a conta está vencida E não está paga.
+     * Para destinoContaFinanceira = 'P', calcula apenas se não estiver paga.
+     */
+    private boolean deveCalcularJurosMultas() {
+        // Se a conta está paga (via campo pago ou tipoHistorico), nunca calcula juros e multas
+        if (Boolean.TRUE.equals(this.pago) || 
+            "BAIXADO".equals(this.tipoHistorico) || 
+            "TRANSFERIDO".equals(this.tipoHistorico) || 
+            "BAIXADOCARTACREDITO".equals(this.tipoHistorico)) {
+            return false;
+        }
+        
+        // Verificar outras condições de pagamento via meio de pagamento
+        if (this.meioPagamento != null && this.meioPagamento.getCodMeioPagamento() != null) {
+            String codMeioPagamento = this.meioPagamento.getCodMeioPagamento().toUpperCase();
+            
+            if ("CARTAO".equals(codMeioPagamento) && 
+                Boolean.FALSE.equals(this.meioPagamento.getUtilizadoParaLinkPagamento())) {
+                return false; // Cartão sem link de pagamento = pago
+            }
+            
+            if ("CARTAORECORRENTE".equals(codMeioPagamento) && 
+                Boolean.TRUE.equals(this.recorrenciaAutorizada)) {
+                return false; // Cartão recorrente autorizado = pago
+            }
+
+            if ("CARTAO".equals(codMeioPagamento) && 
+                Boolean.TRUE.equals(this.meioPagamento.getUtilizadoParaLinkPagamento()) && 
+                Boolean.TRUE.equals(this.recorrenciaAutorizada)) {
+                return false; // Cartão com link e recorrente autorizado = pago
+            }
+        }
+        
+        // Se destinoContaFinanceira = 'P' e não está paga, calcula juros e multas
+        if ("P".equalsIgnoreCase(this.destinoContaFinanceira)) {
+            return true;
+        }
+        
+        // Caso contrário, só calcula se estiver vencida e não paga
+        return isVencida();
+    }
+    
 
     public boolean isPagoCalculado() {
         return "PAGO".equals(calcularStatus());
@@ -383,20 +427,28 @@ public class ContaFinanceira {
     
 
     public BigDecimal calcularValorAtualizado() {
-        if (!"VENCIDO".equals(calcularStatus())) {
-            return calcularValorTotal();
+        BigDecimal valorTotal = calcularValorTotal();
+        
+        if (!deveCalcularJurosMultas()) {
+            // Conta está paga - não calcula juros e multas dinamicamente
+            // Mas inclui valores de juros e multa já salvos no banco de dados
+            BigDecimal jurosSalvos = this.valorJuros != null ? this.valorJuros : BigDecimal.ZERO;
+            BigDecimal multaSalva = this.valorMulta != null ? this.valorMulta : BigDecimal.ZERO;
+            
+            return valorTotal.add(jurosSalvos).add(multaSalva);
         }
         
+        // Conta não está paga - calcula juros e multas dinamicamente
         BigDecimal juros = calcularJuros();
         BigDecimal multa = calcularMulta();
         
-        return calcularValorTotal().add(juros).add(multa);
+        return valorTotal.add(juros).add(multa);
     }
     
 
     public BigDecimal calcularJuros() {
 
-        if (!"VENCIDO".equals(calcularStatus())) {
+        if (!deveCalcularJurosMultas()) {
             return BigDecimal.ZERO;
         }
         
@@ -450,7 +502,7 @@ public class ContaFinanceira {
      * Calcula o valor de juros mensal (juros de 30 dias)
      */
     public BigDecimal calcularJuroMensal() {
-        if (!"VENCIDO".equals(calcularStatus())) {
+        if (!deveCalcularJurosMultas()) {
             return BigDecimal.ZERO;
         }
         
@@ -479,8 +531,8 @@ public class ContaFinanceira {
      * Calcula o valor da multa
      */
     public BigDecimal calcularMulta() {
-        // Usa o status calculado ao invés de isVencida() para considerar todas as regras de negócio
-        if (!"VENCIDO".equals(calcularStatus())) {
+        // Considera contas vencidas OU com destinoContaFinanceira = 'P'
+        if (!deveCalcularJurosMultas()) {
             return BigDecimal.ZERO;
         }
         
@@ -538,8 +590,8 @@ public class ContaFinanceira {
      * Calcula o valor de juros diário (juros de um único dia)
      */
     public BigDecimal calcularJuroDiario() {
-        // Usa o status calculado ao invés de isVencida() para considerar todas as regras de negócio
-        if (!"VENCIDO".equals(calcularStatus())) {
+        // Considera contas vencidas OU com destinoContaFinanceira = 'P'
+        if (!deveCalcularJurosMultas()) {
             return BigDecimal.ZERO;
         }
         

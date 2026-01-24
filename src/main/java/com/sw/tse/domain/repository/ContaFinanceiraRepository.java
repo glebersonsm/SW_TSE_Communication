@@ -152,8 +152,22 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
     
     /**
      * Busca contas por cliente
+     * Considera: idpessoa direto na conta OU cessionário/co-cessionário do contrato
      */
-    @Query("SELECT cf FROM ContaFinanceira cf WHERE cf.pessoa.idPessoa = :idCliente")
+    @Query("""
+        SELECT cf FROM ContaFinanceira cf 
+        LEFT JOIN cf.contrato ct
+        JOIN cf.origemConta toc
+        WHERE (
+            cf.pessoa.idPessoa = :idCliente
+            OR ct.pessoaCessionario.idPessoa = :idCliente
+            OR ct.pessaoCocessionario.idPessoa = :idCliente
+          )
+          AND (
+            toc.sysId IN ('ENTRADA', 'INTERMEDIARIA', 'MULTARESCIS', 'PARC', 'REEMBOLSO')
+            OR toc.idTipoOrigemContaFinanceira = 15
+          )
+    """)
     List<ContaFinanceira> findContasPorCliente(@Param("idCliente") Long idCliente);
     
     /**
@@ -168,15 +182,37 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
     @Query(value = """
         SELECT * 
         FROM contafinanceira cf 
-        WHERE cf.idpessoa = :idCliente
+        LEFT JOIN contrato ct ON cf.idcontrato = ct.idcontrato
+        INNER JOIN tipoorigemcontafinanceira toc ON cf.idorigemconta = toc.idtipoorigemcontafinanceira
+        WHERE (
+            -- Buscar por idpessoa direto na conta financeira (pode ser NULL)
+            cf.idpessoa = :idCliente
+            -- OU buscar por cessionário do contrato
+            OR ct.idpessoacessionario = :idCliente
+            -- OU buscar por co-cessionário do contrato
+            OR ct.idpessoacocessionario = :idCliente
+          )
           AND cf.tipohistorico NOT IN ('RENEGOCIADA', 'EXCLUIDO', 'CANCELADO')
+          AND (
+            toc.sysid IN ('ENTRADA', 'INTERMEDIARIA', 'MULTARESCIS', 'PARC', 'REEMBOLSO')
+            OR toc.idtipoorigemcontafinanceira = 15
+          )
           AND (CAST(:vencimentoInicial AS date) IS NULL OR DATE(cf.datavencimento) >= CAST(:vencimentoInicial AS date))
           AND (CAST(:vencimentoFinal AS date) IS NULL OR DATE(cf.datavencimento) <= CAST(:vencimentoFinal AS date))
           AND (
             :status IS NULL 
-            OR (:status = 'B' AND cf.pago = TRUE)
-            OR (:status = 'P' AND cf.pago = FALSE AND cf.valorreceber > 0)
-            OR (:status = 'V' AND cf.pago = FALSE AND cf.valorreceber > 0 AND cf.datavencimento < CURRENT_DATE)
+            OR (:status = 'B' AND (
+                cf.pago = TRUE 
+                OR UPPER(cf.destinocontafinanceira) = 'P'
+              ))
+            OR (:status = 'P' AND cf.pago = FALSE 
+                AND UPPER(COALESCE(cf.destinocontafinanceira, '')) <> 'P'
+                AND cf.valorreceber > 0
+                AND cf.datavencimento >= CURRENT_DATE)
+            OR (:status = 'V' AND cf.pago = FALSE 
+                AND UPPER(COALESCE(cf.destinocontafinanceira, '')) <> 'P'
+                AND cf.valorreceber > 0 
+                AND cf.datavencimento < CURRENT_DATE)
           )
         ORDER BY cf.datavencimento ASC
     """, nativeQuery = true)
@@ -194,8 +230,21 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
         SELECT COUNT(*) 
         FROM contafinanceira cf 
         LEFT JOIN meiopagamento mp ON cf.idmeiopagamento = mp.idmeiopagamento
-        WHERE cf.idpessoa = :idCliente
+        LEFT JOIN contrato ct ON cf.idcontrato = ct.idcontrato
+        INNER JOIN tipoorigemcontafinanceira toc ON cf.idorigemconta = toc.idtipoorigemcontafinanceira
+        WHERE (
+            -- Buscar por idpessoa direto na conta financeira (pode ser NULL)
+            cf.idpessoa = :idCliente
+            -- OU buscar por cessionário do contrato
+            OR ct.idpessoacessionario = :idCliente
+            -- OU buscar por co-cessionário do contrato
+            OR ct.idpessoacocessionario = :idCliente
+          )
           AND cf.tipohistorico NOT IN ('RENEGOCIADA', 'EXCLUIDO', 'CANCELADO')
+          AND (
+            toc.sysid IN ('ENTRADA', 'INTERMEDIARIA', 'MULTARESCIS', 'PARC', 'REEMBOLSO')
+            OR toc.idtipoorigemcontafinanceira = 15
+          )
           AND (CAST(:vencimentoInicial AS date) IS NULL OR DATE(cf.datavencimento) >= CAST(:vencimentoInicial AS date))
           AND (CAST(:vencimentoFinal AS date) IS NULL OR DATE(cf.datavencimento) <= CAST(:vencimentoFinal AS date))
           AND (:empresaId IS NULL OR cf.idtenant = :empresaId)
@@ -203,6 +252,7 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
             :status IS NULL 
             OR (
                 :status = 'A' AND cf.pago = FALSE
+                AND UPPER(COALESCE(cf.destinocontafinanceira, '')) <> 'P'
                 AND cf.tipohistorico NOT IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
                 -- Excluir contas que são consideradas pagas por outras regras
                 AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
@@ -211,18 +261,23 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
             )
             OR (:status = 'B' AND (
                 cf.pago = TRUE 
+                OR UPPER(cf.destinocontafinanceira) = 'P'
                 OR cf.tipohistorico IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
                 OR (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
                 OR (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
                 OR (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = TRUE AND cf.recorrenciaautorizada = TRUE)
             ))
-            OR (:status = 'P' AND cf.pago = FALSE AND cf.datavencimento >= CURRENT_DATE
+            OR (:status = 'P' AND cf.pago = FALSE 
+                AND UPPER(COALESCE(cf.destinocontafinanceira, '')) <> 'P'
+                AND cf.datavencimento >= CURRENT_DATE
                 AND cf.tipohistorico NOT IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
                 AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
                 AND NOT (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
                 AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = TRUE AND cf.recorrenciaautorizada = TRUE)
             )
-            OR (:status = 'V' AND cf.pago = FALSE AND cf.datavencimento < CURRENT_DATE
+            OR (:status = 'V' AND cf.pago = FALSE 
+                AND UPPER(COALESCE(cf.destinocontafinanceira, '')) <> 'P'
+                AND cf.datavencimento < CURRENT_DATE
                 AND cf.tipohistorico NOT IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
                 AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
                 AND NOT (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
@@ -245,8 +300,21 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
         SELECT cf.* 
         FROM contafinanceira cf 
         LEFT JOIN meiopagamento mp ON cf.idmeiopagamento = mp.idmeiopagamento
-        WHERE cf.idpessoa = :idCliente
+        LEFT JOIN contrato ct ON cf.idcontrato = ct.idcontrato
+        INNER JOIN tipoorigemcontafinanceira toc ON cf.idorigemconta = toc.idtipoorigemcontafinanceira
+        WHERE (
+            -- Buscar por idpessoa direto na conta financeira (pode ser NULL)
+            cf.idpessoa = :idCliente
+            -- OU buscar por cessionário do contrato
+            OR ct.idpessoacessionario = :idCliente
+            -- OU buscar por co-cessionário do contrato
+            OR ct.idpessoacocessionario = :idCliente
+          )
           AND cf.tipohistorico NOT IN ('RENEGOCIADA', 'EXCLUIDO', 'CANCELADO')
+          AND (
+            toc.sysid IN ('ENTRADA', 'INTERMEDIARIA', 'MULTARESCIS', 'PARC', 'REEMBOLSO')
+            OR toc.idtipoorigemcontafinanceira = 15
+          )
           AND (CAST(:vencimentoInicial AS date) IS NULL OR DATE(cf.datavencimento) >= CAST(:vencimentoInicial AS date))
           AND (CAST(:vencimentoFinal AS date) IS NULL OR DATE(cf.datavencimento) <= CAST(:vencimentoFinal AS date))
           AND (:empresaId IS NULL OR cf.idtenant = :empresaId)
@@ -254,6 +322,7 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
             :status IS NULL 
             OR (
                 :status = 'A' AND cf.pago = FALSE
+                AND UPPER(COALESCE(cf.destinocontafinanceira, '')) <> 'P'
                 AND cf.tipohistorico NOT IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
                 -- Excluir contas que são consideradas pagas por outras regras
                 AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
@@ -262,18 +331,23 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
             )
             OR (:status = 'B' AND (
                 cf.pago = TRUE 
+                OR UPPER(cf.destinocontafinanceira) = 'P'
                 OR cf.tipohistorico IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
                 OR (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
                 OR (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
                 OR (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = TRUE AND cf.recorrenciaautorizada = TRUE)
             ))
-            OR (:status = 'P' AND cf.pago = FALSE AND cf.datavencimento >= CURRENT_DATE
+            OR (:status = 'P' AND cf.pago = FALSE 
+                AND UPPER(COALESCE(cf.destinocontafinanceira, '')) <> 'P'
+                AND cf.datavencimento >= CURRENT_DATE
                 AND cf.tipohistorico NOT IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
                 AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
                 AND NOT (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
                 AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = TRUE AND cf.recorrenciaautorizada = TRUE)
             )
-            OR (:status = 'V' AND cf.pago = FALSE AND cf.datavencimento < CURRENT_DATE
+            OR (:status = 'V' AND cf.pago = FALSE 
+                AND UPPER(COALESCE(cf.destinocontafinanceira, '')) <> 'P'
+                AND cf.datavencimento < CURRENT_DATE
                 AND cf.tipohistorico NOT IN ('BAIXADO', 'TRANSFERIDO', 'BAIXADOCARTACREDITO')
                 AND NOT (mp.codmeiopagamento = 'CARTAO' AND COALESCE(mp.utilizadoparalinkpagamento, FALSE) = FALSE)
                 AND NOT (mp.codmeiopagamento = 'CARTAORECORRENTE' AND cf.recorrenciaautorizada = TRUE)
