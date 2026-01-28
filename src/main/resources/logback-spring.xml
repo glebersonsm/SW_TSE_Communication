@@ -2,9 +2,9 @@
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     
-    <!-- Propriedades -->
-    <property name="LOG_PATH" value="logs"/>
-    <property name="LOG_FILE" value="application"/>
+    <!-- LOG_PATH: definido em SwTseCommunicationApplication (pasta do JAR/logs ou LOGGING_FILE_PATH) -->
+    <springProperty name="LOG_PATH" source="sw.tse.logging.path" defaultValue="logs"/>
+    <springProperty name="LOG_FILE" source="sw.tse.logging.file" defaultValue="application"/>
     <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
     
     <!-- Console Appender -->
