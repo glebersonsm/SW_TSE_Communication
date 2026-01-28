@@ -1,7 +1,6 @@
 package com.sw.tse.domain.service.impl.api;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -96,7 +95,8 @@ public class LoginApiServiceImpl implements LoginService {
         List<Long> idsEmpresas = contratosAtivos.stream()
                 .map(ContratoPessoaApiResponse::idEmpresa)
                 .distinct()
-                .collect(Collectors.toList());
+                .sorted()
+                .toList();
 
         return criarEretornarNovoOperador(cpf, pessoa, idsEmpresas);
     }

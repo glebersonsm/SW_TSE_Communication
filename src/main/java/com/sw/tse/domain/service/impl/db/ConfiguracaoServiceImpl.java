@@ -7,8 +7,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.sw.tse.api.model.EmpresaTseDto;
+import com.sw.tse.api.model.GrupoCotaDto;
 import com.sw.tse.api.model.TorreDto;
+import com.sw.tse.domain.model.db.GrupoCota;
 import com.sw.tse.domain.repository.EdificioHotelRepository;
+import com.sw.tse.domain.repository.GrupoCotaRepository;
 import com.sw.tse.domain.repository.EmpresaRepository;
 import com.sw.tse.domain.service.interfaces.ConfiguracaoService;
 
@@ -20,6 +23,9 @@ public class ConfiguracaoServiceImpl implements ConfiguracaoService {
 
     @Autowired
     private EdificioHotelRepository edificioHotelRepository;
+
+    @Autowired
+    private GrupoCotaRepository grupoCotaRepository;
 
     @Override
     public List<EmpresaTseDto> listarEmpresas() {
@@ -62,6 +68,24 @@ public class ConfiguracaoServiceImpl implements ConfiguracaoService {
                 edificio.getDescricao()
             ))
             .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<GrupoCotaDto> listarGruposCota() {
+        return grupoCotaRepository.findAllWithEmpresaOrdered().stream()
+            .map(this::toGrupoCotaDto)
+            .collect(Collectors.toList());
+    }
+
+    private GrupoCotaDto toGrupoCotaDto(GrupoCota g) {
+        String nome = g.getDescricao();
+        if (nome == null || nome.isBlank()) {
+            nome = "ID " + g.getId();
+        }
+        if (g.getEmpresa() != null && g.getEmpresa().getSigla() != null && !g.getEmpresa().getSigla().isBlank()) {
+            nome = nome + " (" + g.getEmpresa().getSigla() + ")";
+        }
+        return new GrupoCotaDto(g.getId(), nome);
     }
 }
 
