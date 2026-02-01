@@ -1,15 +1,18 @@
 package com.sw.tse.domain.service.impl.db;
 
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.sw.tse.core.config.DisponibilidadeContratoProperties;
 import com.sw.tse.core.config.PeriodoUtilizacaoParametros;
 import com.sw.tse.domain.expection.ContratoNaoPertenceAoClienteException;
 import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 import com.sw.tse.domain.model.dto.PeriodoUtilizacaoDisponivel;
+import com.sw.tse.domain.model.dto.ValidacaoDisponibilidadeParametros;
 import com.sw.tse.domain.repository.ContratoRepository;
 import com.sw.tse.domain.repository.PeriodoUtilizacaoCustomRepository;
 import com.sw.tse.domain.service.interfaces.ContratoDisponibilidadeService;
@@ -28,9 +31,11 @@ public class PeriodoUtilizacaoServiceImpl implements PeriodoUtilizacaoService {
     private final PeriodoUtilizacaoParametros parametros;
     private final ContratoRepository contratoRepository;
     private final ContratoDisponibilidadeService contratoDisponibilidadeService;
+    private final DisponibilidadeContratoProperties disponibilidadeProperties;
 
     @Override
-    public List<PeriodoUtilizacaoDisponivel> buscarPeriodosDisponiveisParaReserva(Long idContrato, Integer ano) {
+    public List<PeriodoUtilizacaoDisponivel> buscarPeriodosDisponiveisParaReserva(Long idContrato, Integer ano,
+            String tipoValidacaoIntegralizacao, BigDecimal valorIntegralizacao) {
        
         Long idPessoaCliente = JwtTokenUtil.getIdPessoaCliente();
         
@@ -52,9 +57,17 @@ public class PeriodoUtilizacaoServiceImpl implements PeriodoUtilizacaoService {
         
         log.info("Contrato {} validado com sucesso para o cliente {}", idContrato, idPessoaCliente);
         
-        // Validar disponibilidade do contrato para reserva
+        // Validar disponibilidade do contrato para reserva (com params de integralização vindos da Portal API)
         log.info("Validando disponibilidade do contrato {} para reserva", idContrato);
-        contratoDisponibilidadeService.validarDisponibilidadeParaReserva(idContrato);
+        ValidacaoDisponibilidadeParametros validacaoParametros = ValidacaoDisponibilidadeParametros.builder()
+            .idsTipoTagBloqueio(disponibilidadeProperties.getBloqueio().getIdsTipoTag())
+            .sysIdsGrupoBloqueio(disponibilidadeProperties.getBloqueio().getSysidsGrupo())
+            .tipoValidacaoIntegralizacao(tipoValidacaoIntegralizacao)
+            .valorIntegralizacao(valorIntegralizacao)
+            .validarInadimplencia(disponibilidadeProperties.getInadimplencia().getValidarContrato())
+            .validarInadimplenciaCondominio(disponibilidadeProperties.getInadimplencia().getValidarCondominio())
+            .build();
+        contratoDisponibilidadeService.validarDisponibilidadeParaReserva(idContrato, validacaoParametros);
         
         List<Object[]> resultados = customRepository.buscarPeriodosDisponiveisParaReserva(
             idContrato,

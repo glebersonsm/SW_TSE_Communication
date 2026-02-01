@@ -1,6 +1,5 @@
 package com.sw.tse.core.config;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,19 +13,10 @@ import lombok.Data;
 @Data
 public class DisponibilidadeContratoProperties {
     
-    private Bloqueio bloqueio = new Bloqueio();
-    private Integralizacao integralizacao = new Integralizacao();
-    private Inadimplencia inadimplencia = new Inadimplencia();
-    
     @Data
     public static class Bloqueio {
-        private List<Long> idsTipoTag = new ArrayList<>();
-        private List<String> sysidsGrupo = new ArrayList<>();
-    }
-    
-    @Data
-    public static class Integralizacao {
-        private BigDecimal valorMinimo;
+        private List<Long> idsTipoTag = new ArrayList<Long>();
+        private List<String> sysidsGrupo = new ArrayList<String>();
     }
     
     @Data
@@ -34,4 +24,8 @@ public class DisponibilidadeContratoProperties {
         private Boolean validarContrato = true;
         private Boolean validarCondominio = false;
     }
+    
+    private Bloqueio bloqueio = new Bloqueio();
+    // Integralizacao removido - agora deve vir via request
+    private Inadimplencia inadimplencia = new Inadimplencia();
 }

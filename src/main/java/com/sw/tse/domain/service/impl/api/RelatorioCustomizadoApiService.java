@@ -1,7 +1,7 @@
 package com.sw.tse.domain.service.impl.api;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -36,19 +36,32 @@ public class RelatorioCustomizadoApiService implements RelatorioCustomizadoServi
 		try {
 			Response response = relatorioApiClient.obterDadosRelatorioRaw(idRelatorio, bearerToken, filtros);
 			
-			if(response.status() < 200 || response.status() > 300) {
-				log.error("Erro ao gerar relatorio customizado com o id {} : {} ",idRelatorio, response.body().toString());
-				throw new ApiTseException(String.format("Erro ao gerar relatorio customizado com o id {} : {} ",idRelatorio, response.body().toString()));
+			if (response.status() < 200 || response.status() > 299) {
+				String responseBody = readResponseBody(response);
+				log.error("API TSE - Response erro ao gerar relatorio customizado. idRelatorio={}, status={}, response={}",
+						idRelatorio, response.status(), responseBody != null ? responseBody : "(vazio)");
+				throw new ApiTseException(String.format("Erro ao gerar relatorio customizado com o id %d (HTTP %d). %s",
+						idRelatorio, response.status(), responseBody != null && !responseBody.isBlank() ? responseBody : "Resposta da API sem detalhes."));
 			}
-			
-			InputStream bodyStream = response.body().asInputStream();
-			
+
+			String responseBody = readResponseBody(response);
+			log.debug("API TSE - Response sucesso ao gerar relatorio customizado. idRelatorio={}, status={}, response={}",
+					idRelatorio, response.status(), responseBody != null ? responseBody : "(vazio)");
 			JavaType tipoLista = objectMapper.getTypeFactory().constructCollectionType(List.class, tipoDoElemento);
-			
-			return objectMapper.readValue(bodyStream, tipoLista);
+			return objectMapper.readValue(responseBody != null ? responseBody : "[]", tipoLista);
 			
 		} catch (IOException e) {
 			throw new ApiTseException("Falha ao desserializar a resposta do relatório.", e);
+		}
+	}
+
+	private String readResponseBody(Response response) {
+		if (response.body() == null) return null;
+		try {
+			return new String(response.body().asInputStream().readAllBytes(), StandardCharsets.UTF_8);
+		} catch (IOException e) {
+			log.warn("Não foi possível ler o body da resposta da API TSE: {}", e.getMessage());
+			return null;
 		}
 	}
 

@@ -12,7 +12,6 @@ import com.sw.tse.api.dto.ProcessarPagamentoAprovadoTseDto;
 import com.sw.tse.domain.expection.ContaFinanceiraNaoEncontradaException;
 import com.sw.tse.domain.expection.OperadorSistemaNotFoundException;
 import com.sw.tse.domain.expection.PagamentoCartaoException;
-import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 import com.sw.tse.domain.service.interfaces.PagamentoCartaoService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -44,10 +43,6 @@ public class PagamentoCartaoController {
             log.info("Pagamento processado com sucesso no TSE Communication");
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body("Pagamento processado com sucesso - Transação, conta consolidada e negociação criadas");
-        } catch (TokenJwtInvalidoException e) {
-            log.error("Token JWT inválido", e);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Token de autenticação inválido: " + e.getMessage());
         } catch (OperadorSistemaNotFoundException e) {
             log.error("Operador sistema não encontrado", e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

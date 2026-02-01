@@ -23,9 +23,18 @@ public class ValidacaoDisponibilidadeParametros {
     private List<String> sysIdsGrupoBloqueio;
     
     /**
-     * Valor mínimo que o contrato deve ter integralizado (opcional)
+     * Tipo de validação de integralização: "FIXO" ou "PERCENTUAL" (opcional)
+     * Se null, a validação de integralização será pulada
      */
-    private BigDecimal valorMinimoIntegralizacao;
+    private String tipoValidacaoIntegralizacao;
+    
+    /**
+     * Valor de integralização - interpretado conforme tipoValidacaoIntegralizacao:
+     * - Se tipoValidacaoIntegralizacao = "FIXO": valor mínimo em reais
+     * - Se tipoValidacaoIntegralizacao = "PERCENTUAL": percentual (ex: 10.5 para 10.5%)
+     * Se null, a validação de integralização será pulada
+     */
+    private BigDecimal valorIntegralizacao;
     
     /**
      * Se deve validar inadimplência de contrato (default: true)

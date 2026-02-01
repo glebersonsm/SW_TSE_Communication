@@ -86,7 +86,8 @@ public class PainelClienteController {
             @Valid @RequestBody SemanasDisponiveisRequest request) {
 
         List<PeriodoUtilizacaoDisponivel> periodosDisponiveis = periodoUtilizacaoService
-                .buscarPeriodosDisponiveisParaReserva(request.getIdcontrato(), request.getAno());
+                .buscarPeriodosDisponiveisParaReserva(request.getIdcontrato(), request.getAno(),
+                        request.getTipoValidacaoIntegralizacao(), request.getValorIntegralizacao());
 
         List<SemanasDisponiveisResponse> response = periodosDisponiveis.stream()
                 .map(this::mapearParaResponse)

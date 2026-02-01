@@ -1,6 +1,7 @@
 package com.sw.tse.domain.service.impl.db;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,6 +11,8 @@ import com.sw.tse.core.config.DisponibilidadeContratoProperties;
 import com.sw.tse.domain.expection.ContratoBloqueadoPorTagException;
 import com.sw.tse.domain.expection.ContratoInadimplenteException;
 import com.sw.tse.domain.expection.ContratoIntegralizacaoInsuficienteException;
+import com.sw.tse.domain.expection.ContratoNotFoundException;
+import com.sw.tse.domain.expection.TipoValidacaoIntegralizacaoInvalidoException;
 import com.sw.tse.domain.model.dto.InadimplenciaDto;
 import com.sw.tse.domain.model.dto.ValidacaoDisponibilidadeParametros;
 import com.sw.tse.domain.repository.ContaFinanceiraRepository;
@@ -34,36 +37,38 @@ public class ContratoDisponibilidadeServiceImpl implements ContratoDisponibilida
     public void validarDisponibilidadeParaReserva(Long idContrato) 
             throws ContratoBloqueadoPorTagException, ContratoIntegralizacaoInsuficienteException, ContratoInadimplenteException {
         
-        ValidacaoDisponibilidadeParametros parametros = carregarParametrosGlobais();
+        // Este método não deve ser usado mais - sempre deve passar os parâmetros via request
+        // Mantido apenas para compatibilidade, mas não valida integralização (sem parâmetros)
+        log.warn("Método validarDisponibilidadeParaReserva(idContrato) chamado sem parâmetros. Validação de integralização será pulada. Use o método com ValidacaoDisponibilidadeParametros.");
+        
+        ValidacaoDisponibilidadeParametros parametros = ValidacaoDisponibilidadeParametros.builder()
+            .idsTipoTagBloqueio(properties.getBloqueio().getIdsTipoTag())
+            .sysIdsGrupoBloqueio(properties.getBloqueio().getSysidsGrupo())
+            .tipoValidacaoIntegralizacao(null) // Não valida integralização sem parâmetros da request
+            .valorIntegralizacao(null)
+            .validarInadimplencia(properties.getInadimplencia().getValidarContrato())
+            .validarInadimplenciaCondominio(properties.getInadimplencia().getValidarCondominio())
+            .build();
+            
         validarDisponibilidadeParaReserva(idContrato, parametros);
     }
     
     @Override
     public void validarDisponibilidadeParaReserva(Long idContrato, ValidacaoDisponibilidadeParametros parametros) 
-            throws ContratoBloqueadoPorTagException, ContratoIntegralizacaoInsuficienteException, ContratoInadimplenteException {
+            throws ContratoBloqueadoPorTagException, ContratoIntegralizacaoInsuficienteException, ContratoInadimplenteException, TipoValidacaoIntegralizacaoInvalidoException, ContratoNotFoundException {
         
         log.info("Iniciando validação de disponibilidade para contrato ID: {}", idContrato);
         
         // 1. Validar bloqueio por tags
         validarBloqueioPorTags(idContrato, parametros);
         
-        // 2. Validar integralização mínima
+        // 2. Validar integralização mínima (apenas se parâmetros foram fornecidos na request)
         validarIntegralizacaoMinima(idContrato, parametros);
         
         // 3. Validar inadimplência
         validarInadimplencia(idContrato, parametros);
         
         log.info("Contrato ID {} aprovado para reserva - todas as validações passaram", idContrato);
-    }
-    
-    private ValidacaoDisponibilidadeParametros carregarParametrosGlobais() {
-        return ValidacaoDisponibilidadeParametros.builder()
-            .idsTipoTagBloqueio(properties.getBloqueio().getIdsTipoTag())
-            .sysIdsGrupoBloqueio(properties.getBloqueio().getSysidsGrupo())
-            .valorMinimoIntegralizacao(properties.getIntegralizacao().getValorMinimo())
-            .validarInadimplencia(properties.getInadimplencia().getValidarContrato())
-            .validarInadimplenciaCondominio(properties.getInadimplencia().getValidarCondominio())
-            .build();
     }
     
     private String obterNumeroContrato(Long idContrato) {
@@ -107,14 +112,49 @@ public class ContratoDisponibilidadeServiceImpl implements ContratoDisponibilida
     }
     
     private void validarIntegralizacaoMinima(Long idContrato, ValidacaoDisponibilidadeParametros parametros) 
-            throws ContratoIntegralizacaoInsuficienteException {
+            throws ContratoIntegralizacaoInsuficienteException, TipoValidacaoIntegralizacaoInvalidoException, ContratoNotFoundException {
         
-        BigDecimal valorMinimo = parametros.getValorMinimoIntegralizacao();
+        String tipoValidacao = parametros.getTipoValidacaoIntegralizacao();
+        BigDecimal valorIntegralizacao = parametros.getValorIntegralizacao();
         
-        // Se não tem valor mínimo configurado, pula validação
-        if (valorMinimo == null) {
-            log.debug("Nenhum valor mínimo de integralização configurado - pulando validação");
+        // Se não tem parâmetros de integralização configurados, pula validação
+        if (tipoValidacao == null || tipoValidacao.isEmpty() || valorIntegralizacao == null) {
+            log.debug("Nenhum parâmetro de integralização configurado - pulando validação");
             return;
+        }
+        
+        tipoValidacao = tipoValidacao.toUpperCase();
+        BigDecimal valorMinimo = null;
+        
+        // Validar se o tipo é FIXO ou PERCENTUAL
+        if (!"FIXO".equals(tipoValidacao) && !"PERCENTUAL".equals(tipoValidacao)) {
+            throw new TipoValidacaoIntegralizacaoInvalidoException(tipoValidacao);
+        }
+        
+        if ("FIXO".equals(tipoValidacao)) {
+            // Usar valor fixo diretamente
+            valorMinimo = valorIntegralizacao;
+            log.debug("Validação de integralização (FIXO) - valor mínimo: R$ {}", valorMinimo);
+        } else if ("PERCENTUAL".equals(tipoValidacao)) {
+            // Calcular valor mínimo baseado no percentual e valor negociado do contrato
+            var contratoOptional = contratoRepository.findById(idContrato);
+            if (!contratoOptional.isPresent()) {
+                throw new ContratoNotFoundException(idContrato);
+            }
+            
+            var contrato = contratoOptional.get();
+            if (contrato.getValorNegociado() == null) {
+                log.warn("Valor negociado do contrato não disponível para cálculo percentual. Validação de integralização será pulada.");
+                return;
+            }
+            
+            BigDecimal valorNegociado = contrato.getValorNegociado();
+            valorMinimo = valorNegociado
+                .multiply(valorIntegralizacao)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            
+            log.debug("Validação de integralização (PERCENTUAL) - valor mínimo calculado: R$ {} ({}% de R$ {})", 
+                valorMinimo, valorIntegralizacao, valorNegociado);
         }
         
         log.debug("Validando integralização mínima - valor mínimo: R$ {}", valorMinimo);

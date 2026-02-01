@@ -66,6 +66,20 @@ public class JwtService {
         return gerarToken(claims, null);
     }
     
+    /**
+     * Gera JWT para autenticação de serviço (jobs de background).
+     * Usa idOperadorPadrao como idUsuarioCliente para compatibilidade com processar-aprovado.
+     */
+    public String gerarTokenServico(Long idOperadorPadrao) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(CLAIM_NAME, "SERVICE");
+        claims.put(CLAIM_ROLE, List.of("SERVICE"));
+        claims.put(CLAIM_ID_USUARIO_CLIENTE, String.valueOf(idOperadorPadrao));
+        claims.put(CLAIM_TOKEN_USUARIO_CLIENTE, "");
+        claims.put(CLAIM_ID_PESSOA_CLIENTE, "0");
+        return gerarToken(claims, "SERVICE");
+    }
+    
     public Claims validarToken(String token) throws JwtException {
         log.debug("Validando token JWT. Issuer esperado: {}, Audience esperada: {}", issuer, audience);
         log.debug("Secret key length: {}", secreteKey.length());

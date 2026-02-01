@@ -132,11 +132,13 @@ public class OperadorSistemaDbServiceImpl implements OperadorSistemaService {
 		try {
 			List<BuscaOperadorSistemPessoaResponse> listaOperadorSistemPessoa = 
 					relatorioCustomizadoApiService.buscarRelatorioGenerico(idRelatorioOperadorSistema, filtros, BuscaOperadorSistemPessoaResponse.class);
-			return listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(0L, idPessoa, null, null, null, false));
-			
+			BuscaOperadorSistemPessoaResponse result = listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(0L, idPessoa, null, null, null, false));
+			log.debug("API TSE - Response sucesso ao obter operador sistema cliente por idPessoa. idPessoa={}, response={}", idPessoa, result);
+			return result;
 		} catch (FeignException e) {
-			log.error("erro ao chamar a api de operador de sistema cliente");
-            throw new ApiTseException(String.format("Erro: %s ao obter operador sistema cliente pela api do TSE", e.contentUTF8()));
+			String body = e.contentUTF8();
+			log.error("erro ao chamar a api de operador de sistema cliente. Status: {}, Body: {}", e.status(), body != null ? body : "(vazio)");
+            throw new ApiTseException(String.format("Erro ao obter operador sistema cliente pela api do TSE (HTTP %d). %s", e.status(), body != null && !body.isBlank() ? body : "Resposta da API sem detalhes."));
 		}
 	}
 

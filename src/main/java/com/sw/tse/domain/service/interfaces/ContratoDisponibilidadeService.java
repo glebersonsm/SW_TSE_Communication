@@ -3,6 +3,8 @@ package com.sw.tse.domain.service.interfaces;
 import com.sw.tse.domain.expection.ContratoBloqueadoPorTagException;
 import com.sw.tse.domain.expection.ContratoInadimplenteException;
 import com.sw.tse.domain.expection.ContratoIntegralizacaoInsuficienteException;
+import com.sw.tse.domain.expection.ContratoNotFoundException;
+import com.sw.tse.domain.expection.TipoValidacaoIntegralizacaoInvalidoException;
 import com.sw.tse.domain.model.dto.ValidacaoDisponibilidadeParametros;
 
 /**
@@ -31,11 +33,15 @@ public interface ContratoDisponibilidadeService {
      * @throws ContratoBloqueadoPorTagException se contrato tiver tag de bloqueio ativa
      * @throws ContratoIntegralizacaoInsuficienteException se integralização for insuficiente
      * @throws ContratoInadimplenteException se contrato estiver inadimplente
+     * @throws TipoValidacaoIntegralizacaoInvalidoException se tipo de validação de integralização for inválido
+     * @throws ContratoNotFoundException se contrato não for encontrado
      */
     void validarDisponibilidadeParaReserva(
         Long idContrato, 
         ValidacaoDisponibilidadeParametros parametros
     ) throws ContratoBloqueadoPorTagException, 
              ContratoIntegralizacaoInsuficienteException, 
-             ContratoInadimplenteException;
+             ContratoInadimplenteException,
+             TipoValidacaoIntegralizacaoInvalidoException,
+             ContratoNotFoundException;
 }

@@ -23,8 +23,10 @@ import com.sw.tse.api.dto.ReservaSemanaResponse;
 import com.sw.tse.api.dto.ReservarSemanaRequest;
 import com.sw.tse.api.dto.TelefoneResponse;
 import com.sw.tse.core.config.CancelamentoParametros;
+import com.sw.tse.core.config.DisponibilidadeContratoProperties;
 import com.sw.tse.core.config.EdicaoParametros;
 import com.sw.tse.core.config.UtilizacaoContratoPropertiesCustom;
+import com.sw.tse.domain.model.dto.ValidacaoDisponibilidadeParametros;
 import com.sw.tse.core.util.StringUtil;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.expection.BrasilApiException;
@@ -111,6 +113,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
     private final UtilizacaoContratoPropertiesCustom utilizacaoContratoConfig;
     private final CancelamentoParametros cancelamentoParametros;
     private final EdicaoParametros edicaoParametros;
+    private final DisponibilidadeContratoProperties disponibilidadeContratoProperties;
     
     private final ObjectMapper objectMapper = new ObjectMapper();
     
@@ -151,7 +154,17 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         
         // 2. Validar disponibilidade do contrato (inadimplência, integralização, tags)
         log.debug("Validando disponibilidade do contrato {}", idContrato);
-        contratoDisponibilidadeService.validarDisponibilidadeParaReserva(idContrato);
+        
+        // Este método não recebe request, então não valida integralização (sem parâmetros)
+        ValidacaoDisponibilidadeParametros parametros = ValidacaoDisponibilidadeParametros.builder()
+            .idsTipoTagBloqueio(disponibilidadeContratoProperties.getBloqueio().getIdsTipoTag())
+            .sysIdsGrupoBloqueio(disponibilidadeContratoProperties.getBloqueio().getSysidsGrupo())
+            .tipoValidacaoIntegralizacao(null) // Sem parâmetros de integralização neste método
+            .valorIntegralizacao(null)
+            .validarInadimplencia(disponibilidadeContratoProperties.getInadimplencia().getValidarContrato())
+            .validarInadimplenciaCondominio(disponibilidadeContratoProperties.getInadimplencia().getValidarCondominio())
+            .build();
+        contratoDisponibilidadeService.validarDisponibilidadeParaReserva(idContrato, parametros);
         
         // 3. Validar disponibilidade do período específico (dupla checagem)
         log.debug("Validando disponibilidade do período {}", idPeriodoUtilizacao);
@@ -174,7 +187,24 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         }
         
         // 1. Validações
-        validarReserva(request.getIdContrato(), request.getIdPeriodoUtilizacao(), idPessoaCliente);
+        // Validar se contrato pertence ao cliente
+        boolean contratoPerteceAoCliente = contratoRepository.contratoPerteceAoCliente(
+            request.getIdContrato(), 
+            idPessoaCliente
+        );
+        
+        if (!contratoPerteceAoCliente) {
+            throw new ContratoNaoPertenceAoClienteException(
+                String.format("O contrato %d não pertence ao cliente autenticado", request.getIdContrato())
+            );
+        }
+        
+        // Validar disponibilidade do contrato com parâmetros da request
+        ValidacaoDisponibilidadeParametros parametros = construirParametrosValidacao(request);
+        contratoDisponibilidadeService.validarDisponibilidadeParaReserva(request.getIdContrato(), parametros);
+        
+        // Validar disponibilidade do período específico
+        periodoDisponibilidadeService.validarPeriodoDisponivel(request.getIdContrato(), request.getIdPeriodoUtilizacao());
         
         // 2. Validar regras específicas por tipo
         validarRegrasEspecificasTipo(request);
@@ -309,7 +339,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         
         // Buscar períodos disponíveis para verificar se o período permite RCI
         List<PeriodoUtilizacaoDisponivel> periodosDisponiveis = periodoUtilizacaoService
-            .buscarPeriodosDisponiveisParaReserva(idContrato, periodoUtilizacao.getAnoInicio());
+            .buscarPeriodosDisponiveisParaReserva(idContrato, periodoUtilizacao.getAnoInicio(), null, null);
         
         PeriodoUtilizacaoDisponivel periodoDisponivel = periodosDisponiveis.stream()
             .filter(p -> p.getIdPeriodoUtilizacao().equals(idPeriodoUtilizacao))
@@ -340,7 +370,7 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         
         // Buscar períodos disponíveis para verificar se o período permite POOL
         List<PeriodoUtilizacaoDisponivel> periodosDisponiveis = periodoUtilizacaoService
-            .buscarPeriodosDisponiveisParaReserva(idContrato, periodoUtilizacao.getAnoInicio());
+            .buscarPeriodosDisponiveisParaReserva(idContrato, periodoUtilizacao.getAnoInicio(), null, null);
         
         PeriodoUtilizacaoDisponivel periodoDisponivel = periodosDisponiveis.stream()
             .filter(p -> p.getIdPeriodoUtilizacao().equals(idPeriodoUtilizacao))
@@ -1218,5 +1248,25 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
             .podeEditar(podeEditarUtilizacao(utilizacao))
             .podeCancelar(podeCancelarUtilizacao(utilizacao))
             .build();
+    }
+    
+    /**
+     * Constrói os parâmetros de validação a partir da request.
+     * Os parâmetros de integralização devem vir na request - se não vierem, a validação será pulada.
+     */
+    private ValidacaoDisponibilidadeParametros construirParametrosValidacao(ReservarSemanaRequest request) {
+        ValidacaoDisponibilidadeParametros.ValidacaoDisponibilidadeParametrosBuilder builder = 
+            ValidacaoDisponibilidadeParametros.builder()
+                .idsTipoTagBloqueio(disponibilidadeContratoProperties.getBloqueio().getIdsTipoTag())
+                .sysIdsGrupoBloqueio(disponibilidadeContratoProperties.getBloqueio().getSysidsGrupo())
+                .validarInadimplencia(disponibilidadeContratoProperties.getInadimplencia().getValidarContrato())
+                .validarInadimplenciaCondominio(disponibilidadeContratoProperties.getInadimplencia().getValidarCondominio());
+        
+        // Passar parâmetros de integralização da request para o serviço de validação
+        // O cálculo do percentual será feito no ContratoDisponibilidadeServiceImpl
+        builder.tipoValidacaoIntegralizacao(request.getTipoValidacaoIntegralizacao())
+               .valorIntegralizacao(request.getValorIntegralizacao());
+        
+        return builder.build();
     }
 }
