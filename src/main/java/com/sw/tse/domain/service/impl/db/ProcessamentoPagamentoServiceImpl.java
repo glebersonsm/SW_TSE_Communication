@@ -24,7 +24,6 @@ import com.sw.tse.api.dto.ProcessarPagamentoAprovadoTseDto;
 import com.sw.tse.domain.expection.ContaFinanceiraNaoEncontradaException;
 import com.sw.tse.domain.expection.OperadorSistemaNotFoundException;
 import com.sw.tse.domain.expection.PagamentoCartaoException;
-import com.sw.tse.domain.expection.TokenJwtInvalidoException;
 import com.sw.tse.domain.model.db.BandeiraCartao;
 import com.sw.tse.domain.model.db.BandeirasAceitas;
 import com.sw.tse.domain.model.db.ContaFinanceira;
@@ -119,22 +118,32 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                 dto.getIdEmpresaTse(), dto.getContasFinanceiras().size());
         
         try {
-            // 1. Buscar usuário responsável do JWT (igual aos outros endpoints)
-            Long idUsuarioCliente = JwtTokenUtil.getIdUsuarioCliente();
-            
-            if (idUsuarioCliente == null || idUsuarioCliente == 0) {
-                log.warn("ID do usuário não encontrado no JWT, usando ID enviado no DTO: {}", dto.getIdUsuarioLogado());
-                idUsuarioCliente = dto.getIdUsuarioLogado();
+            // 1. Buscar usuário responsável: JWT -> DTO -> idPessoaTse (job) -> operador padrão
+            Long idUsuario = JwtTokenUtil.getIdUsuarioCliente();
+            if (idUsuario == null || idUsuario == 0) {
+                idUsuario = dto.getIdUsuarioLogado();
             }
+            final Long idUsuarioParaLog = idUsuario;
             
-            if (idUsuarioCliente == null || idUsuarioCliente == 0) {
-                throw new TokenJwtInvalidoException("Não foi possível obter ID do usuário logado do token JWT");
+            OperadorSistema responsavel;
+            if (idUsuario != null && idUsuario > 0) {
+                responsavel = operadorSistemaRepository.findById(idUsuario)
+                        .orElseThrow(() -> new OperadorSistemaNotFoundException("Operador sistema não encontrado para ID: " + idUsuarioParaLog));
+                log.info("Usuário responsável: ID {} (JWT/DTO)", idUsuario);
+            } else if (dto.getIdPessoaTse() != null && dto.getIdPessoaTse() > 0) {
+                var resp = operadorSistemaService.buscarPorIdPessoa(dto.getIdPessoaTse());
+                if (resp != null && resp.idOperador() != null && resp.idOperador() > 0) {
+                    responsavel = operadorSistemaRepository.findById(resp.idOperador())
+                            .orElseThrow(() -> new OperadorSistemaNotFoundException("Operador não encontrado para idPessoa: " + dto.getIdPessoaTse()));
+                    log.info("Usuário responsável: ID {} (idPessoaTse {} - job)", responsavel.getId(), dto.getIdPessoaTse());
+                } else {
+                    responsavel = operadorSistemaService.operadorSistemaPadraoCadastro();
+                    log.info("Usuário responsável: operador padrão (idPessoaTse sem operador)");
+                }
+            } else {
+                responsavel = operadorSistemaService.operadorSistemaPadraoCadastro();
+                log.info("Usuário responsável: operador padrão (sem JWT/DTO/idPessoaTse)");
             }
-            
-            log.info("Usuário responsável: ID {}", idUsuarioCliente);
-            
-            OperadorSistema responsavel = operadorSistemaRepository.findById(idUsuarioCliente)
-                    .orElseThrow(() -> new OperadorSistemaNotFoundException("Operador sistema não encontrado para ID: " + JwtTokenUtil.getIdUsuarioCliente()));
             
             // 2. Buscar contas financeiras originais
             List<Long> idsContas = dto.getContasFinanceiras().stream()
@@ -297,7 +306,7 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
             log.info("Pagamento processado com sucesso. TransacaoId: {}, NSU: {}, NegociacaoId: {}, Contas vinculadas: {}",
                     dto.getIdTransacao(), dto.getNsu(), negociacao.getId(), contasOriginais.size() + 1);
             
-        } catch (TokenJwtInvalidoException | OperadorSistemaNotFoundException | ContaFinanceiraNaoEncontradaException e) {
+        } catch (OperadorSistemaNotFoundException | ContaFinanceiraNaoEncontradaException e) {
             // Re-lançar exceptions específicas sem wrapper
             throw e;
         } catch (Exception e) {
@@ -625,12 +634,15 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                 .filter(v -> v != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
-        // Taxa do cartão (da tabela bandeiracartao) - apenas para CARTAO
+        // Taxa do cartão (da tabela bandeiracartao) - apenas para CARTAO; para PIX não há desconto de taxa
         BigDecimal taxaCartao = BigDecimal.ZERO;
         BigDecimal descontoTaxaCartao = BigDecimal.ZERO;
         Long idBandeirasAceitas = null;
         
-        if (!isPix && bandeiraCartao != null) {
+        if (isPix) {
+            // Nova conta PIX: desconto da taxa de cartão não se aplica (mantém zero)
+            descontoTaxaCartao = BigDecimal.ZERO;
+        } else if (bandeiraCartao != null) {
             taxaCartao = bandeiraCartao.getTaxaOperacao() != null 
                     ? BigDecimal.valueOf(bandeiraCartao.getTaxaOperacao()) 
                     : BigDecimal.ZERO;

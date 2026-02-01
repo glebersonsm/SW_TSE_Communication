@@ -129,11 +129,15 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
 		try {
 			List<BuscaOperadorSistemPessoaResponse> listaOperadorSistemPessoa = 
 					relatorioCustomizadoApiService.buscarRelatorioGenerico(idRelatorioOperadorSistema, filtros, BuscaOperadorSistemPessoaResponse.class);
-			return listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(0L, idPessoa, null, null, null, false));
-			
+			BuscaOperadorSistemPessoaResponse result = listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(0L, idPessoa, null, null, null, false));
+			log.debug("API TSE - Response sucesso ao obter operador sistema cliente por idPessoa. idPessoa={}, response={}", idPessoa, result);
+			return result;
 		} catch (FeignException e) {
-			log.error("erro ao chamar a api de operador de sistema cliente");
-            throw new ApiTseException(String.format("Erro: %s ao obter operador sistema cliente pela api do TSE", e.contentUTF8()));
+			String responseBody = e.contentUTF8();
+			log.error("API TSE - Response erro ao obter operador sistema cliente por idPessoa. status={}, response={}",
+					e.status(), responseBody != null ? responseBody : "(vazio)");
+			throw new ApiTseException(String.format("Erro ao obter operador sistema cliente pela api do TSE (HTTP %d). %s",
+					e.status(), responseBody != null && !responseBody.isBlank() ? responseBody : "Resposta da API sem detalhes."));
 		}
 	}
 
@@ -156,11 +160,15 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
 		try {
 			List<BuscaOperadorSistemPessoaResponse> listaOperadorSistemPessoa = 
 					relatorioCustomizadoApiService.buscarRelatorioGenerico(idRelatorioOperadorSistema, filtros, BuscaOperadorSistemPessoaResponse.class);
-			return listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(idOperador, 0L, null, null, null, false));
-			
+			BuscaOperadorSistemPessoaResponse result = listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(idOperador, 0L, null, null, null, false));
+			log.debug("API TSE - Response sucesso ao obter operador sistema cliente por idOperador. idOperador={}, response={}", idOperador, result);
+			return result;
 		} catch (FeignException e) {
-			log.error("erro ao chamar a api de operador de sistema cliente por id");
-            throw new ApiTseException(String.format("Erro: %s ao obter operador sistema cliente pela api do TSE", e.contentUTF8()));
+			String responseBody = e.contentUTF8();
+			log.error("API TSE - Response erro ao obter operador sistema cliente por idOperador. status={}, response={}",
+					e.status(), responseBody != null ? responseBody : "(vazio)");
+			throw new ApiTseException(String.format("Erro ao obter operador sistema cliente pela api do TSE (HTTP %d). %s",
+					e.status(), responseBody != null && !responseBody.isBlank() ? responseBody : "Resposta da API sem detalhes."));
 		}
 	}
 
@@ -183,11 +191,15 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
 		try {
 			List<BuscaOperadorSistemPessoaResponse> listaOperadorSistemPessoa = 
 					relatorioCustomizadoApiService.buscarRelatorioGenerico(idRelatorioOperadorSistema, filtros, BuscaOperadorSistemPessoaResponse.class);
-			return listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(0L, 0L, null, null, null, false));
-			
+			BuscaOperadorSistemPessoaResponse result = listaOperadorSistemPessoa.stream().findFirst().orElse(new BuscaOperadorSistemPessoaResponse(0L, 0L, null, null, null, false));
+			log.debug("API TSE - Response sucesso ao obter operador sistema cliente por login. login={}, response={}", login, result);
+			return result;
 		} catch (FeignException e) {
-			log.error("erro ao chamar a api de operador de sistema cliente por login");
-            throw new ApiTseException(String.format("Erro: %s ao obter operador sistema cliente pela api do TSE", e.contentUTF8()));
+			String responseBody = e.contentUTF8();
+			log.error("API TSE - Response erro ao obter operador sistema cliente por login. status={}, response={}",
+					e.status(), responseBody != null ? responseBody : "(vazio)");
+			throw new ApiTseException(String.format("Erro ao obter operador sistema cliente pela api do TSE (HTTP %d). %s",
+					e.status(), responseBody != null && !responseBody.isBlank() ? responseBody : "Resposta da API sem detalhes."));
 		}
 	}
 	

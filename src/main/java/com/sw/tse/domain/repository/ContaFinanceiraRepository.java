@@ -19,23 +19,35 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
     
     /**
      * Calcula o valor integralizado de um contrato
+     * REEMBOLSO é tratado como negativo (desconto), pois é devolução ao cliente
      * 
      * @param idContrato ID do contrato
-     * @return Valor total integralizado
+     * @return Valor total integralizado (soma dos valores positivos menos os reembolsos)
      */
     @Query("""
-        SELECT COALESCE(SUM(cf.valorParcela), 0)
+        SELECT COALESCE(SUM(
+            CASE
+                WHEN tc.sysId = 'REEMBOLSO' THEN -cf.valorParcela
+                ELSE cf.valorParcela
+            END
+        ), 0)
         FROM ContaFinanceira cf
         JOIN cf.contrato ct
         JOIN cf.origemConta tc
         WHERE ct.id = :idContrato
           AND ct.status IN ('ATIVO', 'ATIVOREV')
-          AND tc.sysId IN ('PARC','ENTRADA','INTERMEDIARIA','MULTARESCIS','REEMBOLSO')
           AND (
-            cf.tipoHistorico IN ('BAIXADO','TRANSFERIDO','BAIXADOCARTACREDITO') 
-            OR (cf.meioPagamento.id = 3 AND cf.tipoHistorico IN ('BAIXADO','ATIVO'))
-            OR (cf.meioPagamento.id IN (8,11) AND cf.tipoHistorico IN ('BAIXADO','ATIVO') AND cf.recorrenciaAutorizada = TRUE)
-            OR (cf.meioPagamento.id IN (10,12) AND LENGTH(cf.numeroDocumento) > 10)
+            (tc.sysId IN ('PARC','ENTRADA','INTERMEDIARIA','MULTARESCIS')
+             AND (
+               cf.tipoHistorico IN ('BAIXADO','TRANSFERIDO','BAIXADOCARTACREDITO')
+               OR (cf.meioPagamento.id = 3 AND cf.tipoHistorico IN ('BAIXADO','ATIVO'))
+               OR (cf.meioPagamento.id IN (8,11) AND cf.tipoHistorico IN ('BAIXADO','ATIVO') AND cf.recorrenciaAutorizada = TRUE)
+               OR (cf.meioPagamento.id IN (10,12) AND LENGTH(cf.numeroDocumento) > 10)
+             ))
+            OR (tc.sysId = 'REEMBOLSO'
+                AND (
+                  cf.tipoHistorico IN ('BAIXADO','TRANSFERIDO','BAIXADOCARTACREDITO','ATIVO')
+                ))
           )
     """)
     BigDecimal calcularValorIntegralizado(@Param("idContrato") Long idContrato);
