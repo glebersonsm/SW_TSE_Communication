@@ -16,49 +16,67 @@ import com.sw.tse.domain.expection.UtilizacaoContratoNotFoundException;
  * Service para validação e criação de reservas de semanas
  */
 public interface ReservarSemanaService {
-    
+
     /**
      * Valida se uma reserva pode ser criada
      * 
-     * @param idContrato ID do contrato
+     * @param idContrato          ID do contrato
      * @param idPeriodoUtilizacao ID do período a reservar
-     * @param idPessoaCliente ID do cliente autenticado
-     * @throws ContratoNaoPertenceAoClienteException se contrato não pertence ao cliente
-     * @throws ContratoBloqueadoPorTagException se contrato tem tag de bloqueio
-     * @throws ContratoIntegralizacaoInsuficienteException se integralização insuficiente
-     * @throws ContratoInadimplenteException se contrato inadimplente
-     * @throws PeriodoNaoDisponivelException se período não disponível
+     * @param idPessoaCliente     ID do cliente autenticado
+     * @throws ContratoNaoPertenceAoClienteException       se contrato não pertence
+     *                                                     ao cliente
+     * @throws ContratoBloqueadoPorTagException            se contrato tem tag de
+     *                                                     bloqueio
+     * @throws ContratoIntegralizacaoInsuficienteException se integralização
+     *                                                     insuficiente
+     * @throws ContratoInadimplenteException               se contrato inadimplente
+     * @throws PeriodoNaoDisponivelException               se período não disponível
      */
     void validarReserva(Long idContrato, Long idPeriodoUtilizacao, Long idPessoaCliente);
-    
+
     /**
      * Cria uma reserva completa (PeriodoModeloCota + UtilizacaoContrato)
      * 
-     * @param request Dados da reserva
+     * @param request         Dados da reserva
      * @param idPessoaCliente ID do cliente autenticado
      * @return Dados da reserva criada
      */
     ReservaSemanaResponse criarReserva(ReservarSemanaRequest request, Long idPessoaCliente);
-    
+
     /**
      * Busca uma utilização de contrato existente
      * 
      * @param idUtilizacaoContrato ID da utilização
-     * @param idPessoaCliente ID do cliente autenticado
+     * @param idPessoaCliente      ID do cliente autenticado
      * @return Dados da utilização
-     * @throws UtilizacaoContratoNotFoundException se utilização não existe
-     * @throws ContratoNaoPertenceAoClienteException se contrato não pertence ao cliente
+     * @throws UtilizacaoContratoNotFoundException   se utilização não existe
+     * @throws ContratoNaoPertenceAoClienteException se contrato não pertence ao
+     *                                               cliente
      */
     ReservaSemanaResponse buscarUtilizacao(Long idUtilizacaoContrato, Long idPessoaCliente);
-    
+
     /**
      * Lista todas as utilizações não canceladas de um ano específico para o cliente
      * 
-     * @param ano Ano das utilizações
+     * @param ano             Ano das utilizações
      * @param idPessoaCliente ID do cliente autenticado
      * @return Lista de utilizações resumidas ordenadas por check-in
      */
     List<ReservaResumoResponse> listarReservasPorAno(int ano, Long idPessoaCliente);
-    List<ReservaResumoResponse> listarReservasPorContratoEAno(Long idContrato, int ano, Long idPessoaCliente);
-}
 
+    List<ReservaResumoResponse> listarReservasPorContratoEAno(Long idContrato, int ano, Long idPessoaCliente);
+
+    /**
+     * Busca dados completos de uma utilização de contrato (qualquer tipo: RESERVA,
+     * RCI, POOL)
+     * 
+     * @param idUtilizacaoContrato ID da utilização
+     * @param idPessoaCliente      ID do cliente autenticado
+     * @return Dados completos da utilização incluindo todos os IDs
+     * @throws UtilizacaoContratoNotFoundException   se utilização não existe
+     * @throws ContratoNaoPertenceAoClienteException se contrato não pertence ao
+     *                                               cliente
+     */
+    com.sw.tse.api.dto.UtilizacaoContratoCompletaDto obterDadosCompletosUtilizacao(Long idUtilizacaoContrato,
+            Long idPessoaCliente);
+}

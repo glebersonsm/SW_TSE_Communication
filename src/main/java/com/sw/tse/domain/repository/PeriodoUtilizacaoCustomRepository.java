@@ -46,11 +46,22 @@ public class PeriodoUtilizacaoCustomRepository {
                 pe.anoinicio AS ano,
                 (case when CAST((lpad(cast(pe.diainicio AS VARCHAR), 2, '0') || '/' || lpad(cast(pe.mesinicio AS VARCHAR), 2, '0') || '/' || pe.anoinicio) AS DATE) - CURRENT_DATE >= :antecedenciaMinima THEN 1 ELSE 0 END) AS reserva,
                 (CASE 
-                    WHEN (SELECT COUNT(1) FROM contratointercambio 
-                          WHERE idcontrato = :idContrato 
+                    WHEN 
+                        -- Otimização 1: EXISTS é mais performático que COUNT > 0
+                        EXISTS (
+                            SELECT 1 
+                            FROM contratointercambio 
+                            WHERE idcontrato = :idContrato
                             AND tipohistorico = 'ATIVO' 
-                            AND idintercambiadora = :intercambiadoraRciId) > 0
-                      AND (CAST(current_date AS DATE) + :rciDiasMinimos) <= CAST((lpad(cast(pe.diainicio AS VARCHAR), 2, '0') || '/' || lpad(cast(pe.mesinicio AS VARCHAR), 2, '0') || '/' || pe.anoinicio) AS DATE)
+                            AND idintercambiadora = :intercambiadoraRciId
+                        )
+                        
+                        AND 
+                        
+                        -- Otimização 2: MAKE_DATE é mais rápido e seguro que converter strings
+                        -- Sintaxe: MAKE_DATE(ano, mes, dia)
+                        (current_date + :rciDiasMinimos) <= MAKE_DATE(pe.anoinicio, pe.mesinicio, pe.diainicio)
+
                     THEN 1 
                     ELSE 0 
                 END) AS RCI,

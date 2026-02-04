@@ -48,5 +48,10 @@ public class ReservarSemanaRequest {
      * Se null, a validação de integralização será pulada
      */
     private BigDecimal valorIntegralizacao;
+
+    /**
+     * Canal de atendimento (ex: "Portal Cliente" quando a utilização é criada pelo portal).
+     */
+    private String canalAtendimento;
 }
 

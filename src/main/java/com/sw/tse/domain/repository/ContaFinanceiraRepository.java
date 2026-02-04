@@ -384,4 +384,20 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
      */
     @Query("SELECT MAX(cf.numeroParcela) FROM ContaFinanceira cf WHERE cf.contrato.id = :idContrato AND cf.origemConta.idTipoOrigemContaFinanceira = :idOrigemConta AND cf.tipoHistorico = 'ATIVO'")
     Integer obterUltimoNroParcelaContratoOrigem(@Param("idContrato") Long idContrato, @Param("idOrigemConta") Integer idOrigemConta);
+
+    /**
+     * Verifica se a conta financeira pertence ao cliente: por idpessoa na conta
+     * OU por ser cessionário/co-cessionário do contrato (join com contrato).
+     */
+    @Query("""
+        SELECT CASE WHEN COUNT(cf) > 0 THEN true ELSE false END FROM ContaFinanceira cf
+        LEFT JOIN cf.contrato ct
+        WHERE cf.id = :idContaFinanceira
+          AND (
+            (cf.pessoa.idPessoa = :idCliente)
+            OR (ct.pessoaCessionario.idPessoa = :idCliente)
+            OR (ct.pessaoCocessionario.idPessoa = :idCliente)
+          )
+        """)
+    boolean contaPertenceAoCliente(@Param("idContaFinanceira") Long idContaFinanceira, @Param("idCliente") Long idCliente);
 }
