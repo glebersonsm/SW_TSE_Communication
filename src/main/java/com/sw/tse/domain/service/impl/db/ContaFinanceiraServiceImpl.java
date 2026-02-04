@@ -150,18 +150,20 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
     @Transactional(readOnly = true)
     public byte[] gerarSegundaViaBoleto(Long idContaFinanceira) {
         log.info("Iniciando geração de segunda via de boleto para conta financeira ID: {}", idContaFinanceira);
-        
+        if (idContaFinanceira == null) {
+            throw new ApiTseException("ID da conta financeira é obrigatório");
+        }
         // Buscar conta financeira
         ContaFinanceira contaFinanceira = contaFinanceiraRepository.findById(idContaFinanceira)
                 .orElseThrow(() -> new ApiTseException("Conta financeira não encontrada"));
         
-        // Validar se pertence ao cliente autenticado
+        // Validar se pertence ao cliente autenticado (idpessoa na conta OU cessionário/co-cessionário do contrato)
         Long idCliente = JwtTokenUtil.getIdPessoaCliente();
         if (idCliente == null) {
             throw new TokenJwtInvalidoException("ID do cliente não está disponível no token de autenticação");
         }
         
-        if (!contaFinanceira.getPessoa().getIdPessoa().equals(idCliente)) {
+        if (!contaFinanceiraRepository.contaPertenceAoCliente(contaFinanceira.getId(), idCliente)) {
             throw new ApiTseException("Conta financeira não pertence ao cliente autenticado");
         }
         

@@ -12,6 +12,7 @@ import lombok.Data;
 public class ReservaSemanaResponse {
     
     private Long idUtilizacaoContrato;
+    private Long idPeriodoUtilizacao;
     private Long idPeriodoModeloCota;
     private Long idContrato;  // ID do contrato para verificação de proprietário
     private String numeroContrato;

@@ -221,6 +221,10 @@ public class UtilizacaoContrato {
     @Column(name = "voucherenviadoautomaticamente")
     private Boolean voucherEnviadoAutomaticamente;
 
+    @Column(name = "canalatendimento", length = 50)
+    @Setter(AccessLevel.PUBLIC)
+    private String canalAtendimento;
+
     // ========== AGREGADOS ==========
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "utilizacaoContrato", fetch = FetchType.LAZY)
     private List<UtilizacaoContratoHospede> hospedes = new ArrayList<>();
