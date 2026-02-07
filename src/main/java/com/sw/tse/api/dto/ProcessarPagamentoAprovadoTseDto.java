@@ -19,7 +19,7 @@ public class ProcessarPagamentoAprovadoTseDto {
     private Long idContratoTse;
     private Long idPessoaTse;
     private Long idUsuarioLogado; // ID do usuário que fez o pagamento (vem do JWT)
-    
+
     // Dados da Transação
     private String idTransacao; // IdPedido da transacaoPagamento
     private String paymentId; // ID retornado pela GetNet (somente GetNet)
@@ -36,21 +36,25 @@ public class ProcessarPagamentoAprovadoTseDto {
     private String nomeImpressoCartao;
     private String adquirente; // GETNET ou REDE
     private Integer idBandeira; // ID da bandeira do cartão (para buscar BandeiraCartao)
-    
+
     // Dados completos do cartão (serão criptografados ao salvar)
     private String numeroCartao; // Número completo do cartão
     private String codigoSegurancaCartao; // CVV
     private String mesValidadeCartao; // Mês de validade
     private String anoValidadeCartao; // Ano de validade
-    
+
     // Conta de Movimentação Bancária do Gateway
     private Long idContaMovimentacaoBancaria; // ID da conta de movimentação configurada no gateway
-    
+
     // Dados PIX (para preencher na conta financeira)
     private String pixCopiaECola; // Código PIX copia e cola
     private LocalDateTime dataGeracaoPix; // Data/hora de geração do QR Code PIX
-    
-    // Contas Financeiras Selecionadas (cada uma com seu juros e multa calculados em tela)
+
+    // Datas de processamento
+    private LocalDateTime dataAutorizacao; // Data real do pagamento (Liquidação)
+    private LocalDateTime dataPagamento; // Data contábil do pagamento (Ajustada para dia útil)
+
+    // Contas Financeiras Selecionadas (cada uma com seu juros e multa calculados em
+    // tela)
     private List<ContaFinanceiraParaPagamentoDto> contasFinanceiras;
 }
-
