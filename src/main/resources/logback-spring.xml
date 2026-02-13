@@ -1,122 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+    <!-- Incluir a configuração base do Spring Boot -->
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
-    
-    <!-- Propriedades -->
-    <property name="LOG_PATH" value="logs"/>
-    <property name="LOG_FILE" value="application"/>
-    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
-    
-    <!-- Console Appender -->
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-    </appender>
-    
-    <!-- File Appender - Todos os logs -->
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/${LOG_FILE}.log</file>
-        <encoder>
-            <pattern>${LOG_PATTERN}</pattern>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH}/${LOG_FILE}-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
-        </rollingPolicy>
-    </appender>
-    
-    <!-- File Appender - Apenas logs da aplicação (com.sw.tse) -->
-    <appender name="FILE_APP" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/${LOG_FILE}-app.log</file>
-        <encoder>
-            <pattern>${LOG_PATTERN}</pattern>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH}/${LOG_FILE}-app-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>500MB</totalSizeCap>
-        </rollingPolicy>
-        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>DEBUG</level>
-        </filter>
-    </appender>
-    
-    <!-- File Appender - Apenas erros -->
-    <appender name="FILE_ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/${LOG_FILE}-error.log</file>
-        <encoder>
-            <pattern>${LOG_PATTERN}</pattern>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH}/${LOG_FILE}-error-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>60</maxHistory>
-            <totalSizeCap>500MB</totalSizeCap>
-        </rollingPolicy>
-        <filter class="ch.qos.logback.classic.filter.LevelFilter">
-            <level>ERROR</level>
-            <onMatch>ACCEPT</onMatch>
-            <onMismatch>DENY</onMismatch>
-        </filter>
-    </appender>
-    
-    <!-- Logger específico para a aplicação -->
-    <logger name="com.sw.tse" level="DEBUG" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
-        <appender-ref ref="FILE_APP"/>
-        <appender-ref ref="FILE_ERROR"/>
-    </logger>
-    
-    <!-- Logger para Spring Framework -->
-    <logger name="org.springframework" level="INFO" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
-    </logger>
-    
-    <!-- Logger para Hibernate/SQL -->
-    <logger name="org.hibernate" level="WARN" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
-    </logger>
-    
-    <!-- Logger para SQL (se habilitado) -->
-    <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
-    </logger>
-    
-    <!-- Root Logger -->
-    <root level="INFO">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
-        <appender-ref ref="FILE_ERROR"/>
-    </root>
-    
-    <!-- Perfis Spring -->
-    <springProfile name="dev">
-        <logger name="com.sw.tse" level="DEBUG"/>
-        <logger name="org.springframework.web" level="DEBUG"/>
-        <root level="INFO">
-            <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="FILE"/>
-            <appender-ref ref="FILE_APP"/>
-            <appender-ref ref="FILE_ERROR"/>
-        </root>
-    </springProfile>
-    
-    <springProfile name="prod">
-        <logger name="com.sw.tse" level="INFO"/>
-        <logger name="org.springframework.web" level="WARN"/>
-        <root level="WARN">
-            <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="FILE"/>
-            <appender-ref ref="FILE_ERROR"/>
-        </root>
-    </springProfile>
-</configuration>
 
+    <!-- Definir o diretório onde os arquivos de log serão salvos -->
+    <!-- Usa a propriedade do Spring Boot se disponível, senão usa "logs" como padrão -->
+    <!-- O caminho relativo será resolvido em relação ao diretório de trabalho (onde o JAR está sendo executado) -->
+    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs"/>
+
+	<!-- Appender para arquivo com rotação (RollingFileAppender) -->
+	<!-- RollingFileAppender garante rotação automática e melhor gerenciamento de logs -->
+	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+	    <!-- Nome do arquivo atual (sem padrão de data, pois o fileNamePattern gerencia a rotação) -->
+	    <file>${LOG_PATH}/log.log</file>
+	    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+	        <!-- Arquivo de log diário com padrão: log_yyyyMMdd.log -->
+	        <!-- O Logback automaticamente rotaciona o arquivo atual para este padrão ao mudar de dia -->
+	        <fileNamePattern>${LOG_PATH}/log_%d{yyyyMMdd}.log</fileNamePattern>
+	        <!-- Manter logs por 15 dias -->
+	        <maxHistory>15</maxHistory>
+	        <!-- Tamanho máximo total dos arquivos de log antes de remover os mais antigos -->
+	        <totalSizeCap>1GB</totalSizeCap>
+	    </rollingPolicy>
+	    <encoder>
+	        <pattern>%date{yyyy-MM-dd HH:mm:ss.SSS} [%level] %logger{36} - %message%n%xException</pattern>
+	        <charset>UTF-8</charset>
+	    </encoder>
+	</appender>
+	  
+	<!-- Appender para console COM cores (para debug no terminal) -->
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+	    <encoder>
+	        <!-- Pattern com cores: %highlight colore automaticamente por nível -->
+	        <!-- ERROR=vermelho, WARN=amarelo, INFO=verde, DEBUG=azul, TRACE=azul claro -->
+	        <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %highlight(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %msg%n%wEx</pattern>
+	        <charset>UTF-8</charset>
+	    </encoder>
+	</appender>	
+
+    <!-- Configuração do logger raiz -->
+    <root level="INFO">
+        <!-- Adicionar ambos appenders: CONSOLE (com cores) e FILE (para arquivo) -->
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>

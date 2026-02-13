@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sw.tse.api.model.EmpresaTseDto;
+import com.sw.tse.api.model.GrupoCotaDto;
 import com.sw.tse.api.model.TorreDto;
 import com.sw.tse.domain.service.interfaces.ConfiguracaoService;
 
@@ -30,6 +31,12 @@ public class ConfiguracaoController {
     public ResponseEntity<List<TorreDto>> listarTorresPorEmpresa(@PathVariable Long idEmpresa) {
         List<TorreDto> torres = configuracaoService.listarTorresPorEmpresa(idEmpresa);
         return ResponseEntity.ok(torres);
+    }
+
+    @GetMapping("/grupos-cota")
+    public ResponseEntity<List<GrupoCotaDto>> listarGruposCota() {
+        List<GrupoCotaDto> grupos = configuracaoService.listarGruposCota();
+        return ResponseEntity.ok(grupos);
     }
 }
 
