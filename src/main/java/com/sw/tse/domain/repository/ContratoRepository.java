@@ -195,4 +195,23 @@ public interface ContratoRepository extends JpaRepository<Contrato, Long> {
            "ORDER BY e.sigla")
     List<EmpresaTseDto> findEmpresasByPessoaComContratosAtivos(@Param("idPessoa") Long idPessoa);
 
+    /**
+     * Busca IDs de cota (idCotaUh) únicos dos contratos ativos da pessoa.
+     * Usado para contexto de visualização por grupo cota (legado).
+     */
+    @Query("SELECT DISTINCT c.cotaUh.idCotaUh FROM Contrato c " +
+           "WHERE (c.pessoaCessionario.idPessoa = :idPessoa OR c.pessaoCocessionario.idPessoa = :idPessoa) " +
+           "AND c.status IN ('ATIVO', 'ATIVOREV') AND c.cotaUh IS NOT NULL")
+    List<Long> findIdsCotaUhAtivosByPessoaId(@Param("idPessoa") Long idPessoa);
+
+    /**
+     * Busca IDs de grupo de cota (idGrupoCota) distintos dos contratos ativos da pessoa.
+     * Usado para contexto de visualização por grupo cota (CotaUh -> ModeloCota -> GrupoCota).
+     */
+    @Query("SELECT DISTINCT g.id FROM Contrato c " +
+           "JOIN c.cotaUh cu JOIN cu.modeloCota mc JOIN mc.grupoCota g " +
+           "WHERE (c.pessoaCessionario.idPessoa = :idPessoa OR c.pessaoCocessionario.idPessoa = :idPessoa) " +
+           "AND c.status IN ('ATIVO', 'ATIVOREV')")
+    List<Long> findIdsGrupoCotaAtivosByPessoaId(@Param("idPessoa") Long idPessoa);
+
 }

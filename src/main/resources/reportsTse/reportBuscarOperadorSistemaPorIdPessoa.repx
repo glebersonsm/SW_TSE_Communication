@@ -58,7 +58,7 @@ namespace XtraReportSerialization {
             // 
             // sqlDataSource1
             // 
-            this.sqlDataSource1.ConnectionName = "Conexão HB YOU - HOT BEACH YOU EMPREENDIMENTO IMOBILIARIO SPE LTDA";
+            this.sqlDataSource1.ConnectionName = "Conexão HB SUITES - HOT BEACH SUITES OLIMPIA EMPREENDIMENTO IMOBILIARIO SPE LTDA";
             postgreSqlConnectionParameters1.DatabaseName = "tsehotbeachtreino";
             postgreSqlConnectionParameters1.Password = "We8qo?YHtB7b1zG?#K";
             postgreSqlConnectionParameters1.Port = "5435";
