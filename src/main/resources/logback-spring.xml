@@ -11,19 +11,16 @@
 	<!-- Appender para arquivo com rotação (RollingFileAppender) -->
 	<!-- RollingFileAppender garante rotação automática e melhor gerenciamento de logs -->
 	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-	    <!-- Nome do arquivo atual (sem padrão de data, pois o fileNamePattern gerencia a rotação) -->
-	    <file>${LOG_PATH}/log.log</file>
 	    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-	        <!-- Arquivo de log diário com padrão: log_yyyyMMdd.log -->
-	        <!-- O Logback automaticamente rotaciona o arquivo atual para este padrão ao mudar de dia -->
-	        <fileNamePattern>${LOG_PATH}/log_%d{yyyyMMdd}.log</fileNamePattern>
+	        <!-- Arquivo de log diário com padrão: yyyy-MM-dd.log -->
+	        <fileNamePattern>${LOG_PATH}/%d{yyyy-MM-dd}.log</fileNamePattern>
 	        <!-- Manter logs por 15 dias -->
 	        <maxHistory>15</maxHistory>
 	        <!-- Tamanho máximo total dos arquivos de log antes de remover os mais antigos -->
 	        <totalSizeCap>1GB</totalSizeCap>
 	    </rollingPolicy>
 	    <encoder>
-	        <pattern>%date{yyyy-MM-dd HH:mm:ss.SSS} [%level] %logger{36} - %message%n%xException</pattern>
+	        <pattern>%date{yyyy-MM-dd HH:mm:ss.SSS} %level - %message%n%xException</pattern>
 	        <charset>UTF-8</charset>
 	    </encoder>
 	</appender>
