@@ -21,6 +21,7 @@ import org.springframework.lang.NonNull;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.IncorrectClaimException;
 import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -32,32 +33,50 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class JwtAuthenticationFilter extends OncePerRequestFilter{
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final AuthenticationEntryPoint authenticationEntryPoint; 
-    
+    private final AuthenticationEntryPoint authenticationEntryPoint;
+
     private static final String CLAIM_NAME = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name";
     private static final String CLAIM_ROLE = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
     private static final String CLAIM_ID_USUARIO_CLIENTE = "idUsuarioCliente";
     private static final String CLAIM_TOKEN_USUARIO_CLIENTE = "tokenUsuarioCliente";
     private static final String CLAIM_ID_PESSOA_CLIENTE = "idPessoaCliente";
-    
+
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
+    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain)
             throws ServletException, IOException {
-        
+
         final String authHeader = request.getHeader("Authorization");
-        
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
-        
+
         try {
             final String jwt = authHeader.substring(7);
+
+            if (jwt.isBlank()) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            long dots = jwt.chars().filter(ch -> ch == '.').count();
+            if (dots != 2) {
+                // Token malformado. Tratar como erro de autenticação sem logar ERROR.
+                // Como não sabemos qual era a intenção, retornamos 401 através do
+                // authenticationEntryPoint.
+                // Isso não lança exceção para o console.
+                this.authenticationEntryPoint.commence(request, response,
+                        new BadCredentialsException("Token JWT malformado"));
+                return;
+            }
+
             Claims claims = jwtService.validarToken(jwt);
-            
+
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
                 String username = claims.get(CLAIM_NAME, String.class);
 
@@ -85,29 +104,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter{
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
-                        userDetails.getAuthorities()
-                );
+                        userDetails.getAuthorities());
 
-                JwtAuthenticationDetails details = new JwtAuthenticationDetails(request, idUsuarioCliente, tokenUsuarioCliente, idPessoaCliente);
+                JwtAuthenticationDetails details = new JwtAuthenticationDetails(request, idUsuarioCliente,
+                        tokenUsuarioCliente, idPessoaCliente);
                 authToken.setDetails(details);
-                
+
                 SecurityContextHolder.getContext().setAuthentication(authToken);
                 filterChain.doFilter(request, response);
             }
         } catch (JwtException e) {
-            log.error("Erro ao validar JWT. Tipo: {}, Mensagem: {}", 
-                e.getClass().getSimpleName(), e.getMessage(), e);
+            log.error("Erro ao validar JWT. Tipo: {}, Mensagem: {}",
+                    e.getClass().getSimpleName(), e.getMessage(), e);
             BadCredentialsException authException = new BadCredentialsException(traduzirJwtException(e), e);
             this.authenticationEntryPoint.commence(request, response, authException);
         }
     }
-    
+
     private String traduzirJwtException(JwtException e) {
         if (e instanceof ExpiredJwtException) {
             return "Seu token de acesso expirou. Por favor, autentique-se novamente.";
         }
         if (e instanceof SignatureException) {
             return "O token fornecido possui uma assinatura inválida.";
+        }
+        if (e instanceof MalformedJwtException) {
+            return "O token de acesso está mal formatado ou vazio.";
         }
         if (e instanceof IncorrectClaimException) {
             return "O token contém dados de autenticação inválidos (emissor ou audiência incorretos).";

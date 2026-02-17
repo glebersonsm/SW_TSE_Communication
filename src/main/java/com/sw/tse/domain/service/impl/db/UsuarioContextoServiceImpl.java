@@ -1,7 +1,7 @@
 package com.sw.tse.domain.service.impl.db;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -10,10 +10,14 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import com.sw.tse.domain.model.api.dto.ContratoClienteApiResponse;
-import com.sw.tse.domain.model.dto.InadimplenciaDto;
+import com.sw.tse.domain.model.db.StatusFinanceiroCondominio;
+import com.sw.tse.domain.model.db.StatusFinanceiroContrato;
 import com.sw.tse.domain.model.dto.UsuarioContextoDto;
-import com.sw.tse.domain.repository.ContaFinanceiraRepository;
 import com.sw.tse.domain.repository.ContratoRepository;
+import com.sw.tse.domain.repository.EscolhaPeriodoModeloCotaRepository;
+import com.sw.tse.domain.repository.StatusFinanceiroCondominioRepository;
+import com.sw.tse.domain.repository.StatusFinanceiroContratoRepository;
+import com.sw.tse.domain.repository.UtilizacaoContratoRepository;
 import com.sw.tse.domain.service.interfaces.ContratoClienteService;
 import com.sw.tse.domain.service.interfaces.UsuarioContextoService;
 
@@ -27,8 +31,11 @@ import lombok.extern.slf4j.Slf4j;
 public class UsuarioContextoServiceImpl implements UsuarioContextoService {
 
     private final ContratoClienteService contratoClienteService;
-    private final ContaFinanceiraRepository contaFinanceiraRepository;
     private final ContratoRepository contratoRepository;
+    private final UtilizacaoContratoRepository utilizacaoContratoRepository;
+    private final StatusFinanceiroContratoRepository statusFinanceiroContratoRepository;
+    private final StatusFinanceiroCondominioRepository statusFinanceiroCondominioRepository;
+    private final EscolhaPeriodoModeloCotaRepository escolhaPeriodoModeloCotaRepository;
 
     @Override
     public UsuarioContextoDto obterContextoUsuario(Long idPessoa) {
@@ -58,15 +65,22 @@ public class UsuarioContextoServiceImpl implements UsuarioContextoService {
         }
 
         boolean temInadimplente = false;
+
         for (ContratoClienteApiResponse c : contratos) {
             Long idContrato = c.getIdContrato();
-            Optional<InadimplenciaDto> inadimplenciaContrato = contaFinanceiraRepository.buscarInadimplenciaContrato(idContrato);
-            if (inadimplenciaContrato.isPresent() && inadimplenciaContrato.get().getQuantidadeParcelas() != null && inadimplenciaContrato.get().getQuantidadeParcelas() > 0) {
+
+            // 1. Inadimplência de Contrato (Via View)
+            Optional<StatusFinanceiroContrato> statusFin = statusFinanceiroContratoRepository
+                    .findById(idContrato);
+            if (statusFin.isPresent() && "INADIMPLENTE".equalsIgnoreCase(statusFin.get().getStatus())) {
                 temInadimplente = true;
                 break;
             }
-            Optional<InadimplenciaDto> inadimplenciaCondominio = contaFinanceiraRepository.buscarInadimplenciaCondominio(idContrato);
-            if (inadimplenciaCondominio.isPresent() && inadimplenciaCondominio.get().getQuantidadeParcelas() != null && inadimplenciaCondominio.get().getQuantidadeParcelas() > 0) {
+
+            // 2. Inadimplência de Condomínio (Via View)
+            Optional<StatusFinanceiroCondominio> statusCond = statusFinanceiroCondominioRepository
+                    .findByIdContratoSpe(idContrato);
+            if (statusCond.isPresent() && "INADIMPLENTE".equalsIgnoreCase(statusCond.get().getStatus())) {
                 temInadimplente = true;
                 break;
             }
@@ -84,13 +98,25 @@ public class UsuarioContextoServiceImpl implements UsuarioContextoService {
             idsGrupoCota = Collections.emptyList();
         }
 
-        LocalDate proximoCheckin = contratos.stream()
-                .map(ContratoClienteApiResponse::getProximaUtilizacao)
-                .filter(d -> d != null)
-                .map(odt -> odt.atZoneSameInstant(ZoneId.systemDefault()).toLocalDate())
-                .filter(d -> !d.isBefore(LocalDate.now()))
-                .min(LocalDate::compareTo)
+        // Lógica de Próximo Check-in (Sem limite de janela futura, incluindo hoje)
+        LocalDateTime dataInicio = LocalDate.now().atStartOfDay();
+
+        LocalDate proximoCheckin = utilizacaoContratoRepository
+                .findProximoCheckin(idPessoa, dataInicio)
+                .map(LocalDateTime::toLocalDate)
                 .orElse(null);
+
+        // Lógica de Abertura de Calendário
+        List<Long> idsModeloCota = contratoRepository.findIdsModeloCotaAtivosByPessoaId(idPessoa);
+        List<LocalDate> periodosAberturaCalendario = null;
+        if (idsModeloCota != null && !idsModeloCota.isEmpty()) {
+            periodosAberturaCalendario = escolhaPeriodoModeloCotaRepository
+                    .findDatasAberturaCalendario(idsModeloCota, LocalDate.now().getYear(),
+                            LocalDateTime.now().minusDays(15))
+                    .stream()
+                    .map(LocalDateTime::toLocalDate)
+                    .toList();
+        }
 
         return UsuarioContextoDto.builder()
                 .idPessoa(idPessoa)
@@ -99,7 +125,7 @@ public class UsuarioContextoServiceImpl implements UsuarioContextoService {
                 .idsGrupoCota(idsGrupoCota)
                 .idsEmpresa(idsEmpresa)
                 .proximoCheckin(proximoCheckin)
-                .periodoAberturaCalendario(null)
+                .periodosAberturaCalendario(periodosAberturaCalendario)
                 .build();
     }
 }

@@ -72,10 +72,10 @@ public class EscolhaPeriodoModeloCota {
     private LocalDateTime fimPeriodo;
 
     // Método estático para criar nova escolha período modelo cota
-    static EscolhaPeriodoModeloCota novaEscolhaPeriodoModeloCota(Integer ano, Integer mes, 
-            Boolean ativo, ModeloCota modeloCota, OperadorSistema responsavelCadastro, 
+    public static EscolhaPeriodoModeloCota novaEscolhaPeriodoModeloCota(Integer ano, Integer mes,
+            Boolean ativo, ModeloCota modeloCota, OperadorSistema responsavelCadastro,
             Empresa empresa, LocalDateTime inicioPeriodo, LocalDateTime fimPeriodo) {
-        
+
         EscolhaPeriodoModeloCota novaEscolha = new EscolhaPeriodoModeloCota();
         novaEscolha.setAno(ano);
         novaEscolha.setMes(mes);
@@ -85,7 +85,7 @@ public class EscolhaPeriodoModeloCota {
         novaEscolha.setEmpresa(empresa);
         novaEscolha.setInicioPeriodo(inicioPeriodo);
         novaEscolha.setFimPeriodo(fimPeriodo);
-        
+
         return novaEscolha;
     }
 }
