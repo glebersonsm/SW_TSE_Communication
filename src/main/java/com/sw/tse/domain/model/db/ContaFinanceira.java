@@ -2,13 +2,18 @@ package com.sw.tse.domain.model.db;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Locale;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.sw.tse.core.util.DiasAtrasoHelper;
 import com.sw.tse.core.util.ParametroFinanceiroHelper;
 
 import jakarta.persistence.Column;
@@ -451,9 +456,34 @@ public class ContaFinanceira {
 
         BigDecimal valorBase = calcularValorTotal();
         LocalDateTime dataBase = getDataBaseVencimento();
-        long diasAtraso = ChronoUnit.DAYS.between(
+        LocalDate dataReferencia = LocalDate.now();
+
+        String cidadeNome = null;
+        String cidadeUf = null;
+        String estadoSigla = null;
+        if (this.empresa != null && this.empresa.getPessoa() != null
+                && this.empresa.getPessoa().getEnderecos() != null
+                && !this.empresa.getPessoa().getEnderecos().isEmpty()) {
+            var endereco = this.empresa.getPessoa().getEnderecos().stream()
+                    .filter(e -> Boolean.TRUE.equals(e.getParaCorrespondencia()))
+                    .findFirst()
+                    .orElse(this.empresa.getPessoa().getEnderecos().get(0));
+            if (endereco.getCidade() != null) {
+                cidadeNome = endereco.getCidade().getNome();
+                cidadeUf = endereco.getCidade().getUf();
+                estadoSigla = endereco.getCidade().getUf();
+            }
+            if (estadoSigla == null && endereco.getUf() != null) {
+                estadoSigla = endereco.getUf();
+            }
+        }
+
+        long diasAtraso = DiasAtrasoHelper.obterDiasAtraso(
                 dataBase.toLocalDate(),
-                LocalDateTime.now().toLocalDate());
+                dataReferencia,
+                cidadeNome,
+                cidadeUf,
+                estadoSigla);
 
         if (diasAtraso <= 0) {
             return BigDecimal.ZERO;
@@ -620,6 +650,80 @@ public class ContaFinanceira {
             return percentualMensal.divide(BigDecimal.valueOf(30), 6, RoundingMode.HALF_UP);
         }
         return null;
+    }
+
+    /**
+     * Gera a memória de cálculo de juros e multas para exibição no modo simulação.
+     * Retorna null se a conta não deve ter juros/multas calculados.
+     */
+    public String obterMemoriaCalculo() {
+        if (!deveCalcularJurosMultas()) {
+            return null;
+        }
+        DecimalFormat df = new DecimalFormat("#,##0.00", new DecimalFormatSymbols(Locale.forLanguageTag("pt-BR")));
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        StringBuilder sb = new StringBuilder();
+        sb.append("MEMÓRIA DE CÁLCULO - JUROS E MULTAS\n");
+        sb.append("====================================\n\n");
+
+        BigDecimal valorBase = calcularValorTotal();
+        LocalDateTime dataBase = getDataBaseVencimento();
+        LocalDate dataRef = LocalDate.now();
+
+        String cidadeNome = null;
+        String cidadeUf = null;
+        String estadoSigla = null;
+        if (this.empresa != null && this.empresa.getPessoa() != null
+                && this.empresa.getPessoa().getEnderecos() != null
+                && !this.empresa.getPessoa().getEnderecos().isEmpty()) {
+            var endereco = this.empresa.getPessoa().getEnderecos().stream()
+                    .filter(e -> Boolean.TRUE.equals(e.getParaCorrespondencia()))
+                    .findFirst()
+                    .orElse(this.empresa.getPessoa().getEnderecos().get(0));
+            if (endereco.getCidade() != null) {
+                cidadeNome = endereco.getCidade().getNome();
+                cidadeUf = endereco.getCidade().getUf();
+                estadoSigla = endereco.getCidade().getUf();
+            }
+            if (estadoSigla == null && endereco.getUf() != null) {
+                estadoSigla = endereco.getUf();
+            }
+        }
+
+        sb.append("Valor original: R$ ").append(df.format(valorBase)).append("\n");
+        sb.append("Data de vencimento: ").append(dataBase != null ? dataBase.toLocalDate().format(dtf) : "-").append("\n");
+
+        LocalDate dataVenc = dataBase != null ? dataBase.toLocalDate() : null;
+        LocalDate primeiroDiaUtil = dataVenc != null ? DiasAtrasoHelper.obterProximoDiaUtil(dataVenc, cidadeNome, cidadeUf, estadoSigla) : null;
+        long diasAtraso = dataVenc != null ? DiasAtrasoHelper.obterDiasAtraso(dataVenc, dataRef, cidadeNome, cidadeUf, estadoSigla) : 0;
+
+        if (primeiroDiaUtil != null) {
+            sb.append("Primeiro dia útil para juros: ").append(primeiroDiaUtil.format(dtf)).append("\n");
+        }
+        sb.append("Dias de atraso: ").append(diasAtraso).append("\n\n");
+
+        BigDecimal juros = calcularJuros();
+        BigDecimal multa = calcularMulta();
+        BigDecimal valorAtualizado = valorBase.add(juros).add(multa);
+
+        sb.append("--- JUROS ---\n");
+        BigDecimal pctJuroMensal = getPercentualJuroMensal();
+        if (pctJuroMensal != null) {
+            sb.append("Percentual juros mensal: ").append(df.format(pctJuroMensal)).append("%\n");
+        }
+        sb.append("Valor juros: R$ ").append(df.format(juros)).append("\n\n");
+
+        sb.append("--- MULTA ---\n");
+        BigDecimal pctMulta = getPercentualMultaCalculado();
+        if (pctMulta != null) {
+            sb.append("Percentual multa: ").append(df.format(pctMulta)).append("%\n");
+        }
+        sb.append("Valor multa: R$ ").append(df.format(multa)).append("\n\n");
+
+        sb.append("--- TOTAL ---\n");
+        sb.append("Valor atualizado: R$ ").append(df.format(valorAtualizado)).append("\n");
+
+        return sb.toString();
     }
 
     /**

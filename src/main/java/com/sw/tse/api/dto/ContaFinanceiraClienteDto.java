@@ -168,4 +168,7 @@ public class ContaFinanceiraClienteDto {
     
     @JsonProperty("Multa")
     private BigDecimal multa; // Valor de multa calculada para esta conta
+    
+    @JsonProperty("MemoriaCalculo")
+    private String memoriaCalculo; // Memória de cálculo de juros e multas (apenas no modo simulação)
 }

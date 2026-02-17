@@ -13,6 +13,10 @@ import com.sw.tse.domain.model.db.UnidadeHoteleira;
 public class ContaFinanceiraConverter {
     
     public ContaFinanceiraClienteDto toDto(ContaFinanceira contaFinanceira) {
+        return toDto(contaFinanceira, false);
+    }
+    
+    public ContaFinanceiraClienteDto toDto(ContaFinanceira contaFinanceira, boolean incluirMemoriaCalculo) {
         if (contaFinanceira == null) {
             return null;
         }
@@ -181,6 +185,11 @@ public class ContaFinanceiraConverter {
                     dto.setLimitePagamentoTransmitido(dataBase.plusDays(diasLimite));
                 }
             }
+        }
+        
+        // Memória de cálculo (apenas no modo simulação)
+        if (incluirMemoriaCalculo) {
+            dto.setMemoriaCalculo(contaFinanceira.obterMemoriaCalculo());
         }
         
         return dto;
