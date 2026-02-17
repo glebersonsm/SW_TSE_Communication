@@ -1,8 +1,11 @@
 package com.sw.tse.api.controller;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import com.sw.tse.core.context.FeriadosContext;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
@@ -24,7 +27,6 @@ import com.sw.tse.api.dto.CartaoParaPagamentoDto;
 import com.sw.tse.api.dto.CartaoVinculadoResponseDto;
 import com.sw.tse.api.dto.ContaFinanceiraClienteDto;
 import com.sw.tse.api.dto.DadosPessoaDto;
-import com.sw.tse.api.dto.EnderecoDto;
 import com.sw.tse.api.dto.PaginatedResponseDto;
 import com.sw.tse.api.dto.ReservaResumoResponse;
 import com.sw.tse.api.dto.ReservaSemanaResponse;
@@ -318,9 +320,14 @@ public class PainelClienteController {
 
                         @Parameter(description = "ID da empresa para filtrar contas", required = false) @RequestParam(required = false) Long empresaId,
 
+                        @Parameter(description = "Lista de feriados (formato yyyy-MM-dd) para cálculo de juros. Enviada pelo chamador (ex: Portal) para que o TSE não dependa da API do Portal.", required = false) @RequestParam(required = false) List<LocalDate> feriados,
+
                         @Parameter(description = "Número da página (inicia em 1)", required = false) @RequestParam(required = false, defaultValue = "1") Integer numeroDaPagina,
 
                         @Parameter(description = "Quantidade de registros por página", required = false) @RequestParam(required = false, defaultValue = "30") Integer quantidadeRegistrosRetornar) {
+
+                try {
+                FeriadosContext.setFeriados(feriados != null ? feriados : Collections.emptyList());
 
                 var resultado = contaFinanceiraService.buscarContasClienteDtoComPaginacao(
                                 vencimentoInicial,
@@ -339,6 +346,9 @@ public class PainelClienteController {
                                 resultado.getLastPageNumber());
 
                 return ResponseEntity.ok(responseApi);
+                } finally {
+                        FeriadosContext.clear();
+                }
         }
 
         @Operation(summary = "Gerar segunda via de boleto", description = "Gera e retorna o PDF da segunda via de boleto para uma conta financeira específica. "

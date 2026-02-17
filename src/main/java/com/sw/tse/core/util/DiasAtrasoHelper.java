@@ -1,16 +1,11 @@
 package com.sw.tse.core.util;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
-import com.sw.tse.client.FeriadoApiClient;
-import com.sw.tse.domain.model.api.response.ProximoDiaUtilResponse;
+import com.sw.tse.core.context.FeriadosContext;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,34 +14,23 @@ import lombok.extern.slf4j.Slf4j;
  * Se o vencimento cai em sábado, domingo ou feriado, o primeiro dia para juros
  * é o próximo dia útil. A partir daí, todos os dias (incluindo fins de semana
  * e feriados) entram na contagem.
+ *
+ * Os feriados são obtidos do FeriadosContext, definido pelo chamador da API
+ * (ex: Portal envia a lista ao chamar o TSE). Assim o TSE não depende da API do Portal.
  */
-@Component
 @Slf4j
 public class DiasAtrasoHelper {
 
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
-
-    private static FeriadoApiClient feriadoApiClient;
-
-    private static final Map<String, LocalDate> cachePrimeiroDiaUtil = new ConcurrentHashMap<>();
-
-    @Autowired
-    public void setFeriadoApiClient(FeriadoApiClient feriadoApiClient) {
-        DiasAtrasoHelper.feriadoApiClient = feriadoApiClient;
-    }
-
     /**
      * Calcula os dias de atraso para aplicação de juros.
-     * Considera o primeiro dia útil após o vencimento (excluindo sábado, domingo e feriados
-     * da cidade da empresa). A partir do primeiro dia útil, conta todos os dias corridos.
-     * Feriados municipais: consultados por cidadeNome + cidadeUf (evita divergência de IDs entre bancos).
-     * Feriados estaduais: consultados por estadoSigla (sigla do estado).
+     * Considera o primeiro dia útil após o vencimento (excluindo sábado, domingo e feriados).
+     * Os feriados vêm do FeriadosContext (enviados pelo chamador da API).
      *
      * @param dataVencimento data de vencimento da parcela
      * @param dataReferencia data de referência (geralmente hoje)
-     * @param cidadeNome nome da cidade da empresa para feriados municipais (pode ser null)
-     * @param cidadeUf UF da cidade da empresa para feriados municipais (pode ser null)
-     * @param estadoSigla sigla do estado para feriados estaduais (pode ser null)
+     * @param cidadeNome (ignorado - mantido por compatibilidade de assinatura)
+     * @param cidadeUf (ignorado - mantido por compatibilidade de assinatura)
+     * @param estadoSigla (ignorado - mantido por compatibilidade de assinatura)
      * @return número de dias de atraso para cálculo de juros (0 se ainda não passou do primeiro dia útil)
      */
     public static long obterDiasAtraso(
@@ -79,40 +63,30 @@ public class DiasAtrasoHelper {
 
     /**
      * Retorna o próximo dia útil após a data informada (considerando sábado, domingo e feriados).
-     * Útil para exibição na memória de cálculo.
-     * Feriados municipais: cidadeNome + cidadeUf. Feriados estaduais: estadoSigla.
+     * Os feriados vêm do FeriadosContext. Se não houver feriados no contexto, usa fallback (dias corridos).
      */
     public static LocalDate obterProximoDiaUtil(LocalDate data, String cidadeNome, String cidadeUf, String estadoSigla) {
-        String cacheKey = data + "|" + (cidadeNome != null ? cidadeNome : "") + "|" + (cidadeUf != null ? cidadeUf : "") + "|" + (estadoSigla != null ? estadoSigla : "");
+        Set<LocalDate> feriados = FeriadosContext.getFeriados();
 
-        LocalDate cached = cachePrimeiroDiaUtil.get(cacheKey);
-        if (cached != null) {
-            return cached;
+        return obterProximoDiaUtilComFeriados(data, feriados);
+    }
+
+    /**
+     * Calcula o próximo dia útil considerando sábado, domingo e a lista de feriados.
+     */
+    private static LocalDate obterProximoDiaUtilComFeriados(LocalDate data, Set<LocalDate> feriados) {
+        LocalDate candidata = data;
+        while (isFimDeSemanaOuFeriado(candidata, feriados)) {
+            candidata = candidata.plusDays(1);
         }
+        return candidata;
+    }
 
-        if (feriadoApiClient == null) {
-            log.warn("FeriadoApiClient não injetado - usando fallback de dias corridos");
-            return null;
+    private static boolean isFimDeSemanaOuFeriado(LocalDate data, Set<LocalDate> feriados) {
+        if (data.getDayOfWeek() == DayOfWeek.SATURDAY || data.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            return true;
         }
-
-        try {
-            String dataStr = data.format(DATE_FORMATTER);
-            ProximoDiaUtilResponse response = feriadoApiClient.obterProximoDiaUtil(
-                    dataStr, cidadeNome, cidadeUf, estadoSigla);
-
-            if (response == null || response.getData() == null || response.getData().isEmpty()) {
-                log.warn("Resposta vazia do Portal API para proximo-dia-util - usando fallback");
-                return null;
-            }
-
-            LocalDate proximoDiaUtil = LocalDate.parse(response.getData(), DATE_FORMATTER);
-            cachePrimeiroDiaUtil.put(cacheKey, proximoDiaUtil);
-            return proximoDiaUtil;
-        } catch (Exception e) {
-            log.warn("Erro ao obter próximo dia útil da API Portal (data={}, cidadeNome={}, cidadeUf={}, estadoSigla={}): {}. Usando fallback.",
-                    data, cidadeNome, cidadeUf, estadoSigla, e.getMessage());
-            return null;
-        }
+        return feriados.contains(data);
     }
 
     private static long fallbackDiasCorridos(LocalDate dataVencimento, LocalDate dataReferencia) {
@@ -122,9 +96,9 @@ public class DiasAtrasoHelper {
 
     /**
      * Limpa o cache de primeiro dia útil.
-     * Útil para testes ou quando os feriados são atualizados.
+     * Mantido por compatibilidade (cache removido - feriados vêm do contexto).
      */
     public static void limparCache() {
-        cachePrimeiroDiaUtil.clear();
+        // Cache removido - feriados vêm do FeriadosContext por requisição
     }
 }
