@@ -13,8 +13,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * DTO com o contexto agregado do usuário para filtragem de tags de visualização.
- * Usado pelo Portal do Proprietário para decidir quais imagens/documentos o usuário pode ver.
+ * DTO com o contexto agregado do usuário para filtragem de tags de
+ * visualização.
+ * Usado pelo Portal do Proprietário para decidir quais imagens/documentos o
+ * usuário pode ver.
  */
 @Data
 @Builder
@@ -59,8 +61,8 @@ public class UsuarioContextoDto {
     private LocalDate proximoCheckin;
 
     /**
-     * Período de abertura de calendário, se aplicável (para uso futuro).
+     * Períodos de abertura de calendário, se aplicável.
      */
-    @JsonProperty("periodoAberturaCalendario")
-    private LocalDate periodoAberturaCalendario;
+    @JsonProperty("periodosAberturaCalendario")
+    private List<LocalDate> periodosAberturaCalendario;
 }

@@ -2,7 +2,6 @@ package com.sw.tse.domain.service.impl.db;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +14,7 @@ import com.sw.tse.domain.model.db.StatusFinanceiroCondominio;
 import com.sw.tse.domain.model.db.StatusFinanceiroContrato;
 import com.sw.tse.domain.model.dto.UsuarioContextoDto;
 import com.sw.tse.domain.repository.ContratoRepository;
+import com.sw.tse.domain.repository.EscolhaPeriodoModeloCotaRepository;
 import com.sw.tse.domain.repository.StatusFinanceiroCondominioRepository;
 import com.sw.tse.domain.repository.StatusFinanceiroContratoRepository;
 import com.sw.tse.domain.repository.UtilizacaoContratoRepository;
@@ -35,6 +35,7 @@ public class UsuarioContextoServiceImpl implements UsuarioContextoService {
     private final UtilizacaoContratoRepository utilizacaoContratoRepository;
     private final StatusFinanceiroContratoRepository statusFinanceiroContratoRepository;
     private final StatusFinanceiroCondominioRepository statusFinanceiroCondominioRepository;
+    private final EscolhaPeriodoModeloCotaRepository escolhaPeriodoModeloCotaRepository;
 
     @Override
     public UsuarioContextoDto obterContextoUsuario(Long idPessoa) {
@@ -97,14 +98,25 @@ public class UsuarioContextoServiceImpl implements UsuarioContextoService {
             idsGrupoCota = Collections.emptyList();
         }
 
-        // Lógica de Próximo Check-in (Janela de 15 dias a partir de amanhã)
-        LocalDateTime dataInicio = LocalDate.now().plusDays(1).atStartOfDay();
-        LocalDateTime dataFim = LocalDate.now().plusDays(16).atTime(23, 59, 59);
+        // Lógica de Próximo Check-in (Sem limite de janela futura, incluindo hoje)
+        LocalDateTime dataInicio = LocalDate.now().atStartOfDay();
 
         LocalDate proximoCheckin = utilizacaoContratoRepository
-                .findProximoCheckin(idPessoa, dataInicio, dataFim)
+                .findProximoCheckin(idPessoa, dataInicio)
                 .map(LocalDateTime::toLocalDate)
                 .orElse(null);
+
+        // Lógica de Abertura de Calendário
+        List<Long> idsModeloCota = contratoRepository.findIdsModeloCotaAtivosByPessoaId(idPessoa);
+        List<LocalDate> periodosAberturaCalendario = null;
+        if (idsModeloCota != null && !idsModeloCota.isEmpty()) {
+            periodosAberturaCalendario = escolhaPeriodoModeloCotaRepository
+                    .findDatasAberturaCalendario(idsModeloCota, LocalDate.now().getYear(),
+                            LocalDateTime.now().minusDays(15))
+                    .stream()
+                    .map(LocalDateTime::toLocalDate)
+                    .toList();
+        }
 
         return UsuarioContextoDto.builder()
                 .idPessoa(idPessoa)
@@ -113,7 +125,7 @@ public class UsuarioContextoServiceImpl implements UsuarioContextoService {
                 .idsGrupoCota(idsGrupoCota)
                 .idsEmpresa(idsEmpresa)
                 .proximoCheckin(proximoCheckin)
-                .periodoAberturaCalendario(null)
+                .periodosAberturaCalendario(periodosAberturaCalendario)
                 .build();
     }
 }
