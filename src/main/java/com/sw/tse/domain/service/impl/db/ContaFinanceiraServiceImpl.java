@@ -77,8 +77,9 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
         // Inicializar relacionamentos lazy necessários para cálculo de juros e multa
         inicializarRelacionamentosParaCalculo(contasFinanceiras);
         
+        boolean modoSimulacao = JwtTokenUtil.isModoSimulacao();
         return contasFinanceiras.stream()
-                .map(contaFinanceiraConverter::toDto)
+                .map(cf -> contaFinanceiraConverter.toDto(cf, modoSimulacao))
                 .collect(Collectors.toList());
     }
     
@@ -139,8 +140,9 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
         // Inicializar relacionamentos lazy necessários para cálculo de juros e multa
         inicializarRelacionamentosParaCalculo(contasFinanceiras);
         
+        boolean modoSimulacao = JwtTokenUtil.isModoSimulacao();
         List<ContaFinanceiraClienteDto> contasDto = contasFinanceiras.stream()
-                .map(contaFinanceiraConverter::toDto)
+                .map(cf -> contaFinanceiraConverter.toDto(cf, modoSimulacao))
                 .collect(Collectors.toList());
         
         return new ContasPaginadasDto(contasDto, numeroDaPagina, totalPages);
@@ -238,11 +240,13 @@ public class ContaFinanceiraServiceImpl implements ContaFinanceiraService {
                 .collect(Collectors.toList());
         
         // Buscar contas com JOIN FETCH para carregar relacionamentos
+        // Inclui empresa.pessoa e pessoa.enderecos para cálculo de juros (cidade/estado para feriados)
         String jpql = """
             SELECT DISTINCT cf 
             FROM ContaFinanceira cf
             LEFT JOIN FETCH cf.carteiraBoleto
-            LEFT JOIN FETCH cf.empresa
+            LEFT JOIN FETCH cf.empresa emp
+            LEFT JOIN FETCH emp.pessoa
             LEFT JOIN FETCH cf.meioPagamento
             WHERE cf.id IN :ids
             """;
