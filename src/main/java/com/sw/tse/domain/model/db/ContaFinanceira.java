@@ -495,27 +495,23 @@ public class ContaFinanceira {
                 return BigDecimal.ZERO;
             }
 
-            BigDecimal percentualTaxaJuros = this.carteiraBoleto.getValorJurosDeMora()
-                    .divide(BigDecimal.valueOf(30), 6, RoundingMode.HALF_UP)
-                    .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+            // CarteiraBoleto: valorJurosDeMora é valor fixo em R$ por dia (não percentual)
+            BigDecimal valorJurosTotal = this.carteiraBoleto.getValorJurosDeMora()
+                    .multiply(BigDecimal.valueOf(diasAtraso));
 
-            BigDecimal valorJurosDia = valorBase
-                    .multiply(percentualTaxaJuros);
-
-            BigDecimal valorJurosTotal = valorJurosDia.multiply(BigDecimal.valueOf(diasAtraso));
-
-            return valorJurosTotal;
+            return valorJurosTotal.setScale(2, RoundingMode.HALF_UP);
 
         } else if (this.empresa != null) {
             ParametroFinanceiro parametro = ParametroFinanceiroHelper.buscarPorEmpresa(this.empresa.getId());
             if (parametro != null && parametro.getPercentualJuro() != null) {
+                // ParametroFinanceiro: percentualJuro é % mensal; taxa diária = % / 30 / 100
                 BigDecimal taxaDiaria = parametro.getPercentualJuro()
-                        .divide(BigDecimal.valueOf(30), 6, RoundingMode.HALF_UP) // Converte mensal para diário
-                        .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP); // Converte percentual para decimal
+                        .divide(BigDecimal.valueOf(30), 6, RoundingMode.HALF_UP)
+                        .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
                 BigDecimal valorJuros = valorBase.multiply(taxaDiaria)
                         .multiply(BigDecimal.valueOf(diasAtraso));
 
-                return valorJuros;
+                return valorJuros.setScale(2, RoundingMode.HALF_UP);
             }
         }
 
@@ -711,7 +707,14 @@ public class ContaFinanceira {
         if (pctJuroMensal != null) {
             sb.append("Percentual juros mensal: ").append(df.format(pctJuroMensal)).append("%\n");
         }
-        sb.append("Valor juros: R$ ").append(df.format(juros)).append("\n\n");
+        BigDecimal valorJuroMensal = calcularJuroMensal();
+        sb.append("Valor juros mensal: R$ ").append(df.format(valorJuroMensal)).append("\n");
+        BigDecimal valorJuroDiario = diasAtraso > 0
+                ? juros.divide(BigDecimal.valueOf(diasAtraso), 2, RoundingMode.HALF_UP)
+                : valorJuroMensal.divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
+        sb.append("Valor juros aplicados: R$ ").append(df.format(juros))
+                .append(" (R$ ").append(df.format(valorJuroDiario))
+                .append(" x ").append(diasAtraso).append(" Dias)\n\n");
 
         sb.append("--- MULTA ---\n");
         BigDecimal pctMulta = getPercentualMultaCalculado();
