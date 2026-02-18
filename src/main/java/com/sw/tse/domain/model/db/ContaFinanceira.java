@@ -694,7 +694,7 @@ public class ContaFinanceira {
         long diasAtraso = dataVenc != null ? DiasAtrasoHelper.obterDiasAtraso(dataVenc, dataRef, cidadeNome, cidadeUf, estadoSigla) : 0;
 
         if (primeiroDiaUtil != null) {
-            sb.append("Primeiro dia útil para juros: ").append(primeiroDiaUtil.format(dtf)).append("\n");
+            sb.append("Primeiro dia útil para pagamento (sem juros): ").append(primeiroDiaUtil.format(dtf)).append("\n");
         }
         sb.append("Dias de atraso: ").append(diasAtraso).append("\n\n");
 
