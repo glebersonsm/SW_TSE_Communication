@@ -11,9 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Helper para cálculo de dias de atraso considerando o primeiro dia útil.
- * Se o vencimento cai em sábado, domingo ou feriado, o primeiro dia para juros
- * é o próximo dia útil. A partir daí, todos os dias (incluindo fins de semana
- * e feriados) entram na contagem.
+ * O primeiro dia útil (excluindo sábado, domingo e feriados) é usado apenas como
+ * prazo de graça: se pago até o próximo dia útil, não há juros. Se não pago até
+ * essa data, os dias de atraso são contados desde a data de vencimento original,
+ * incluindo fins de semana e feriados.
  *
  * Os feriados são obtidos do FeriadosContext, definido pelo chamador da API
  * (ex: Portal envia a lista ao chamar o TSE). Assim o TSE não depende da API do Portal.
@@ -23,7 +24,10 @@ public class DiasAtrasoHelper {
 
     /**
      * Calcula os dias de atraso para aplicação de juros.
-     * Considera o primeiro dia útil após o vencimento (excluindo sábado, domingo e feriados).
+     * O primeiro dia útil após o vencimento (excluindo sábado, domingo e feriados)
+     * é prazo de graça: se dataReferencia for antes ou igual ao primeiro dia útil, retorna 0.
+     * Caso contrário, conta todos os dias desde a data de vencimento até a data de referência
+     * (incluindo fins de semana e feriados).
      * Os feriados vêm do FeriadosContext (enviados pelo chamador da API).
      *
      * @param dataVencimento data de vencimento da parcela
@@ -31,7 +35,7 @@ public class DiasAtrasoHelper {
      * @param cidadeNome (ignorado - mantido por compatibilidade de assinatura)
      * @param cidadeUf (ignorado - mantido por compatibilidade de assinatura)
      * @param estadoSigla (ignorado - mantido por compatibilidade de assinatura)
-     * @return número de dias de atraso para cálculo de juros (0 se ainda não passou do primeiro dia útil)
+     * @return número de dias de atraso para cálculo de juros (0 se pago até o primeiro dia útil)
      */
     public static long obterDiasAtraso(
             LocalDate dataVencimento,
@@ -53,11 +57,11 @@ public class DiasAtrasoHelper {
             return fallbackDiasCorridos(dataVencimento, dataReferencia);
         }
 
-        if (dataReferencia.isBefore(primeiroDiaUtil)) {
+        if (!dataReferencia.isAfter(primeiroDiaUtil)) {
             return 0;
         }
 
-        long dias = ChronoUnit.DAYS.between(primeiroDiaUtil, dataReferencia) + 1;
+        long dias = ChronoUnit.DAYS.between(dataVencimento, dataReferencia);
         return Math.max(0, dias);
     }
 
