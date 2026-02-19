@@ -1,6 +1,7 @@
 package com.sw.tse.domain.service.impl.db;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -51,6 +52,7 @@ import com.sw.tse.domain.repository.TipoOrigemContaFinanceiraRepository;
 import com.sw.tse.domain.repository.TransacaoDebitoCreditoRepository;
 import com.sw.tse.domain.service.interfaces.OperadorSistemaService;
 import com.sw.tse.domain.service.interfaces.PagamentoCartaoService;
+import com.sw.tse.core.util.DiasAtrasoHelper;
 import com.sw.tse.security.JwtTokenUtil;
 
 import lombok.extern.slf4j.Slf4j;
@@ -609,7 +611,10 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                 MovimentacaoBancaria movimentacao = new MovimentacaoBancaria();
                 movimentacao.setEmpresa(conta.getEmpresa());
                 movimentacao.setContaMovimentacaoBancaria(conta.getContaMovimentacaoBancaria());
-                movimentacao.setData(LocalDateTime.now());
+                // Regra: data da movimentação (extrato) deve ser no próximo dia útil para PIX
+                // em feriados/fds
+                LocalDate proximoDiaUtil = DiasAtrasoHelper.obterProximoDiaUtil(LocalDate.now());
+                movimentacao.setData(proximoDiaUtil.atStartOfDay());
                 movimentacao.setHistorico("Recebimento PIX - Conta " + conta.getId() + " - NSU: " + dto.getNsu());
                 movimentacao.setValor(dto.getValorTotal());
                 movimentacao.setDebitoCreditoMovimentacaoBancaria(0); // 0 = Crédito (recebimento)

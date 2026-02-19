@@ -1,6 +1,7 @@
 package com.sw.tse.api.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,7 +20,7 @@ public class ProcessarPagamentoAprovadoTseDto {
     private Long idContratoTse;
     private Long idPessoaTse;
     private Long idUsuarioLogado; // ID do usuário que fez o pagamento (vem do JWT)
-    
+
     // Dados da Transação
     private String idTransacao; // IdPedido da transacaoPagamento
     private String paymentId; // ID retornado pela GetNet (somente GetNet)
@@ -36,21 +37,25 @@ public class ProcessarPagamentoAprovadoTseDto {
     private String nomeImpressoCartao;
     private String adquirente; // GETNET ou REDE
     private Integer idBandeira; // ID da bandeira do cartão (para buscar BandeiraCartao)
-    
+
     // Dados completos do cartão (serão criptografados ao salvar)
     private String numeroCartao; // Número completo do cartão
     private String codigoSegurancaCartao; // CVV
     private String mesValidadeCartao; // Mês de validade
     private String anoValidadeCartao; // Ano de validade
-    
+
     // Conta de Movimentação Bancária do Gateway
     private Long idContaMovimentacaoBancaria; // ID da conta de movimentação configurada no gateway
-    
+
     // Dados PIX (para preencher na conta financeira)
     private String pixCopiaECola; // Código PIX copia e cola
     private LocalDateTime dataGeracaoPix; // Data/hora de geração do QR Code PIX
-    
-    // Contas Financeiras Selecionadas (cada uma com seu juros e multa calculados em tela)
+
+    // Lista de feriados para cálculo do próximo dia útil de compensação
+    private List<LocalDate> feriados;
+
+    // Contas Financeiras Selecionadas (cada uma com seu juros e multa calculados em
+    // tela)
+    // tela)
     private List<ContaFinanceiraParaPagamentoDto> contasFinanceiras;
 }
-

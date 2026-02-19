@@ -1,12 +1,12 @@
 package com.sw.tse.api.controller;
 
+import com.sw.tse.core.context.FeriadosContext;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.sw.tse.core.context.FeriadosContext;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -26,7 +26,9 @@ import com.sw.tse.api.dto.BandeiraAceitaDto;
 import com.sw.tse.api.dto.CartaoParaPagamentoDto;
 import com.sw.tse.api.dto.CartaoVinculadoResponseDto;
 import com.sw.tse.api.dto.ContaFinanceiraClienteDto;
+import com.sw.tse.api.dto.ContasFinanceirasRequestDto;
 import com.sw.tse.api.dto.DadosPessoaDto;
+import com.sw.tse.api.dto.OperadorSistemaRequestDto;
 import com.sw.tse.api.dto.PaginatedResponseDto;
 import com.sw.tse.api.dto.ReservaResumoResponse;
 import com.sw.tse.api.dto.ReservaSemanaResponse;
@@ -57,6 +59,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/painelcliente")
 @RequiredArgsConstructor
@@ -304,48 +307,42 @@ public class PainelClienteController {
 
         // ==================== ENDPOINTS DE CONTAS FINANCEIRAS ====================
 
-        @Operation(summary = "Listar contas financeiras do cliente", description = "Lista todas as contas financeiras do cliente com filtros e paginação opcionais, excluindo contas com tipo histórico RENEGOCIADA, EXCLUIDO ou CANCELADO")
+        @Operation(summary = "Listar contas financeiras do cliente", description = "Listar contas financeiras do cliente com filtros e paginação opcionais")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Contas financeiras listadas com sucesso", content = @Content(schema = @Schema(implementation = PaginatedResponseDto.class))),
                         @ApiResponse(responseCode = "400", description = "Dados inválidos", content = @Content),
                         @ApiResponse(responseCode = "500", description = "Erro interno do servidor", content = @Content)
         })
-        @GetMapping("/contasfinanceiras")
+        @PostMapping("/contasfinanceiras")
         public ResponseEntity<PaginatedResponseDto<ContaFinanceiraClienteDto>> listarContasFinanceiras(
-                        @Parameter(description = "Data inicial de vencimento (formato: yyyy-MM-dd)", required = false) @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate vencimentoInicial,
-
-                        @Parameter(description = "Data final de vencimento (formato: yyyy-MM-dd)", required = false) @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate vencimentoFinal,
-
-                        @Parameter(description = "Status da conta: B (Paga), P (Em aberto), V (Vencida)", required = false) @RequestParam(required = false) String status,
-
-                        @Parameter(description = "ID da empresa para filtrar contas", required = false) @RequestParam(required = false) Long empresaId,
-
-                        @Parameter(description = "Lista de feriados (formato yyyy-MM-dd) para cálculo de juros. Enviada pelo chamador (ex: Portal) para que o TSE não dependa da API do Portal.", required = false) @RequestParam(required = false) List<LocalDate> feriados,
-
-                        @Parameter(description = "Número da página (inicia em 1)", required = false) @RequestParam(required = false, defaultValue = "1") Integer numeroDaPagina,
-
-                        @Parameter(description = "Quantidade de registros por página", required = false) @RequestParam(required = false, defaultValue = "30") Integer quantidadeRegistrosRetornar) {
+                        @RequestBody ContasFinanceirasRequestDto request) {
 
                 try {
-                FeriadosContext.setFeriados(feriados != null ? feriados : Collections.emptyList());
+                        log.info("Recebida requisição de listagem de contas financeiras. Vencimento: {} até {}, Status: {}, Empresa: {}, Feriados: {}",
+                                        request.getVencimentoInicial(), request.getVencimentoFinal(),
+                                        request.getStatus(), request.getEmpresaId(),
+                                        request.getFeriados() != null ? request.getFeriados().size() : 0);
 
-                var resultado = contaFinanceiraService.buscarContasClienteDtoComPaginacao(
-                                vencimentoInicial,
-                                vencimentoFinal,
-                                status,
-                                empresaId,
-                                numeroDaPagina,
-                                quantidadeRegistrosRetornar);
+                        FeriadosContext.setFeriados(request.getFeriados() != null ? request.getFeriados()
+                                        : Collections.emptyList());
 
-                PaginatedResponseDto<ContaFinanceiraClienteDto> responseApi = new PaginatedResponseDto<>(
-                                HttpStatus.OK.value(),
-                                true,
-                                resultado.getContas(),
-                                "Contas financeiras listadas com sucesso",
-                                resultado.getPageNumber(),
-                                resultado.getLastPageNumber());
+                        var resultado = contaFinanceiraService.buscarContasClienteDtoComPaginacao(
+                                        request.getVencimentoInicial(),
+                                        request.getVencimentoFinal(),
+                                        request.getStatus(),
+                                        request.getEmpresaId(),
+                                        request.getNumeroDaPagina(),
+                                        request.getQuantidadeRegistrosRetornar());
 
-                return ResponseEntity.ok(responseApi);
+                        PaginatedResponseDto<ContaFinanceiraClienteDto> responseApi = new PaginatedResponseDto<>(
+                                        HttpStatus.OK.value(),
+                                        true,
+                                        resultado.getContas(),
+                                        "Contas financeiras listadas com sucesso",
+                                        resultado.getPageNumber(),
+                                        resultado.getLastPageNumber());
+
+                        return ResponseEntity.ok(responseApi);
                 } finally {
                         FeriadosContext.clear();
                 }

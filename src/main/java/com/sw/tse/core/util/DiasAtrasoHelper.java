@@ -11,13 +11,16 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Helper para cálculo de dias de atraso considerando o primeiro dia útil.
- * O primeiro dia útil (excluindo sábado, domingo e feriados) é usado apenas como
+ * O primeiro dia útil (excluindo sábado, domingo e feriados) é usado apenas
+ * como
  * prazo de graça: se pago até o próximo dia útil, não há juros. Se não pago até
- * essa data, os dias de atraso são contados desde a data de vencimento original,
+ * essa data, os dias de atraso são contados desde a data de vencimento
+ * original,
  * incluindo fins de semana e feriados.
  *
  * Os feriados são obtidos do FeriadosContext, definido pelo chamador da API
- * (ex: Portal envia a lista ao chamar o TSE). Assim o TSE não depende da API do Portal.
+ * (ex: Portal envia a lista ao chamar o TSE). Assim o TSE não depende da API do
+ * Portal.
  */
 @Slf4j
 public class DiasAtrasoHelper {
@@ -25,24 +28,24 @@ public class DiasAtrasoHelper {
     /**
      * Calcula os dias de atraso para aplicação de juros.
      * O primeiro dia útil após o vencimento (excluindo sábado, domingo e feriados)
-     * é prazo de graça: se dataReferencia for antes ou igual ao primeiro dia útil, retorna 0.
-     * Caso contrário, conta todos os dias desde a data de vencimento até a data de referência
+     * é prazo de graça: se dataReferencia for antes ou igual ao primeiro dia útil,
+     * retorna 0.
+     * Caso contrário, conta todos os dias desde a data de vencimento até a data de
+     * referência
      * (incluindo fins de semana e feriados).
      * Os feriados vêm do FeriadosContext (enviados pelo chamador da API).
      *
      * @param dataVencimento data de vencimento da parcela
      * @param dataReferencia data de referência (geralmente hoje)
-     * @param cidadeNome (ignorado - mantido por compatibilidade de assinatura)
-     * @param cidadeUf (ignorado - mantido por compatibilidade de assinatura)
-     * @param estadoSigla (ignorado - mantido por compatibilidade de assinatura)
-     * @return número de dias de atraso para cálculo de juros (0 se pago até o primeiro dia útil)
+     * @param cidadeNome     (ignorado - mantido por compatibilidade de assinatura)
+     * @param cidadeUf       (ignorado - mantido por compatibilidade de assinatura)
+     * @param estadoSigla    (ignorado - mantido por compatibilidade de assinatura)
+     * @return número de dias de atraso para cálculo de juros (0 se pago até o
+     *         primeiro dia útil)
      */
     public static long obterDiasAtraso(
             LocalDate dataVencimento,
-            LocalDate dataReferencia,
-            String cidadeNome,
-            String cidadeUf,
-            String estadoSigla) {
+            LocalDate dataReferencia) {
 
         if (dataVencimento == null || dataReferencia == null) {
             return 0;
@@ -52,31 +55,38 @@ public class DiasAtrasoHelper {
             return 0;
         }
 
-        LocalDate primeiroDiaUtil = obterProximoDiaUtil(dataVencimento, cidadeNome, cidadeUf, estadoSigla);
+        LocalDate primeiroDiaUtil = obterProximoDiaUtil(dataVencimento);
         if (primeiroDiaUtil == null) {
             return fallbackDiasCorridos(dataVencimento, dataReferencia);
         }
 
         if (!dataReferencia.isAfter(primeiroDiaUtil)) {
+            log.info("Cálculo atraso [{}]: Referência {} está dentro do prazo de graça (até {}). Dias: 0",
+                    dataVencimento, dataReferencia, primeiroDiaUtil);
             return 0;
         }
 
         long dias = ChronoUnit.DAYS.between(dataVencimento, dataReferencia);
+        log.info("Cálculo atraso [{}]: Referência {} passou do prazo de graça ({}). Dias desde original: {}",
+                dataVencimento, dataReferencia, primeiroDiaUtil, dias);
         return Math.max(0, dias);
     }
 
     /**
-     * Retorna o próximo dia útil após a data informada (considerando sábado, domingo e feriados).
-     * Os feriados vêm do FeriadosContext. Se não houver feriados no contexto, usa fallback (dias corridos).
+     * Retorna o próximo dia útil após a data informada (considerando sábado,
+     * domingo e feriados).
+     * Os feriados vêm do FeriadosContext. Se não houver feriados no contexto, usa
+     * fallback (dias corridos).
      */
-    public static LocalDate obterProximoDiaUtil(LocalDate data, String cidadeNome, String cidadeUf, String estadoSigla) {
+    public static LocalDate obterProximoDiaUtil(LocalDate data) {
         Set<LocalDate> feriados = FeriadosContext.getFeriados();
 
         return obterProximoDiaUtilComFeriados(data, feriados);
     }
 
     /**
-     * Calcula o próximo dia útil considerando sábado, domingo e a lista de feriados.
+     * Calcula o próximo dia útil considerando sábado, domingo e a lista de
+     * feriados.
      */
     private static LocalDate obterProximoDiaUtilComFeriados(LocalDate data, Set<LocalDate> feriados) {
         LocalDate candidata = data;

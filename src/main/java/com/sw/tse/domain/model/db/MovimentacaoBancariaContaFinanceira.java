@@ -27,8 +27,8 @@ import lombok.Setter;
 public class MovimentacaoBancariaContaFinanceira {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seqmovimentacaobancariacontafinanceira")
-    @SequenceGenerator(name = "seqmovimentacaobancariacontafinanceira", sequenceName = "seqmovimentacaobancariacontafinanceira", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seqmovimentacaobancaria")
+    @SequenceGenerator(name = "seqmovimentacaobancaria", sequenceName = "seqmovimentacaobancaria", allocationSize = 1)
     @Column(name = "idmovimentacaobancariacontafinanceira")
     private Long id;
 
@@ -73,4 +73,3 @@ public class MovimentacaoBancariaContaFinanceira {
     @JoinColumn(name = "idtenant")
     private Empresa empresa;
 }
-

@@ -64,4 +64,3 @@ public class NegociacaoContaFinanceira {
     @Column(name = "contafinanceirajson", columnDefinition = "TEXT")
     private String contaFinanceiraJson;
 }
-

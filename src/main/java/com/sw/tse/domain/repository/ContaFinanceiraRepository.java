@@ -71,7 +71,7 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
             AND cf.origemConta.idTipoOrigemContaFinanceira <> 15
             AND cf.tipoHistorico = 'ATIVO'
             AND cf.dataVencimento <= CURRENT_DATE - 2 DAY
-            AND cf.destinoContaFinanceira = 'R'
+            AND cf.destino = 'R'
             AND tocf.sysId IN ('PARC','ENTRADA','INTERMEDIARIA','MULTARESCIS')
             AND (
               (cf.meioPagamento.id NOT IN (1, 3, 8, 11))
@@ -97,7 +97,7 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
             AND cf.origemConta.idTipoOrigemContaFinanceira = 15
             AND COALESCE(cf.dataVencimentoOriginal, cf.dataVencimento) < CURRENT_DATE - 1 DAY
             AND cf.meioPagamento.id NOT IN (3, 8, 11)
-            AND cf.destinoContaFinanceira = 'R'
+            AND cf.destino = 'R'
             AND cf.tipoHistorico = 'ATIVO'
             AND cf.valorParcela > 0
       """)
@@ -128,7 +128,7 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
   /**
    * Busca contas financeiras por destino
    */
-  List<ContaFinanceira> findByDestinoContaFinanceira(String destino);
+  List<ContaFinanceira> findByDestino(String destino);
 
   /**
    * Busca contas financeiras por empresa

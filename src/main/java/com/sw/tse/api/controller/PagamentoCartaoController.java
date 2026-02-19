@@ -13,11 +13,13 @@ import com.sw.tse.domain.expection.ContaFinanceiraNaoEncontradaException;
 import com.sw.tse.domain.expection.OperadorSistemaNotFoundException;
 import com.sw.tse.domain.expection.PagamentoCartaoException;
 import com.sw.tse.domain.service.interfaces.PagamentoCartaoService;
+import com.sw.tse.core.context.FeriadosContext;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import java.util.Collections;
 
 @Slf4j
 @RestController
@@ -25,20 +27,20 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Tag(name = "Pagamento Cartão", description = "Endpoints para processamento de pagamentos com cartão")
 public class PagamentoCartaoController {
-    
+
     private final PagamentoCartaoService pagamentoCartaoService;
-    
+
     @PostMapping("/processar-aprovado")
-    @Operation(summary = "Processar pagamento aprovado", 
-               description = "Processa um pagamento aprovado no portal, criando transação, conta consolidada e negociação no TSE")
+    @Operation(summary = "Processar pagamento aprovado", description = "Processa um pagamento aprovado no portal, criando transação, conta consolidada e negociação no TSE")
     public ResponseEntity<String> processarPagamentoAprovado(
             @RequestHeader("Authorization") String token,
             @RequestBody ProcessarPagamentoAprovadoTseDto dto) {
-        
+
         log.info("Recebida requisição para processar pagamento aprovado. IdTransacao: {}, Valor: {}, Contas: {}",
                 dto.getIdTransacao(), dto.getValorTotal(), dto.getContasFinanceiras().size());
-        
+
         try {
+            FeriadosContext.setFeriados(dto.getFeriados() != null ? dto.getFeriados() : Collections.emptyList());
             pagamentoCartaoService.processarPagamentoAprovado(dto);
             log.info("Pagamento processado com sucesso no TSE Communication");
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -59,7 +61,8 @@ public class PagamentoCartaoController {
             log.error("Erro inesperado ao processar pagamento aprovado", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro interno ao processar pagamento: " + e.getMessage());
+        } finally {
+            FeriadosContext.clear();
         }
     }
 }
-
