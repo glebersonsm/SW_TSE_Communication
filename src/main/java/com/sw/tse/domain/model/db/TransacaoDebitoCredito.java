@@ -105,41 +105,40 @@ public class TransacaoDebitoCredito {
 
     @Column(name = "gatewaypagamento", length = 100)
     private String gatewayPagamento;
-    
+
     // Campos adicionais
     @Column(name = "datavencimento", nullable = false)
     private LocalDateTime dataVencimento;
-    
+
     @Column(name = "idbandeirasaceitas") // Nullable - não temos essa informação do portal
     private Integer idBandeirasAceitas;
-    
+
     @Column(name = "idbandeiracartao") // Nullable - não temos essa informação do portal
     private Integer idBandeiraCartao;
-    
+
     @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "numerocartao", nullable = false, length = 250)
     private String numeroCartao;
-    
+
     @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "codsegurancacartao", nullable = false, length = 250)
     private String codSegurancaCartao;
-    
+
     @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "mesvalidadecartao", nullable = false, length = 250)
     private String mesValidadeCartao;
-    
+
     @Convert(converter = GenericCryptoStringConverter.class)
     @Column(name = "anovalidadecartao", nullable = false, length = 250)
     private String anoValidadeCartao;
-    
+
     @Column(name = "estornado", nullable = false)
     private Boolean estornado = false;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idcontrato")
     private Contrato contrato;
-    
+
     @Column(name = "nomepessoa", length = 250)
     private String nomePessoa;
 }
-

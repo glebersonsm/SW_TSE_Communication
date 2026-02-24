@@ -4,23 +4,23 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
     <!-- Definir o diretório onde os arquivos de log serão salvos -->
-    <!-- Usa a propriedade do Spring Boot se disponível, senão usa "logs" como padrão -->
-    <!-- O caminho relativo será resolvido em relação ao diretório de trabalho (onde o JAR está sendo executado) -->
     <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs"/>
 
 	<!-- Appender para arquivo com rotação (RollingFileAppender) -->
 	<!-- RollingFileAppender garante rotação automática e melhor gerenciamento de logs -->
 	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+	    <!-- Nome do arquivo atual: tse-communication.log -->
+	    <file>${LOG_PATH}/tse-communication.log</file>
 	    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-	        <!-- Arquivo de log diário com padrão: yyyy-MM-dd.log -->
-	        <fileNamePattern>${LOG_PATH}/%d{yyyy-MM-dd}.log</fileNamePattern>
-	        <!-- Manter logs por 15 dias -->
-	        <maxHistory>15</maxHistory>
+	        <!-- Arquivo de log diário com padrão: tse-communication_yyyyMMdd.log -->
+	        <fileNamePattern>${LOG_PATH}/tse-communication_%d{yyyyMMdd}.log</fileNamePattern>
+	        <!-- Manter logs por 30 dias -->
+	        <maxHistory>30</maxHistory>
 	        <!-- Tamanho máximo total dos arquivos de log antes de remover os mais antigos -->
 	        <totalSizeCap>1GB</totalSizeCap>
 	    </rollingPolicy>
 	    <encoder>
-	        <pattern>%date{yyyy-MM-dd HH:mm:ss.SSS} %level - %message%n%xException</pattern>
+	        <pattern>%date{yyyy-MM-dd HH:mm:ss.SSS} [%level] %logger{36} - %message%n%xException</pattern>
 	        <charset>UTF-8</charset>
 	    </encoder>
 	</appender>

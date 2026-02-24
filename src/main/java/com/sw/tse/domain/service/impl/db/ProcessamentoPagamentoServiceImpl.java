@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import jakarta.persistence.EntityManager;
@@ -21,10 +20,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sw.tse.api.dto.ContaFinanceiraParaPagamentoDto;
+import com.sw.tse.api.dto.ProcessamentoPagamentoResponseDto;
 import com.sw.tse.api.dto.ProcessarPagamentoAprovadoTseDto;
 import com.sw.tse.domain.expection.ContaFinanceiraNaoEncontradaException;
 import com.sw.tse.domain.expection.OperadorSistemaNotFoundException;
+import com.sw.tse.domain.expection.BandeiraCartaoNaoEncontradaException;
 import com.sw.tse.domain.expection.PagamentoCartaoException;
+import com.sw.tse.domain.expection.PagamentoTseBusinessException;
+import com.sw.tse.domain.expection.RegraDeNegocioException;
 import com.sw.tse.domain.model.db.BandeiraCartao;
 import com.sw.tse.domain.model.db.BandeirasAceitas;
 import com.sw.tse.domain.model.db.ContaFinanceira;
@@ -115,13 +118,32 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
 
         @Override
         @Transactional
-        public void processarPagamentoAprovado(ProcessarPagamentoAprovadoTseDto dto) {
-                log.info("Processando pagamento aprovado para empresa {} com {} contas financeiras",
-                                dto.getIdEmpresaTse(), dto.getContasFinanceiras().size());
+        public ProcessamentoPagamentoResponseDto processarPagamentoAprovado(ProcessarPagamentoAprovadoTseDto dto) {
+                log.info("Processando pagamento aprovado para empresa {} com {} contas financeiras. IdTransacao: {}",
+                                dto.getIdEmpresaTse(), dto.getContasFinanceiras().size(), dto.getIdTransacao());
 
                 try {
-                        // 1. Buscar usuário responsável: JWT -> DTO -> idPessoaTse (job) -> operador
-                        // padrão
+                        // 0. Idempotência: Verificar se já existe transação ou negociação para este
+                        // MerchantOrderId (idTransacao)
+                        if (dto.getIdTransacao() != null && !dto.getIdTransacao().startsWith("TEMP_")) {
+                                List<TransacaoDebitoCredito> transacoesExistentes = transacaoRepository
+                                                .findByMerchantOrderId(dto.getIdTransacao());
+                                if (!transacoesExistentes.isEmpty()) {
+                                        log.warn("Transação já processada anteriormente para IdTransacao: {}. NSU: {}",
+                                                        dto.getIdTransacao(), transacoesExistentes.get(0).getNsu());
+
+                                        // Buscar negociação vinculada (se houver) para retornar o ID
+                                        // Como a transação existe, o sistema pode ter caído antes de marcar como
+                                        // sucesso no Portal.
+                                        // Vamos retornar sucesso para o Portal completar o ciclo.
+                                        return ProcessamentoPagamentoResponseDto.builder()
+                                                        .mensagem("Pagamento já processado anteriormente (Idempotência)")
+                                                        .status("SUCESSO_EXISTENTE")
+                                                        .build();
+                                }
+                        }
+
+                        // 1. Buscar usuário responsável...
                         Long idUsuario = JwtTokenUtil.getIdUsuarioCliente();
                         if (idUsuario == null || idUsuario == 0) {
                                 idUsuario = dto.getIdUsuarioLogado();
@@ -165,10 +187,27 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                                 throw new ContaFinanceiraNaoEncontradaException(idsContas);
                         }
 
-                        // Inicializar relacionamentos lazy necessários para cálculo de juros e multa
-                        inicializarRelacionamentosParaCalculo(contasOriginais);
-
                         log.info("Encontradas {} contas originais para processar", contasOriginais.size());
+
+                        // Validação de status das contas (Bloqueio de processamento automático)
+                        for (ContaFinanceira conta : contasOriginais) {
+                                if (conta.getDataCancelamento() != null) {
+                                        throw new PagamentoTseBusinessException(String.format(
+                                                        "ID: %d - Conta cancelada no sistema de origem (TSE). É necessária atuação manual de um operador.",
+                                                        conta.getId()));
+                                }
+                                if (conta.isPagoCalculado()) {
+                                        throw new PagamentoTseBusinessException(String.format(
+                                                        "ID: %d - Conta já se encontra baixada, paga ou em processo de quitação no sistema de origem (TSE).",
+                                                        conta.getId()));
+                                }
+                                if (Boolean.TRUE.equals(conta.getRecorrenciaAutorizada())) {
+                                        throw new PagamentoTseBusinessException(String.format(
+                                                        "ID: %d - Conta possui recorrência autorizada configurada. Não é permitido o processamento via portal sem intervenção.",
+                                                        conta.getId()));
+                                }
+                        }
+
                         log.info("IdBandeira recebido no DTO: {}", dto.getIdBandeira());
                         log.info("Meio de pagamento recebido: {}", dto.getMeioPagamento());
 
@@ -195,16 +234,18 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                                         // REGRA: Usar OBRIGATORIAMENTE a conta do GatewayPagamentoConfiguracao (vem do
                                         // DTO)
                                         if (dto.getIdContaMovimentacaoBancaria() == null) {
-                                                throw new PagamentoCartaoException(
+                                                String nomeGatewayMsg = extrairNomeGateway(dto.getAdquirente());
+                                                throw new BandeiraCartaoNaoEncontradaException(
                                                                 String.format(
-                                                                                "GatewayPagamentoConfiguracao sem idContaMovimentacaoBancariaTse configurado. "
-                                                                                                +
-                                                                                                "É obrigatório configurar a conta de movimentação bancária no gateway de pagamento. "
-                                                                                                +
-                                                                                                "Tenant: %d, Gateway: %s",
+                                                                                "Configuração de bandeira de cartão não encontrada no TSE para esta empresa. "
+                                                                                                + "Cadastre um registro em Bandeiras de Cartão no TSE com: "
+                                                                                                + "Empresa=%d, Bandeira ID=%d, Operação='CREDAV', Status=Ativo, "
+                                                                                                + "e Nome do Estabelecimento contendo '%s'. "
+                                                                                                + "Consulte as empresas que funcionam para verificar o padrão de configuração.",
                                                                                 contasOriginais.get(0).getEmpresa()
                                                                                                 .getId(),
-                                                                                dto.getAdquirente()));
+                                                                                dto.getIdBandeira(),
+                                                                                nomeGatewayMsg));
                                         }
 
                                         log.info("Usando conta de movimentação do GatewayPagamentoConfiguracao: ID {}",
@@ -259,9 +300,10 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                                 // 5.1 Salvar snapshot JSON ANTES da alteração
                                 String jsonContaOriginal = serializarContaOriginal(contaOriginal);
 
-                                // 5.2 Criar data de cadastro sem nanosegundos (regra TSE)
-                                LocalDateTime dataCadastroNegociacao = LocalDateTime.now()
-                                                .truncatedTo(ChronoUnit.SECONDS);
+                                // 5.2 Criar data de cadastro (Usar data enviada ou agora)
+                                LocalDateTime dataCadastroNegociacao = dto.getDataPagamento() != null
+                                                ? dto.getDataPagamento().truncatedTo(ChronoUnit.SECONDS)
+                                                : LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
 
                                 // 5.3 Criar Negociação
                                 Negociacao negociacao = criarNegociacao(contaOriginal.getEmpresa(), responsavel,
@@ -310,6 +352,12 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                                 log.info("Processamento de conta única finalizado. TransacaoId: {}, NegociacaoId: {}",
                                                 dto.getIdTransacao(), negociacao.getId());
 
+                                return ProcessamentoPagamentoResponseDto.builder()
+                                                .idNegociacao(negociacao.getId())
+                                                .mensagem("Pagamento processado com sucesso (Conta Única)")
+                                                .status("SUCESSO")
+                                                .build();
+
                         } else {
                                 // === FLUXO PADRÃO: CONSOLIDAÇÃO (Cria Nova, Cancela Originais) ===
 
@@ -330,10 +378,11 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                                         criarMovimentacaoBancariaPix(contaNova, dto, operadorPadrao);
                                 }
 
-                                // 6. Criar data de cadastro sem nanosegundos (regra TSE)
+                                // 6. Criar data de cadastro (Usar data enviada ou agora)
                                 // Mesma data para Negociacao e todas as NegociacaoContaFinanceira
-                                LocalDateTime dataCadastroNegociacao = LocalDateTime.now()
-                                                .truncatedTo(ChronoUnit.SECONDS);
+                                LocalDateTime dataCadastroNegociacao = dto.getDataPagamento() != null
+                                                ? dto.getDataPagamento().truncatedTo(ChronoUnit.SECONDS)
+                                                : LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
 
                                 // 7. Criar Negociação
                                 Negociacao negociacao = criarNegociacao(contasOriginais.get(0).getEmpresa(),
@@ -382,10 +431,18 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                                                 "Pagamento processado com sucesso. TransacaoId: {}, NSU: {}, NegociacaoId: {}, Contas vinculadas: {}",
                                                 dto.getIdTransacao(), dto.getNsu(), negociacao.getId(),
                                                 contasOriginais.size() + 1);
+
+                                return ProcessamentoPagamentoResponseDto.builder()
+                                                .idNegociacao(negociacao.getId())
+                                                .mensagem("Pagamento processado com sucesso (Consolidação)")
+                                                .status("SUCESSO")
+                                                .build();
                         }
 
-                } catch (OperadorSistemaNotFoundException | ContaFinanceiraNaoEncontradaException e) {
-                        // Re-lançar exceptions específicas sem wrapper
+                } catch (OperadorSistemaNotFoundException | ContaFinanceiraNaoEncontradaException
+                                | RegraDeNegocioException e) {
+                        // Re-lançar exceptions específicas sem wrapper para manter a mensagem limpa no
+                        // portal
                         throw e;
                 } catch (Exception e) {
                         log.error("Erro ao processar pagamento aprovado", e);
@@ -435,9 +492,9 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                                 .orElse(null);
 
                 if (bandeira == null) {
-                        log.warn("BandeiraCartao não encontrada para tenant: {}, idBandeira: {}, nome gateway: '{}'. " +
-                                        "Verifique se existe registro ativo em bandeiracartao com operacao='CREDAV' e nomeestabelecimento contendo '{}'",
-                                        idTenant, idBandeira, nomeGateway, nomeGateway);
+                        log.warn("BandeiraCartao não encontrada para tenant: {}, idBandeira: {}, nome gateway: '{}'. "
+                                        + "Retornando null — o chamador decidirá o fallback ou lançará exceção.",
+                                        idTenant, idBandeira, nomeGateway);
                 } else {
                         log.info("BandeiraCartao encontrada: ID {}, NomeEstabelecimento contém '{}', TaxaOperacao: {}",
                                         bandeira.getIdBandeiraCartao(), nomeGateway, bandeira.getTaxaOperacao());
@@ -490,12 +547,19 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                 transacao.setIdBandeirasAceitas(bandeiraCartao.getIdBandeirasAceitas());
                 transacao.setIdBandeiraCartao(bandeiraCartao.getIdBandeiraCartao());
 
-                // Dados do cartão completos (serão criptografados pelo @Convert)
-                // Vem do frontend (cartão digitado ou vinculado) → Backend Portal → TSE
-                transacao.setNumeroCartao(dto.getNumeroCartao());
-                transacao.setCodSegurancaCartao(dto.getCodigoSegurancaCartao());
-                transacao.setMesValidadeCartao(dto.getMesValidadeCartao());
-                transacao.setAnoValidadeCartao(dto.getAnoValidadeCartao());
+                // No reprocessamento, dados sensíveis do cartão não são enviados por segurança.
+                // Usa mascarado para o número e "N/A" para CVV/validade (satisfaz NOT NULL do
+                // banco).
+                String numeroCartaoParaSalvar = dto.getNumeroCartao() != null
+                                ? dto.getNumeroCartao()
+                                : dto.getNumeroCartaoMascarado();
+                transacao.setNumeroCartao(numeroCartaoParaSalvar);
+                transacao.setCodSegurancaCartao(
+                                dto.getCodigoSegurancaCartao() != null ? dto.getCodigoSegurancaCartao() : "N/A");
+                transacao.setMesValidadeCartao(
+                                dto.getMesValidadeCartao() != null ? dto.getMesValidadeCartao() : "N/A");
+                transacao.setAnoValidadeCartao(
+                                dto.getAnoValidadeCartao() != null ? dto.getAnoValidadeCartao() : "N/A");
                 transacao.setNomeImpressoCartao(dto.getNomeImpressoCartao());
 
                 // Número do cartão mascarado já vem formatado do backend
