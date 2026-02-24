@@ -23,6 +23,7 @@ public class ProcessarPagamentoAprovadoTseDto {
 
     // Dados da Transação
     private String idTransacao; // IdPedido da transacaoPagamento
+    private LocalDateTime dataPagamento;
     private String paymentId; // ID retornado pela GetNet (somente GetNet)
     private String nsu;
     private String tid;
