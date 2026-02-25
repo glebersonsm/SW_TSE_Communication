@@ -5,6 +5,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.sw.tse.api.jackson.FlexibleLocalDateTimeDeserializer;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,7 +26,10 @@ public class ProcessarPagamentoAprovadoTseDto {
 
     // Dados da Transação
     private String idTransacao; // IdPedido da transacaoPagamento
+
+    @JsonDeserialize(using = FlexibleLocalDateTimeDeserializer.class)
     private LocalDateTime dataPagamento;
+
     private String paymentId; // ID retornado pela GetNet (somente GetNet)
     private String nsu;
     private String tid;
@@ -50,6 +56,7 @@ public class ProcessarPagamentoAprovadoTseDto {
 
     // Dados PIX (para preencher na conta financeira)
     private String pixCopiaECola; // Código PIX copia e cola
+    @JsonDeserialize(using = FlexibleLocalDateTimeDeserializer.class)
     private LocalDateTime dataGeracaoPix; // Data/hora de geração do QR Code PIX
 
     // Lista de feriados para cálculo do próximo dia útil de compensação
@@ -60,3 +67,4 @@ public class ProcessarPagamentoAprovadoTseDto {
     // tela)
     private List<ContaFinanceiraParaPagamentoDto> contasFinanceiras;
 }
+

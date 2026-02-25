@@ -386,6 +386,14 @@ public class ContaFinanceira {
         return dataBase != null && dataBase.toLocalDate().isBefore(LocalDate.now());
     }
 
+    public Integer calcularDiasAtraso() {
+        if (!isVencida()) {
+            return 0;
+        }
+        long diasAtraso = DiasAtrasoHelper.obterDiasAtraso(getDataBaseVencimento().toLocalDate(), LocalDate.now());
+        return diasAtraso > 0 ? (int) diasAtraso : 0;
+    }
+
     /**
      * Verifica se a conta deve ter juros e multas calculados.
      * Retorna true se a conta está vencida E não está paga.
@@ -496,15 +504,21 @@ public class ContaFinanceira {
                 return BigDecimal.ZERO;
             }
 
-            // CarteiraBoleto: valorJurosDeMora é valor fixo em R$ por dia (não percentual)
-            BigDecimal valorJurosTotal = this.carteiraBoleto.getValorJurosDeMora()
+            // CORREÇÃO: Passando a tratar valorJurosDeMora como PERCENTUAL mensal (%)
+            // Assim como no ParametroFinanceiro, a taxa diária = % / 30 / 100
+            BigDecimal taxaDiaria = this.carteiraBoleto.getValorJurosDeMora()
+                    .divide(BigDecimal.valueOf(30), 6, RoundingMode.HALF_UP)
+                    .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+
+            BigDecimal valorJurosTotal = valorBase.multiply(taxaDiaria)
                     .multiply(BigDecimal.valueOf(diasAtraso));
 
             return valorJurosTotal.setScale(2, RoundingMode.HALF_UP);
 
         } else if (this.empresa != null) {
             ParametroFinanceiro parametro = ParametroFinanceiroHelper.buscarPorEmpresa(this.empresa.getId());
-            if (parametro != null && parametro.getPercentualJuro() != null) {
+            if (parametro != null && parametro.getPercentualJuro() != null &&
+                    parametro.getPercentualJuro().compareTo(BigDecimal.ZERO) > 0) {
                 // ParametroFinanceiro: percentualJuro é % mensal; taxa diária = % / 30 / 100
                 BigDecimal taxaDiaria = parametro.getPercentualJuro()
                         .divide(BigDecimal.valueOf(30), 6, RoundingMode.HALF_UP)
@@ -529,16 +543,17 @@ public class ContaFinanceira {
 
         BigDecimal valorBase = calcularValorTotal();
 
-        // Verifica se tem CarteiraBoleto com valor fixo por dia
+        // Verifica se tem CarteiraBoleto
         if (this.carteiraBoleto != null && this.carteiraBoleto.getValorJurosDeMora() != null) {
-            // Carteira usa valor fixo por dia, então juros de 30 dias
-            return this.carteiraBoleto.getValorJurosDeMora()
-                    .multiply(BigDecimal.valueOf(30));
+            // CORREÇÃO: Carteira possui percentual de juros ao mês
+            return valorBase.multiply(this.carteiraBoleto.getValorJurosDeMora())
+                    .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
         }
         // Se não tem carteira, usa o percentual do ParametroFinanceiro
         else if (this.empresa != null) {
             ParametroFinanceiro parametro = ParametroFinanceiroHelper.buscarPorEmpresa(this.empresa.getId());
-            if (parametro != null && parametro.getPercentualJuro() != null) {
+            if (parametro != null && parametro.getPercentualJuro() != null
+                    && parametro.getPercentualJuro().compareTo(BigDecimal.ZERO) > 0) {
                 // Percentual mensal aplicado sobre o valor base
                 return valorBase.multiply(parametro.getPercentualJuro())
                         .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
@@ -580,8 +595,8 @@ public class ContaFinanceira {
      */
     public BigDecimal getPercentualJuroMensal() {
         if (this.carteiraBoleto != null && this.carteiraBoleto.getValorJurosDeMora() != null) {
-            // CarteiraBoleto usa valor fixo por dia, não tem percentual mensal
-            return null;
+            // CORREÇÃO: CarteiraBoleto agora usa percentual mensal (%)
+            return this.carteiraBoleto.getValorJurosDeMora();
         } else if (this.empresa != null) {
             ParametroFinanceiro parametro = ParametroFinanceiroHelper.buscarPorEmpresa(this.empresa.getId());
             if (parametro != null) {
@@ -596,8 +611,9 @@ public class ContaFinanceira {
      */
     public BigDecimal getPercentualMultaCalculado() {
         if (this.carteiraBoleto != null && this.carteiraBoleto.getValorMulta() != null) {
-            // CarteiraBoleto usa valor fixo, não tem percentual
-            return null;
+            // CarteiraBoleto (A multa já estava sendo usada como %, só vamos adaptar o
+            // retorno visual)
+            return this.carteiraBoleto.getValorMulta();
         } else if (this.empresa != null) {
             ParametroFinanceiro parametro = ParametroFinanceiroHelper.buscarPorEmpresa(this.empresa.getId());
             if (parametro != null) {
@@ -618,9 +634,13 @@ public class ContaFinanceira {
 
         BigDecimal valorBase = calcularValorTotal();
 
-        // Verifica se tem CarteiraBoleto com valor fixo por dia
+        // Verifica se tem CarteiraBoleto
         if (this.carteiraBoleto != null && this.carteiraBoleto.getValorJurosDeMora() != null) {
-            return this.carteiraBoleto.getValorJurosDeMora();
+            // CORREÇÃO: Aplica a taxa % / 30 / 100
+            BigDecimal taxaDiaria = this.carteiraBoleto.getValorJurosDeMora()
+                    .divide(BigDecimal.valueOf(30), 6, RoundingMode.HALF_UP)
+                    .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+            return valorBase.multiply(taxaDiaria);
         }
         // Se não tem carteira, usa o percentual do ParametroFinanceiro
         else if (this.empresa != null) {
@@ -728,41 +748,6 @@ public class ContaFinanceira {
         if (pctMulta != null) {
             sb.append("Percentual multa: ").append(df.format(pctMulta)).append("%\n");
         }
-        // The following lines are inserted as per user instruction.
-        // Note: 'idCliente', 'TokenJwtInvalidoException', 'log', 'vencimentoInicial',
-        // 'vencimentoFinal', 'status', 'empresaId'
-        // are not defined in this context and will cause compilation errors.
-        // As per instructions, the change is made faithfully.
-        // If this is not the intended behavior, please provide a corrected snippet or
-        // context.
-        // For the file to be syntactically correct, these variables would need to be
-        // declared or imported.
-        // Assuming this is a placeholder or part of a larger context not provided.
-        // To avoid compilation errors, these lines would typically be commented out or
-        // removed if not applicable.
-        // However, following the instruction to "make the change faithfully", they are
-        // inserted as provided.
-        // This will result in a syntactically incorrect file.
-        // If the intention was to add logging related to the *calculation* of multa,
-        // the content of the log message
-        // would need to be different and relevant variables would need to be in scope.
-        // For example, a log for multa calculation might look like:
-        // log.debug("Calculando multa. Valor base: {}, Percentual multa: {}",
-        // valorBase, pctMulta);
-        // But the instruction was to insert the provided snippet exactly.
-        // Therefore, inserting the snippet as is, which will lead to compilation
-        // errors.
-        // If the user wants a syntactically correct file, they must provide a snippet
-        // that is valid in this context.
-        // Given the constraint "Make sure to incorporate the change in a way so that
-        // the resulting file is syntactically correct",
-        // and the fact that the provided snippet *cannot* be syntactically correct in
-        // this context without further modifications
-        // (which would violate "without making any unrelated edits"), there is a
-        // conflict.
-        // I will insert the code as requested, but it will lead to a syntactically
-        // incorrect file.
-        // This is the only way to "make the change faithfully" with the provided
         sb.append("Valor multa: R$ ").append(df.format(multa)).append("\n\n");
 
         sb.append("--- TOTAL ---\n");
