@@ -194,6 +194,11 @@ public class ContaFinanceiraConverter {
             dto.setMemoriaCalculo(contaFinanceira.obterMemoriaCalculo());
         }
 
+        // Dias de atraso
+        // Usar sempre o cálculo de dias de atraso baseado em data de vencimento
+        // (o próprio método já retorna 0 quando não está vencida ou está em prazo de graça)
+        dto.setQuantidadeDiasAtraso(contaFinanceira.calcularDiasAtraso());
+
         return dto;
     }
 }
