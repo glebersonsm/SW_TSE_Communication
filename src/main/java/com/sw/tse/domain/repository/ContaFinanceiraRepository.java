@@ -6,7 +6,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -400,4 +402,30 @@ public interface ContaFinanceiraRepository extends JpaRepository<ContaFinanceira
       """)
   boolean contaPertenceAoCliente(@Param("idContaFinanceira") Long idContaFinanceira,
       @Param("idCliente") Long idCliente);
+
+  // ========== REPROCESSAMENTO / SINCRONIZAÇÃO ==========
+
+  /**
+   * Busca contas por lista de IDs com lock pessimista (PESSIMISTIC_WRITE).
+   * DEVE ser a PRIMEIRA operação dentro da transação de reprocessamento
+   * para evitar janela de corrida entre requests concorrentes.
+   */
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT cf FROM ContaFinanceira cf WHERE cf.id IN :ids")
+  List<ContaFinanceira> findByIdsComLock(@Param("ids") List<Long> ids);
+
+  /**
+   * Busca conta pelo txId do PIX dentro de um conjunto de IDs.
+   * Usado no Cenário 2.2 para localizar a conta consolidada/baixada pelo nosso
+   * fluxo.
+   */
+  @Query("SELECT cf FROM ContaFinanceira cf WHERE cf.txId = :txId AND cf.id IN :ids")
+  Optional<ContaFinanceira> findByTxIdAndIdsIn(
+      @Param("txId") String txId,
+      @Param("ids") List<Long> ids);
+
+  /**
+   * Busca conta consolidada de cartão pelo ID da transação.
+   */
+  Optional<ContaFinanceira> findByIdTransacaoCartaoCreditoDebito(Long idTransacao);
 }

@@ -208,6 +208,12 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                                 }
                         }
 
+                        // Mapear DTOs para acesso rápido por ID
+                        Map<Long, ContaFinanceiraParaPagamentoDto> mapaDtos = dto.getContasFinanceiras().stream()
+                                        .collect(Collectors.toMap(
+                                                        ContaFinanceiraParaPagamentoDto::getIdContaFinanceiraTse,
+                                                        c -> c));
+
                         log.info("IdBandeira recebido no DTO: {}", dto.getIdBandeira());
                         log.info("Meio de pagamento recebido: {}", dto.getMeioPagamento());
 
@@ -329,9 +335,14 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
 
                                 // 5.6 Atualizar conta original IN-PLACE
                                 OperadorSistema operadorPadrao = operadorSistemaService.operadorSistemaPadraoCadastro();
+
+                                // Buscar valores do DTO para esta conta
+                                ContaFinanceiraParaPagamentoDto contaDto = mapaDtos.get(contaOriginal.getId());
+
                                 atualizarContaExistente(
                                                 contaOriginal,
                                                 dto,
+                                                contaDto, // Passar DTO específico da conta
                                                 responsavel,
                                                 bandeiraCartao,
                                                 contaMovimentacao,
@@ -362,7 +373,8 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                                 // === FLUXO PADRÃO: CONSOLIDAÇÃO (Cria Nova, Cancela Originais) ===
 
                                 // 5. Criar conta consolidada (passa null para transacao se for PIX)
-                                ContaFinanceira contaNova = criarContaConsolidada(contasOriginais, transacao, dto,
+                                ContaFinanceira contaNova = criarContaConsolidada(contasOriginais, mapaDtos, transacao,
+                                                dto,
                                                 responsavel,
                                                 bandeiraCartao, isPix);
                                 contaFinanceiraRepository.save(contaNova);
@@ -420,7 +432,10 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                                         negociacaoContaFinanceiraRepository.save(ncfOriginal);
 
                                         // Cancelar conta usando método do Aggregate Root
-                                        contaOriginal.cancelar(responsavel, "Cancelada - Paga via Portal com Cartão");
+                                        String historicoCancelamento = isPix
+                                                        ? "Cancelada - Paga via Portal com PIX"
+                                                        : "Cancelada - Paga via Portal com Cartão";
+                                        contaOriginal.cancelar(responsavel, historicoCancelamento);
                                         contaFinanceiraRepository.save(contaOriginal);
 
                                         log.info("Conta {} vinculada à negociação e cancelada (JSON salvo)",
@@ -707,6 +722,7 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
         private void atualizarContaExistente(
                         ContaFinanceira conta,
                         ProcessarPagamentoAprovadoTseDto dto,
+                        ContaFinanceiraParaPagamentoDto contaDto,
                         OperadorSistema responsavel,
                         BandeiraCartao bandeiraCartao,
                         ContaMovimentacaoBancaria contaMovimentacaoBancaria,
@@ -725,10 +741,15 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                                         .orElse(conta.getMeioPagamento());
                 }
 
-                // Calcular juros totais cobrados na tela
-                BigDecimal valorJurosCobrado = conta.calcularJuros();
+                // PRIORIDADE: Juros e multas vindos do DTO (evita recálculo dinâmico que pode
+                // falhar)
+                BigDecimal valorJurosCobrado = (contaDto != null && contaDto.getValorJuros() != null)
+                                ? contaDto.getValorJuros()
+                                : conta.calcularJuros();
 
-                BigDecimal valorMultaCobrada = conta.calcularMulta();
+                BigDecimal valorMultaCobrada = (contaDto != null && contaDto.getValorMulta() != null)
+                                ? contaDto.getValorMulta()
+                                : conta.calcularMulta();
 
                 // Delegar atualização para a entidade (DDD)
                 conta.atualizarDadosPagamentoPortal(
@@ -753,6 +774,7 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
 
         private ContaFinanceira criarContaConsolidada(
                         List<ContaFinanceira> contasOriginais,
+                        Map<Long, ContaFinanceiraParaPagamentoDto> mapaDtos,
                         TransacaoDebitoCredito transacao,
                         ProcessarPagamentoAprovadoTseDto dto,
                         OperadorSistema responsavel,
@@ -773,17 +795,24 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                 Integer numeroParcela = calcularNumeroParcela(base.getContrato().getId(),
                                 origemConta.getIdTipoOrigemContaFinanceira());
 
-                // Calcular juros e multa ANTES de cancelar as contas
-                // Usa os métodos calcularJuros() e calcularMulta() da própria entidade
+                // PRIORIDADE: Juros e multas vindos dos DTOs vinculados
                 BigDecimal valorJurosCalculado = contasOriginais.stream()
-                                .map(ContaFinanceira::calcularJuros)
+                                .map(co -> {
+                                        ContaFinanceiraParaPagamentoDto cd = mapaDtos.get(co.getId());
+                                        return (cd != null && cd.getValorJuros() != null) ? cd.getValorJuros()
+                                                        : co.calcularJuros();
+                                })
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                 BigDecimal valorMultaCalculado = contasOriginais.stream()
-                                .map(ContaFinanceira::calcularMulta)
+                                .map(co -> {
+                                        ContaFinanceiraParaPagamentoDto cd = mapaDtos.get(co.getId());
+                                        return (cd != null && cd.getValorMulta() != null) ? cd.getValorMulta()
+                                                        : co.calcularMulta();
+                                })
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                log.info("Valores de juros e multa CALCULADOS das contas vencidas - Juros: {}, Multa: {}",
+                log.info("Valores de juros e multa utilizados - Juros: {}, Multa: {}",
                                 valorJurosCalculado, valorMultaCalculado);
 
                 // Buscar meio de pagamento apropriado
@@ -838,7 +867,8 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                 );
 
                 // Configurar campos adicionais conforme especificação
-                configurarCamposAdicionaisContaNova(contaNova, contasOriginais, bandeiraCartao, numeroParcela, dto,
+                configurarCamposAdicionaisContaNova(contaNova, contasOriginais, mapaDtos, bandeiraCartao, numeroParcela,
+                                dto,
                                 isPix);
 
                 return contaNova;
@@ -856,6 +886,7 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
         private void configurarCamposAdicionaisContaNova(
                         ContaFinanceira contaNova,
                         List<ContaFinanceira> contasOriginais,
+                        Map<Long, ContaFinanceiraParaPagamentoDto> mapaDtos,
                         BandeiraCartao bandeiraCartao,
                         Integer numeroParcela,
                         ProcessarPagamentoAprovadoTseDto dto,
@@ -920,16 +951,24 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                                         : null;
                 }
 
-                // Calcular juros e multa das contas originais (antes de cancelar)
+                // PRIORIDADE: Juros e multa vindos dos DTOs vinculados
                 BigDecimal valorJuros = contasOriginais.stream()
-                                .map(ContaFinanceira::calcularJuros)
+                                .map(co -> {
+                                        ContaFinanceiraParaPagamentoDto cd = mapaDtos.get(co.getId());
+                                        return (cd != null && cd.getValorJuros() != null) ? cd.getValorJuros()
+                                                        : co.calcularJuros();
+                                })
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                 BigDecimal valorMulta = contasOriginais.stream()
-                                .map(ContaFinanceira::calcularMulta)
+                                .map(co -> {
+                                        ContaFinanceiraParaPagamentoDto cd = mapaDtos.get(co.getId());
+                                        return (cd != null && cd.getValorMulta() != null) ? cd.getValorMulta()
+                                                        : co.calcularMulta();
+                                })
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                log.info("DEBUG - Configurando campos adicionais - Juros CALCULADOS: {}, Multa CALCULADA: {}",
+                log.info("DEBUG - Configurando campos adicionais - Juros UTILIZADOS: {}, Multa UTILIZADA: {}",
                                 valorJuros,
                                 valorMulta);
 
