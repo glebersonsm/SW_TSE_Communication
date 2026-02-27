@@ -24,6 +24,6 @@ public class ContaFinanceiraParaPagamentoDto {
 
     private BigDecimal valorJuros; // Juros calculado em tela para esta conta
     private BigDecimal valorMulta; // Multa calculada em tela para esta conta
+    private BigDecimal percentualJuros; // Percentual de juros aplicado
+    private BigDecimal percentualMulta; // Percentual de multa aplicado
 }
-
-
