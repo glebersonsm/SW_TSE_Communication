@@ -117,8 +117,31 @@ public class ContaFinanceiraConverter {
             }
         }
 
-        // Valor calculado usando o método da entity (valor original sem juros/multa)
-        dto.setValor(contaFinanceira.calcularValorTotal());
+        BigDecimal valorTotal = contaFinanceira.calcularValorTotal();
+        BigDecimal valorAtualizado = contaFinanceira.calcularValorAtualizado();
+        BigDecimal jurosTotal = contaFinanceira.calcularJuros();
+        BigDecimal multaTotal = contaFinanceira.calcularMulta();
+
+        // Se destino = 'P', o valor deve ser negativo (devolvido ao cliente)
+        if ("P".equalsIgnoreCase(contaFinanceira.getDestino())) {
+            if (valorTotal != null && valorTotal.compareTo(BigDecimal.ZERO) > 0) {
+                valorTotal = valorTotal.negate();
+            }
+            if (valorAtualizado != null && valorAtualizado.compareTo(BigDecimal.ZERO) > 0) {
+                valorAtualizado = valorAtualizado.negate();
+            }
+            if (jurosTotal != null && jurosTotal.compareTo(BigDecimal.ZERO) > 0) {
+                jurosTotal = jurosTotal.negate();
+            }
+            if (multaTotal != null && multaTotal.compareTo(BigDecimal.ZERO) > 0) {
+                multaTotal = multaTotal.negate();
+            }
+        }
+
+        dto.setValor(valorTotal);
+        dto.setValorAtualizado(valorAtualizado);
+        dto.setJuros(jurosTotal);
+        dto.setMulta(multaTotal);
 
         // Saldo fixo em 0 conforme solicitado
         dto.setSaldo(BigDecimal.ZERO);
@@ -149,8 +172,6 @@ public class ContaFinanceiraConverter {
             dto.setPodeAplicarMulta("N"); // false como string
         }
 
-        dto.setValorAtualizado(contaFinanceira.calcularValorAtualizado());
-
         // Campos de data
         dto.setDataHoraBaixa(contaFinanceira.getDataBaixa());
 
@@ -167,9 +188,7 @@ public class ContaFinanceiraConverter {
         // Status CRC - valor padrão
         dto.setStatusCrcBloqueiaPagamento("N");
 
-        // Juros e Multa calculados (valores totais)
-        dto.setJuros(contaFinanceira.calcularJuros()); // Juros total acumulado
-        dto.setMulta(contaFinanceira.calcularMulta()); // Multa total
+        // Juros e Multa calculados já processados acima (linhas 121-137)
 
         // LimitePagamentoTransmitido - calcular para contas vencidas
         if (contaFinanceira.getCarteiraBoleto() != null &&
@@ -196,7 +215,8 @@ public class ContaFinanceiraConverter {
 
         // Dias de atraso
         // Usar sempre o cálculo de dias de atraso baseado em data de vencimento
-        // (o próprio método já retorna 0 quando não está vencida ou está em prazo de graça)
+        // (o próprio método já retorna 0 quando não está vencida ou está em prazo de
+        // graça)
         dto.setQuantidadeDiasAtraso(contaFinanceira.calcularDiasAtraso());
 
         return dto;

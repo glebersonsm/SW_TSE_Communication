@@ -430,9 +430,10 @@ public class ContaFinanceira {
             }
         }
 
-        // Se destino = 'P' e não está paga, calcula juros e multas
+        // Se destino = 'P', não deve calcular multas nem juros (valor devolvido ao
+        // cliente)
         if ("P".equalsIgnoreCase(this.destino)) {
-            return true;
+            return false;
         }
 
         // Caso contrário, só calcula se estiver vencida e não paga,
