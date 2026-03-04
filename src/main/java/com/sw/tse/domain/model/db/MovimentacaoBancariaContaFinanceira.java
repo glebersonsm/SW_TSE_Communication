@@ -27,9 +27,9 @@ import lombok.Setter;
 public class MovimentacaoBancariaContaFinanceira {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seqmovimentacaobancaria")
-    @SequenceGenerator(name = "seqmovimentacaobancaria", sequenceName = "seqmovimentacaobancaria", allocationSize = 1)
-    @Column(name = "idmovimentacaobancariacontafinanceira")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seqmovimentacaobancariacontafinanceira")
+    @SequenceGenerator(name = "seqmovimentacaobancariacontafinanceira", sequenceName = "seqmovimentacaobancariacontafinanceira", allocationSize = 1)
+    @Column(name = "seqmovimentacaobancariacontafinanceira")
     private Long id;
 
     @CreationTimestamp
