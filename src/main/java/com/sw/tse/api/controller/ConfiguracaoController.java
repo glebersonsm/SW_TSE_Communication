@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sw.tse.api.model.BandeiraCartaoDto;
 import com.sw.tse.api.model.EmpresaTseDto;
 import com.sw.tse.api.model.GrupoCotaDto;
 import com.sw.tse.api.model.TorreDto;
@@ -37,6 +38,14 @@ public class ConfiguracaoController {
     public ResponseEntity<List<GrupoCotaDto>> listarGruposCota() {
         List<GrupoCotaDto> grupos = configuracaoService.listarGruposCota();
         return ResponseEntity.ok(grupos);
+    }
+
+    @GetMapping("/empresas/{idEmpresa}/bandeiras-cartao")
+    public ResponseEntity<List<BandeiraCartaoDto>> listarBandeirasCartaoPorEmpresa(
+            @PathVariable Long idEmpresa, 
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Integer idBandeiraAceita) {
+        List<BandeiraCartaoDto> bandeiras = configuracaoService.listarBandeirasCartaoPorEmpresa(idEmpresa, idBandeiraAceita);
+        return ResponseEntity.ok(bandeiras);
     }
 }
 

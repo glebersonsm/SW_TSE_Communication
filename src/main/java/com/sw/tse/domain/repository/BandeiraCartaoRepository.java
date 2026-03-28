@@ -26,12 +26,13 @@ public interface BandeiraCartaoRepository extends JpaRepository<BandeiraCartao, 
         FROM bandeiracartao bc
         WHERE bc.idtenant = :idTenant
           AND bc.idbandeirasaceitas = :idBandeirasAceitas
-          AND bc.operacao = 'CREDAV'
+          AND bc.operacao = :operacao
           AND bc.ativo = true
         ORDER BY bc.datacadastro DESC
         """, nativeQuery = true)
     java.util.List<BandeiraCartao> findBandeirasAtivasParaPagamento(
             @Param("idTenant") Long idTenant,
-            @Param("idBandeirasAceitas") Integer idBandeirasAceitas);
+            @Param("idBandeirasAceitas") Integer idBandeirasAceitas,
+            @Param("operacao") String operacao);
 }
 

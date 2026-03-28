@@ -47,6 +47,7 @@ import com.sw.tse.domain.repository.BandeiraCartaoRepository;
 import com.sw.tse.domain.repository.MeioPagamentoRepository;
 import java.util.HashMap;
 import java.util.Map;
+import com.sw.tse.domain.repository.EmpresaRepository;
 import com.sw.tse.security.JwtTokenUtil;
 
 import lombok.extern.slf4j.Slf4j;
@@ -81,6 +82,9 @@ public class ReprocessamentoPagamentoServiceImpl implements ReprocessamentoPagam
     private ContaMovimentacaoBancariaRepository contaMovimentacaoBancariaRepository;
     @Autowired
     private TransacaoDebitoCreditoRepository transacaoDebitoCreditoRepository;
+
+    @Autowired
+    private EmpresaRepository empresaRepository;
     @Autowired
     private OperadorSistemaRepository operadorSistemaRepository;
     @Autowired
@@ -97,6 +101,7 @@ public class ReprocessamentoPagamentoServiceImpl implements ReprocessamentoPagam
         BLOQUEADA_EXTERNO,
         INCONSISTENTE_SEM_NEGOCIACAO,
         INCONSISTENTE_SEM_MOVIMENTACAO,
+        INCONSISTENTE_DADOS_CARTAO,
         COMPLETA,
         PENDENTE
     }
@@ -351,9 +356,8 @@ public class ReprocessamentoPagamentoServiceImpl implements ReprocessamentoPagam
 
         // 1. Localizar TransacaoDebitoCredito (obrigatória para todos os sub-cenários
         // de cartão no reprocessamento)
-        // Se já existe uma conta vinculada ao idTransacaoCartaoCreditoDebito, usamos
-        // ela como base.
-        TransacaoDebitoCredito transacao = localizarTransacao(contas, dto);
+        // Se não encontrar, o sistema agora cria automaticamente para garantir a integração.
+        TransacaoDebitoCredito transacao = obterOuCriarTransacao(contas, dto, responsavel);
 
         // 2. Classificar Cenário: Conta Única (Alteração) vs Múltiplas Contas
         // (Consolidação)
@@ -375,30 +379,121 @@ public class ReprocessamentoPagamentoServiceImpl implements ReprocessamentoPagam
         }
     }
 
-    private TransacaoDebitoCredito localizarTransacao(List<ContaFinanceira> contas,
-            ProcessarPagamentoAprovadoTseDto dto) {
-        // Tenta achar pelo ID no DTO primeiro
-        if (dto.getPaymentId() != null || dto.getIdTransacao() != null) {
-            // O DTO idTransacao no cartão costuma ser o MerchantOrderId
+    private TransacaoDebitoCredito obterOuCriarTransacao(List<ContaFinanceira> contas,
+            ProcessarPagamentoAprovadoTseDto dto, OperadorSistema responsavel) {
+        // 1. Tenta achar pelo MerchantOrderId (Idempotência)
+        if (dto.getIdTransacao() != null) {
             Optional<TransacaoDebitoCredito> t = transacaoDebitoCreditoRepository
                     .findFirstByMerchantOrderIdOrderByDataCadastroDesc(dto.getIdTransacao());
-            if (t.isPresent())
+            if (t.isPresent()) {
+                log.info("[Reprocessamento] Transação encontrada por MerchantOrderId: {}", dto.getIdTransacao());
                 return t.get();
-        }
-
-        // Tenta achar pelas contas
-        for (ContaFinanceira c : contas) {
-            if (c.getIdTransacaoCartaoCreditoDebito() != null) {
-                return transacaoDebitoCreditoRepository.findById(c.getIdTransacaoCartaoCreditoDebito())
-                        .orElseThrow(() -> new PagamentoTseBusinessException(
-                                "Transação vinculada à conta não encontrada no TSE"));
             }
         }
 
-        throw new PagamentoTseBusinessException(
-                "Transação de débito/crédito não encontrada para reprocessamento de cartão.");
+        // 2. Tenta achar vinculada às contas
+        for (ContaFinanceira c : contas) {
+            if (c.getIdTransacaoCartaoCreditoDebito() != null) {
+                Optional<TransacaoDebitoCredito> t = transacaoDebitoCreditoRepository
+                        .findById(c.getIdTransacaoCartaoCreditoDebito());
+                if (t.isPresent()) {
+                    log.info("[Reprocessamento] Transação encontrada vinculada à conta: {}", c.getId());
+                    return t.get();
+                }
+            }
+        }
+
+        // 3. Se não encontrou, cria uma nova (Resiliência)
+        log.warn("[Reprocessamento] Transação não encontrada para IdTransacao={}. Criando automaticamente...",
+                dto.getIdTransacao());
+
+        // Agora sim buscamos a bandeira (configuração de taxas) - Validar ANTES de salvar a transação
+        BandeiraCartao bandeira = resolverBandeiraCartao(dto, contas.get(0).getEmpresa().getId());
+
+        if (bandeira == null) {
+            String nomeEmpresa = empresaRepository.findById(dto.getIdEmpresaTse())
+                    .map(e -> e.getPessoa() != null ? e.getPessoa().getNome() : e.getSigla())
+                    .orElse("ID: " + dto.getIdEmpresaTse());
+
+            throw new PagamentoTseBusinessException(
+                    String.format(
+                            "Configuração de mapeamento de taxas de cartão não fornecida pelo Portal para empresa %s, Bandeira %d e GateWay de pagamento %s, verifique a parametrização nos Parâmetros do Sistema das Configurações do Portal.",
+                            nomeEmpresa,
+                            dto.getIdBandeira(),
+                            dto.getAdquirente()));
+        }
+
+        // Criar a transação com os dados de bandeira já validados
+        TransacaoDebitoCredito novaTransacao = criarTransacaoDebitoCredito(dto, contas.get(0), responsavel, bandeira);
+        atualizarTransacaoComResultado(novaTransacao, dto);
+        novaTransacao = transacaoDebitoCreditoRepository.save(novaTransacao);
+
+        log.info("[Reprocessamento] Nova transação criada e salva com ID: {}", novaTransacao.getId());
+
+        return novaTransacao;
     }
 
+    private TransacaoDebitoCredito criarTransacaoDebitoCredito(
+            ProcessarPagamentoAprovadoTseDto dto,
+            ContaFinanceira contaBase,
+            OperadorSistema responsavel,
+            BandeiraCartao bandeiraCartao) {
+
+        TransacaoDebitoCredito transacao = new TransacaoDebitoCredito();
+        transacao.setEmpresa(contaBase.getEmpresa());
+        transacao.setResponsavelCadastro(responsavel);
+        transacao.setContrato(contaBase.getContrato());
+        transacao.setMerchantOrderId(dto.getIdTransacao());
+
+        String gatewaySysId = dto.getAdquirente() != null ? dto.getAdquirente().toUpperCase() : "";
+        if (gatewaySysId.contains("GETNET") && dto.getPaymentId() != null) {
+            transacao.setPaymentId(dto.getPaymentId());
+        }
+
+        if (bandeiraCartao != null) {
+            transacao.setIdBandeirasAceitas(bandeiraCartao.getIdBandeirasAceitas());
+            transacao.setIdBandeiraCartao(bandeiraCartao.getIdBandeiraCartao());
+        }
+
+        String numeroCartaoParaSalvar = dto.getNumeroCartao() != null ? dto.getNumeroCartao()
+                : dto.getNumeroCartaoMascarado();
+        transacao.setNumeroCartao(numeroCartaoParaSalvar);
+        transacao.setCodSegurancaCartao(dto.getCodigoSegurancaCartao() != null ? dto.getCodigoSegurancaCartao() : "N/A");
+        transacao.setMesValidadeCartao(dto.getMesValidadeCartao() != null ? dto.getMesValidadeCartao() : "N/A");
+        transacao.setAnoValidadeCartao(dto.getAnoValidadeCartao() != null ? dto.getAnoValidadeCartao() : "N/A");
+        transacao.setNomeImpressoCartao(dto.getNomeImpressoCartao());
+        transacao.setNumeroCartaoMascarado(dto.getNumeroCartaoMascarado());
+        transacao.setNomePessoa(dto.getNomeImpressoCartao());
+
+        transacao.setDataVencimento(LocalDateTime.now().plusDays(30));
+        transacao.setValorReceber(dto.getValorTotal());
+        transacao.setQtdParcela(dto.getNumeroParcelas());
+        transacao.setBloqueadoParaProcessamento(false);
+        transacao.setStatus("InProgress");
+        transacao.setGatewayPagamento(dto.getAdquirente());
+        transacao.setAutorizado(false);
+
+        transacao.setNsu(dto.getNsu());
+        transacao.setTid(dto.getTid());
+        transacao.setCodigoAutorizacao(dto.getCodigoAutorizacao());
+        transacao.setEstornado(false);
+
+        return transacao;
+    }
+
+    private void atualizarTransacaoComResultado(TransacaoDebitoCredito transacao, ProcessarPagamentoAprovadoTseDto dto) {
+        transacao.setAutorizado(true);
+        transacao.setStatus(dto.getStatus() != null ? dto.getStatus() : "APROVADA");
+        transacao.setStatusGenerico("AUTORIZADO");
+        transacao.setMensagemRetorno(dto.getMensagemRetorno());
+        transacao.setCodigoRetorno(dto.getCodigoRetorno());
+        transacao.setBloqueadoParaProcessamento(false);
+        transacao.setNsu(dto.getNsu());
+        transacao.setTid(dto.getTid());
+        transacao.setCodigoAutorizacao(dto.getCodigoAutorizacao());
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
     private ProcessamentoPagamentoResponseDto sincronizarContaCartaoExistente(
             ContaFinanceira contaBaixada,
             List<ContaFinanceira> todasContas,
@@ -406,12 +501,70 @@ public class ReprocessamentoPagamentoServiceImpl implements ReprocessamentoPagam
             OperadorSistema responsavel,
             LocalDateTime dataReferencia,
             TransacaoDebitoCredito transacao) {
+    	
+    	// 1. Resolver bandeira para garantir que os IDs de marca/taxa estejam presentes
+        BandeiraCartao bandeira = resolverBandeiraCartao(dto, contaBaixada.getEmpresa().getId());
+
+        // 2. Se for uma inconsistência de dados de cartão, ou se a conta está incompleta,
+        // re-configuramos
+        if (contaBaixada.getIdBandeiraCartao() == null || contaBaixada.getIdBandeirasAceitas() == null) {
+            log.info("[CARTÃO] Reparando metadados de bandeira para conta {}", contaBaixada.getId());
+            if (bandeira == null) {
+                String nomeEmpresa = empresaRepository.findById(dto.getIdEmpresaTse())
+                        .map(e -> e.getPessoa() != null ? e.getPessoa().getNome() : e.getSigla())
+                        .orElse("ID: " + dto.getIdEmpresaTse());
+
+                throw new PagamentoTseBusinessException(
+                        String.format(
+                                "Configuração de mapeamento de taxas de cartão não fornecida pelo Portal para empresa %s, Bandeira %d e GateWay de pagamento %s, verifique a parametrização nos Parâmetros do Sistema das Configurações do Portal.",
+                                nomeEmpresa,
+                                dto.getIdBandeira(),
+                                dto.getAdquirente()));
+            }
+
+            // Calcular taxas (paridade com ProcessamentoPagamentoServiceImpl)
+            BigDecimal taxaCartao = bandeira.getTaxaOperacao() != null
+                    ? BigDecimal.valueOf(bandeira.getTaxaOperacao())
+                    : BigDecimal.ZERO;
+            BigDecimal descontoTaxaCartao = dto.getValorTotal()
+                    .multiply(taxaCartao)
+                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+
+            // Determinar unidade de negócio e número de parcela
+            Long idUnidadeNegocio = contaBaixada.getIdUnidadeNegocio();
+            Integer nroParcela = contaBaixada.getNumeroParcela() != null ? contaBaixada.getNumeroParcela()
+                    : calcularNumeroParcela(contaBaixada.getContrato().getId(),
+                            contaBaixada.getOrigemConta().getIdTipoOrigemContaFinanceira());
+
+            // Chamar método de preenchimento completo
+            contaBaixada.configurarCamposNegociacaoPortal(
+                    idUnidadeNegocio,
+                    nroParcela,
+                    taxaCartao,
+                    descontoTaxaCartao,
+                    contaBaixada.getValorReceber(),
+                    contaBaixada.getValorParcela(),
+                    contaBaixada.getValorDesconto(),
+                    contaBaixada.getValorAcrescimo(),
+                    contaBaixada.getValorDescontoManual(),
+                    contaBaixada.getValorJuros(),
+                    contaBaixada.getValorMulta(),
+                    bandeira.getIdBandeirasAceitas() != null ? bandeira.getIdBandeirasAceitas().longValue() : null,
+                    bandeira.getIdBandeiraCartao() != null ? bandeira.getIdBandeiraCartao().longValue() : null);
+
+            contaFinanceiraRepository.save(contaBaixada);
+        }
 
         EstadoSincronizacao estado = classificarEstadoConta(contaBaixada);
         Negociacao negociacao = null;
 
         switch (estado) {
             case COMPLETA -> log.info("[CARTÃO] Conta {} já está COMPLETA.", contaBaixada.getId());
+            case INCONSISTENTE_DADOS_CARTAO -> {
+                // Já tentamos reparar acima, se continua inconsistente há um erro grave
+                throw new PagamentoTseBusinessException("Falha ao persistir metadados de cartão na conta "
+                        + contaBaixada.getId() + ". Verifique as configurações de bandeira.");
+            }
             case INCONSISTENTE_SEM_NEGOCIACAO -> {
                 int tipoNegoc = (todasContas.size() == 1 && todasContas.get(0).getId().equals(contaBaixada.getId())) ? 3
                         : 1;
@@ -454,8 +607,8 @@ public class ReprocessamentoPagamentoServiceImpl implements ReprocessamentoPagam
                 .collect(Collectors.toMap(ContaFinanceiraParaPagamentoDto::getIdContaFinanceiraTse, c -> c));
 
         // 1. Criar conta consolidada
-        // Para cartão, precisamos da BandeiraCartao (buscamos da transação se possível)
-        BandeiraCartao bandeira = null;
+        // Para cartão, precisamos da BandeiraCartao
+        BandeiraCartao bandeira = resolverBandeiraCartao(dto, contas.get(0).getEmpresa().getId());
         if (transacao.getIdBandeiraCartao() != null) {
             bandeira = bandeiraCartaoRepository.findById(transacao.getIdBandeiraCartao().intValue()).orElse(null);
         }
@@ -492,18 +645,36 @@ public class ReprocessamentoPagamentoServiceImpl implements ReprocessamentoPagam
      * MovimentacaoBancariaContaFinanceira.
      */
     private EstadoSincronizacao classificarEstadoConta(ContaFinanceira conta) {
-        List<NegociacaoContaFinanceira> ncfs = negociacaoContaFinanceiraRepository
-                .findByContaFinanceiraId(conta.getId());
+        // 1. Bloqueio por movimentação externa (se já tiver baixa manual que não seja
+        // do nosso fluxo)
+        if (Boolean.TRUE.equals(conta.getPago()) && (conta.getHistoricoBaixa() == null
+                || !conta.getHistoricoBaixa().contains(PREFIXO_CANCELAMENTO_PORTAL))) {
+            return EstadoSincronizacao.BLOQUEADA_EXTERNO;
+        }
+
+        // 2. Inconsistência de metadados de cartão (idBandeiraCartao e
+        // idBandeirasAceitas)
+        // Somente para transações de cartão
+        boolean isCartao = conta.getMeioPagamento() != null
+                && "CARTAO".equalsIgnoreCase(conta.getMeioPagamento().getCodMeioPagamento());
+        if (isCartao && (conta.getIdBandeiraCartao() == null || conta.getIdBandeirasAceitas() == null)) {
+            return EstadoSincronizacao.INCONSISTENTE_DADOS_CARTAO;
+        }
+
+        // 3. Inconsistência por falta de Negociação (ex: consolidada mas perdeu o
+        // cabeçalho)
+        List<NegociacaoContaFinanceira> ncfs = negociacaoContaFinanceiraRepository.findByContaFinanceiraId(conta.getId());
+        if (ncfs.isEmpty()) {
+            return EstadoSincronizacao.INCONSISTENTE_SEM_NEGOCIACAO;
+        }
+
         List<MovimentacaoBancariaContaFinanceira> vinculosMovim = movimentacaoVinculoRepository
                 .findByContaFinanceiraId(conta.getId());
 
-        boolean temNegociacao = !ncfs.isEmpty();
         boolean temMovimentacao = !vinculosMovim.isEmpty();
 
-        if (temNegociacao && temMovimentacao)
+        if (temMovimentacao)
             return EstadoSincronizacao.COMPLETA;
-        if (!temNegociacao)
-            return EstadoSincronizacao.INCONSISTENTE_SEM_NEGOCIACAO;
         return EstadoSincronizacao.INCONSISTENTE_SEM_MOVIMENTACAO;
     }
 
@@ -757,6 +928,27 @@ public class ReprocessamentoPagamentoServiceImpl implements ReprocessamentoPagam
                 totalCorrecao = totalCorrecao.add(c.getValorAcrescimoAcumuladoCorrecaoMonetaria());
         }
         return new ValoresTotais(totalAcrescimo, totalCorrecao);
+    }
+
+    /**
+     * Resolve a BandeiraCartao baseada estritamente no ID enviado pelo Portal.
+     * EM HIPOTESE ALGUMA deve tentar localizar heuristicamente no TSE Communication.
+     */
+    private BandeiraCartao resolverBandeiraCartao(ProcessarPagamentoAprovadoTseDto dto, Long idEmpresa) {
+        // Tenta pelo ID direto (Ponto de paridade com o Portal moderno)
+        if (dto.getIdBandeira() != null) {
+            return bandeiraCartaoRepository.findById(dto.getIdBandeira().intValue()).orElse(null);
+        }
+        return null;
+    }
+
+    private Integer calcularNumeroParcela(Long idContrato, Integer idOrigemConta) {
+        Integer ultimoNroParcela = contaFinanceiraRepository.obterUltimoNroParcelaContratoOrigem(idContrato,
+                idOrigemConta);
+        if (ultimoNroParcela == null) {
+            ultimoNroParcela = 0;
+        }
+        return ultimoNroParcela + 1;
     }
 
     private ContaMovimentacaoBancaria determinarContaMovimentacao(

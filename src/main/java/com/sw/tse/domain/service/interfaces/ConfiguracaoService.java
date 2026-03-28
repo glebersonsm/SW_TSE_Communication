@@ -2,6 +2,7 @@ package com.sw.tse.domain.service.interfaces;
 
 import java.util.List;
 
+import com.sw.tse.api.model.BandeiraCartaoDto;
 import com.sw.tse.api.model.EmpresaTseDto;
 import com.sw.tse.api.model.GrupoCotaDto;
 import com.sw.tse.api.model.TorreDto;
@@ -14,5 +15,7 @@ public interface ConfiguracaoService {
 
     /** Lista grupos de cota (CotaUh) para uso em tags de visualização no Portal. */
     List<GrupoCotaDto> listarGruposCota();
+
+    List<BandeiraCartaoDto> listarBandeirasCartaoPorEmpresa(Long idEmpresa, Integer idBandeiraAceita);
 }
 

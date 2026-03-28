@@ -922,7 +922,8 @@ public class ContaFinanceira {
             BigDecimal valorDescontoManual,
             BigDecimal valorJuros,
             BigDecimal valorMulta,
-            Long idBandeirasAceitas) {
+            Long idBandeirasAceitas,
+            Long idBandeiraCartao) {
 
         this.idUnidadeNegocio = idUnidadeNegocio;
         this.numeroParcela = numeroParcela;
@@ -935,6 +936,7 @@ public class ContaFinanceira {
         this.taxaCartao = taxaCartao;
         this.descontoTaxaCartao = descontoTaxaCartao;
         this.idBandeirasAceitas = idBandeirasAceitas;
+        this.idBandeiraCartao = idBandeiraCartao;
 
         // Campos booleanos
         this.chequeCompensado = false;
@@ -1004,8 +1006,13 @@ public class ContaFinanceira {
 
         this.guidMerchantOrderId = guidMerchantOrderId;
 
-        // Taxas do cartão
-        if (!isPix && bandeiraCartao != null) {
+        // Taxas do cartão - OBRIGATÓRIO se não for PIX
+        if (!isPix) {
+            if (bandeiraCartao == null) {
+                log.error("Tentativa de atualizar dados de pagamento em cartão sem BandeiraCartao (NULL). Guid: {}", guidMerchantOrderId);
+                throw new java.lang.IllegalArgumentException("A configuração de taxas (Bandeira) é obrigatória para pagamentos em cartão.");
+            }
+
             BigDecimal taxa = bandeiraCartao.getTaxaOperacao() != null
                     ? BigDecimal.valueOf(bandeiraCartao.getTaxaOperacao())
                     : BigDecimal.ZERO;
@@ -1018,6 +1025,9 @@ public class ContaFinanceira {
             if (bandeiraCartao.getIdBandeirasAceitas() != null) {
                 this.idBandeirasAceitas = bandeiraCartao.getIdBandeirasAceitas().longValue();
             }
+            this.idBandeiraCartao = bandeiraCartao.getIdBandeiraCartao() != null
+                    ? bandeiraCartao.getIdBandeiraCartao().longValue()
+                    : null;
         }
 
         // Diferenciação PIX vs CARTÃO

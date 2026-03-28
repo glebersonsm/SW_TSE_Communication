@@ -29,7 +29,7 @@ public class MovimentacaoBancariaContaFinanceira {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seqmovimentacaobancariacontafinanceira")
     @SequenceGenerator(name = "seqmovimentacaobancariacontafinanceira", sequenceName = "seqmovimentacaobancariacontafinanceira", allocationSize = 1)
-    @Column(name = "seqmovimentacaobancariacontafinanceira")
+    @Column(name = "idmovimentacaobancariacontafinanceira")
     private Long id;
 
     @CreationTimestamp
