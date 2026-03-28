@@ -10,29 +10,28 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
-
+import org.springframework.beans.factory.annotation.Value;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sw.tse.api.dto.ContaFinanceiraParaPagamentoDto;
 import com.sw.tse.api.dto.ProcessamentoPagamentoResponseDto;
 import com.sw.tse.api.dto.ProcessarPagamentoAprovadoTseDto;
+import com.sw.tse.core.util.DiasAtrasoHelper;
+import com.sw.tse.domain.expection.BandeiraCartaoNaoEncontradaException;
 import com.sw.tse.domain.expection.ContaFinanceiraNaoEncontradaException;
 import com.sw.tse.domain.expection.OperadorSistemaNotFoundException;
-import com.sw.tse.domain.expection.BandeiraCartaoNaoEncontradaException;
 import com.sw.tse.domain.expection.PagamentoCartaoException;
 import com.sw.tse.domain.expection.PagamentoTseBusinessException;
 import com.sw.tse.domain.expection.RegraDeNegocioException;
 import com.sw.tse.domain.model.db.BandeiraCartao;
-import com.sw.tse.domain.model.db.BandeirasAceitas;
 import com.sw.tse.domain.model.db.ContaFinanceira;
 import com.sw.tse.domain.model.db.ContaMovimentacaoBancaria;
-import com.sw.tse.domain.model.db.Empresa;
 import com.sw.tse.domain.model.db.MeioPagamento;
 import com.sw.tse.domain.model.db.MovimentacaoBancaria;
 import com.sw.tse.domain.model.db.MovimentacaoBancariaContaFinanceira;
@@ -42,7 +41,6 @@ import com.sw.tse.domain.model.db.OperadorSistema;
 import com.sw.tse.domain.model.db.TipoOrigemContaFinanceira;
 import com.sw.tse.domain.model.db.TransacaoDebitoCredito;
 import com.sw.tse.domain.repository.BandeiraCartaoRepository;
-import com.sw.tse.domain.repository.BandeirasAceitasRepository;
 import com.sw.tse.domain.repository.ContaFinanceiraRepository;
 import com.sw.tse.domain.repository.ContaMovimentacaoBancariaRepository;
 import com.sw.tse.domain.repository.MeioPagamentoRepository;
@@ -50,12 +48,11 @@ import com.sw.tse.domain.repository.MovimentacaoBancariaContaFinanceiraRepositor
 import com.sw.tse.domain.repository.MovimentacaoBancariaRepository;
 import com.sw.tse.domain.repository.NegociacaoContaFinanceiraRepository;
 import com.sw.tse.domain.repository.NegociacaoRepository;
+import com.sw.tse.domain.repository.EmpresaRepository;
 import com.sw.tse.domain.repository.OperadorSistemaRepository;
-import com.sw.tse.domain.repository.TipoOrigemContaFinanceiraRepository;
 import com.sw.tse.domain.repository.TransacaoDebitoCreditoRepository;
 import com.sw.tse.domain.service.interfaces.OperadorSistemaService;
 import com.sw.tse.domain.service.interfaces.PagamentoCartaoService;
-import com.sw.tse.core.util.DiasAtrasoHelper;
 import com.sw.tse.security.JwtTokenUtil;
 
 import lombok.extern.slf4j.Slf4j;
@@ -78,6 +75,9 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
         private TransacaoDebitoCreditoRepository transacaoRepository;
 
         @Autowired
+        private EmpresaRepository empresaRepository;
+
+        @Autowired
         private NegociacaoRepository negociacaoRepository;
 
         @Autowired
@@ -90,13 +90,7 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
         private MeioPagamentoRepository meioPagamentoRepository;
 
         @Autowired
-        private TipoOrigemContaFinanceiraRepository tipoOrigemRepository;
-
-        @Autowired
         private BandeiraCartaoRepository bandeiraCartaoRepository;
-
-        @Autowired
-        private BandeirasAceitasRepository bandeirasAceitasRepository;
 
         @Autowired
         private ContaMovimentacaoBancariaRepository contaMovimentacaoBancariaRepository;
@@ -117,7 +111,7 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
         private ObjectMapper objectMapper;
 
         @Override
-        @Transactional
+        @Transactional(propagation = Propagation.REQUIRED)
         public ProcessamentoPagamentoResponseDto processarPagamentoAprovado(ProcessarPagamentoAprovadoTseDto dto) {
                 log.info("Processando pagamento aprovado para empresa {} com {} contas financeiras. IdTransacao: {}",
                                 dto.getIdEmpresaTse(), dto.getContasFinanceiras().size(), dto.getIdTransacao());
@@ -225,61 +219,52 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                         TransacaoDebitoCredito transacao = null;
 
                         if (!isPix) {
-                                // 3. Buscar BandeiraCartao (para taxa e configurações) - OBRIGATÓRIO para
-                                // CARTAO
-                                bandeiraCartao = buscarBandeiraCartao(
-                                                contasOriginais.get(0).getEmpresa().getId(),
-                                                dto.getIdBandeira(),
-                                                dto.getAdquirente());
+                                // 3. Buscar BandeiraCartao (para taxa e configurações) - OBRIGATÓRIO para cartões
+                                // Buscamos estritamente pelo ID enviado pelo Portal (C#). 
+                                // EM HIPOTESE ALGUMA LOCALIZAR HEURISTICAMENTE NO TSE COMMUNICATION.
+                                if (dto.getIdBandeira() != null) {
+                                        bandeiraCartao = bandeiraCartaoRepository
+                                                        .findById(dto.getIdBandeira().intValue())
+                                                        .orElse(null);
+                                }
 
                                 if (bandeiraCartao != null) {
+                                        if (bandeiraCartao.getTaxaOperacao() == null) {
+                                                log.error("BandereiraCartao ID {} encontrada, mas sem taxa operacao configurada (NULL).",
+                                                                bandeiraCartao.getIdBandeiraCartao());
+                                                throw new BandeiraCartaoNaoEncontradaException(
+                                                                "Configuração de taxas inválida no TSE: Taxa de operação está nula para esta bandeira.");
+                                        }
+
                                         log.info("BandeiraCartao encontrada: ID {}, Taxa: {}",
                                                         bandeiraCartao.getIdBandeiraCartao(),
                                                         bandeiraCartao.getTaxaOperacao());
                                 } else {
-                                        // REGRA: Usar OBRIGATORIAMENTE a conta do GatewayPagamentoConfiguracao (vem do
-                                        // DTO)
-                                        if (dto.getIdContaMovimentacaoBancaria() == null) {
-                                                String nomeGatewayMsg = extrairNomeGateway(dto.getAdquirente());
-                                                throw new BandeiraCartaoNaoEncontradaException(
-                                                                String.format(
-                                                                                "Configuração de bandeira de cartão não encontrada no TSE para esta empresa. "
-                                                                                                + "Cadastre um registro em Bandeiras de Cartão no TSE com: "
-                                                                                                + "Empresa=%d, Bandeira ID=%d, Operação='CREDAV', Status=Ativo, "
-                                                                                                + "e Nome do Estabelecimento contendo '%s'. "
-                                                                                                + "Consulte as empresas que funcionam para verificar o padrão de configuração.",
-                                                                                contasOriginais.get(0).getEmpresa()
-                                                                                                .getId(),
-                                                                                dto.getIdBandeira(),
-                                                                                nomeGatewayMsg));
-                                        }
+                                        String nomeEmpresa = empresaRepository.findById(dto.getIdEmpresaTse())
+                                                        .map(e -> e.getPessoa() != null ? e.getPessoa().getNome() : e.getSigla())
+                                                        .orElse("ID: " + dto.getIdEmpresaTse());
 
-                                        log.info("Usando conta de movimentação do GatewayPagamentoConfiguracao: ID {}",
-                                                        dto.getIdContaMovimentacaoBancaria());
-
-                                        // Criar automaticamente BandeiraCartao padrão para não bloquear o fluxo
-                                        log.warn(
-                                                        "BandeiraCartao não encontrada. Criando configuração padrão para Tenant: {}, IdBandeira: {}, Gateway: {}, IdContaMovBancaria: {}",
-                                                        contasOriginais.get(0).getEmpresa().getId(),
-                                                        dto.getIdBandeira(), dto.getAdquirente(),
-                                                        dto.getIdContaMovimentacaoBancaria());
-
-                                        bandeiraCartao = criarBandeiraCartaoPadrao(
-                                                        contasOriginais.get(0).getEmpresa(),
+                                        String nomeGatewayMsg = extrairNomeGatewayPortal(dto.getAdquirente());
+                                        log.error("Configuração de bandeira não encontrada para Empresa: {}, IdBandeira: {}, Gateway: {}. Integração abortada (Rollback).",
+                                                        nomeEmpresa,
                                                         dto.getIdBandeira(),
-                                                        dto.getAdquirente(),
-                                                        dto.getIdContaMovimentacaoBancaria());
+                                                        nomeGatewayMsg);
 
-                                        log.info("BandeiraCartao criada automaticamente: ID {}, Taxa: {}%, IdContaMovBancaria: {}",
-                                                        bandeiraCartao.getIdBandeiraCartao(),
-                                                        bandeiraCartao.getTaxaOperacao(),
-                                                        bandeiraCartao.getIdContaMovBancaria());
+                                        throw new BandeiraCartaoNaoEncontradaException(
+                                                        String.format(
+                                                                        "Configuração de mapeamento de taxas de cartão não fornecida pelo Portal para empresa %s, Bandeira %d e GateWay de pagamento %s, verifique a parametrização nos Parâmetros do Sistema das Configurações do Portal.",
+                                                                        nomeEmpresa,
+                                                                        dto.getIdBandeira(),
+                                                                        nomeGatewayMsg));
                                 }
 
-                                // 4. Criar TransacaoDebitoCredito (apenas para CARTAO)
+                                // 4. Criar TransacaoDebitoCredito (apenas após validar taxas)
+                                // O rastro financeiro APROVADA já está garantido no Backend C# (Portal). 
+                                // O TSE só registra se estiver tudo apto para integração.
                                 transacao = criarTransacaoDebitoCredito(
                                                 dto, contasOriginais.get(0), responsavel, bandeiraCartao);
-                                transacaoRepository.save(transacao);
+                                transacao = transacaoRepository.save(transacao);
+
                                 log.info("TransacaoDebitoCredito criada com ID: {}, Status: InProgress",
                                                 transacao.getId());
 
@@ -468,73 +453,21 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
 
         // ==================== MÉTODOS AUXILIARES ====================
 
-        private BandeiraCartao buscarBandeiraCartao(Long idTenant, Integer idBandeira, String gatewaySysId) {
-                if (idBandeira == null || idBandeira == 0) {
-                        throw new PagamentoCartaoException(
-                                        "ID da bandeira do cartão é obrigatório para processar pagamento");
-                }
-
-                // Extrair apenas "REDE" ou "GETNET" do SysId (ex: "GATEWAY_PAGAMENTO_REDE" ->
-                // "REDE")
-                String nomeGateway = extrairNomeGateway(gatewaySysId);
-
-                log.info("Buscando BandeiraCartao. Tenant: {}, IdBandeira: {}, Gateway original: '{}', Nome extraído: '{}'",
-                                idTenant, idBandeira, gatewaySysId, nomeGateway);
-
-                // Buscar todos os registros que atendem aos critérios (exceto nome)
-                // O campo nomeEstabelecimento é criptografado, então precisamos comparar em
-                // memória
-                java.util.List<BandeiraCartao> candidatos = bandeiraCartaoRepository.findBandeirasAtivasParaPagamento(
-                                idTenant,
-                                idBandeira);
-
-                log.info("Encontrados {} candidatos de BandeiraCartao para filtrar por nome do gateway",
-                                candidatos.size());
-
-                // Filtrar em memória pelo nome do gateway (campo descriptografado)
-                BandeiraCartao bandeira = candidatos.stream()
-                                .filter(bc -> {
-                                        String nomeEstab = bc.getNomeEstabelecimento();
-                                        if (nomeEstab == null)
-                                                return false;
-                                        String nomeEstabUpper = nomeEstab.toUpperCase();
-                                        boolean match = nomeEstabUpper.contains(nomeGateway.toUpperCase());
-                                        log.debug("Comparando: '{}' contém '{}'? {}", nomeEstabUpper, nomeGateway,
-                                                        match);
-                                        return match;
-                                })
-                                .findFirst()
-                                .orElse(null);
-
-                if (bandeira == null) {
-                        log.warn("BandeiraCartao não encontrada para tenant: {}, idBandeira: {}, nome gateway: '{}'. "
-                                        + "Retornando null — o chamador decidirá o fallback ou lançará exceção.",
-                                        idTenant, idBandeira, nomeGateway);
-                } else {
-                        log.info("BandeiraCartao encontrada: ID {}, NomeEstabelecimento contém '{}', TaxaOperacao: {}",
-                                        bandeira.getIdBandeiraCartao(), nomeGateway, bandeira.getTaxaOperacao());
-                }
-
-                return bandeira;
-        }
-
         /**
-         * Extrai o nome do gateway do SysId
-         * Ex: "GATEWAY_PAGAMENTO_REDE" -> "REDE"
-         * "GATEWAY_PAGAMENTO_GETNET" -> "GETNET"
+         * Extrai o nome amigável do gateway para log
          */
-        private String extrairNomeGateway(String gatewaySysId) {
+        private String extrairNomeGatewayPortal(String gatewaySysId) {
                 if (gatewaySysId == null)
                         return "";
-
                 String upper = gatewaySysId.toUpperCase();
                 if (upper.contains("GETNET"))
                         return "GETNET";
                 if (upper.contains("REDE"))
                         return "REDE";
-
-                return gatewaySysId; // Fallback: retorna o original
+                return gatewaySysId;
         }
+
+        
 
         private TransacaoDebitoCredito criarTransacaoDebitoCredito(
                         ProcessarPagamentoAprovadoTseDto dto,
@@ -931,6 +864,7 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                 BigDecimal taxaCartao = BigDecimal.ZERO;
                 BigDecimal descontoTaxaCartao = BigDecimal.ZERO;
                 Long idBandeirasAceitas = null;
+                Long idBandeiraCartaoConfig = null;
 
                 if (isPix) {
                         // Nova conta PIX: desconto da taxa de cartão não se aplica (mantém zero)
@@ -948,6 +882,11 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                         // ID bandeira aceitas (converter Integer para Long)
                         idBandeirasAceitas = bandeiraCartao.getIdBandeirasAceitas() != null
                                         ? bandeiraCartao.getIdBandeirasAceitas().longValue()
+                                        : null;
+
+                        // ID bandeira cartao (referência da configuração de taxas)
+                        idBandeiraCartaoConfig = bandeiraCartao.getIdBandeiraCartao() != null
+                                        ? bandeiraCartao.getIdBandeiraCartao().longValue()
                                         : null;
                 }
 
@@ -992,7 +931,8 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                                 somaValorDescontoManual,
                                 valorJuros, // Valor calculado em tela no portal
                                 valorMulta, // Valor calculado em tela no portal
-                                idBandeirasAceitas);
+                                idBandeirasAceitas,
+                                idBandeiraCartaoConfig);
 
                 log.info("DEBUG - Após configurar - Conta nova Juros: {}, Multa: {}",
                                 contaNova.getValorJuros(), contaNova.getValorMulta());
@@ -1079,120 +1019,8 @@ public class ProcessamentoPagamentoServiceImpl implements PagamentoCartaoService
                 return base.getOrigemConta();
         }
 
-        /**
-         * Cria automaticamente um registro BandeiraCartao quando não encontrado
-         * Isso garante que o fluxo de pagamento aprovado sempre seja concluído
-         */
-        private BandeiraCartao criarBandeiraCartaoPadrao(
-                        Empresa empresa,
-                        Integer idBandeira,
-                        String gatewaySysId,
-                        Long idContaMovimentacaoBancaria) {
 
-                try {
-                        // Extrair nome do gateway (GETNET ou REDE)
-                        String nomeGateway = extrairNomeGateway(gatewaySysId);
 
-                        // Buscar BandeirasAceitas para pegar a descrição da bandeira
-                        BandeirasAceitas bandeirasAceitas = bandeirasAceitasRepository.findById(idBandeira.longValue())
-                                        .orElseThrow(() -> new PagamentoCartaoException(
-                                                        "BandeirasAceitas não encontrada para ID: " + idBandeira));
-
-                        // Criar nome no padrão dos filtros para ser encontrado na próxima vez
-                        String nomeEstabelecimento = String.format("CREDITO A VISTA - %s", nomeGateway);
-
-                        // Usar método factory da entidade BandeiraCartao (padrão DDD)
-                        BandeiraCartao novaBandeira = BandeiraCartao.criarConfiguracaoPadrao(
-                                        empresa,
-                                        nomeEstabelecimento,
-                                        bandeirasAceitas.getBandeira(),
-                                        idBandeira,
-                                        idContaMovimentacaoBancaria != null ? idContaMovimentacaoBancaria.intValue()
-                                                        : null);
-
-                        // Salvar usando repository - o @Convert criptografará automaticamente o
-                        // nomeEstabelecimento
-                        BandeiraCartao bandeiraCartaoSalva = bandeiraCartaoRepository.save(novaBandeira);
-
-                        log.info("BandeiraCartao criada automaticamente: ID {}, NomeEstabelecimento: '{}', Bandeira: {}, Taxa: {}%",
-                                        bandeiraCartaoSalva.getIdBandeiraCartao(),
-                                        nomeEstabelecimento,
-                                        bandeiraCartaoSalva.getBandeira(),
-                                        bandeiraCartaoSalva.getTaxaOperacao());
-
-                        return bandeiraCartaoSalva;
-
-                } catch (PagamentoCartaoException e) {
-                        // Re-lançar exceptions específicas
-                        throw e;
-                } catch (Exception e) {
-                        log.error("Erro ao criar BandeiraCartao padrão", e);
-                        throw new PagamentoCartaoException(
-                                        "Não foi possível criar configuração de bandeira automaticamente: "
-                                                        + e.getMessage(),
-                                        e);
-                }
-        }
-
-        /**
-         * Inicializa os relacionamentos lazy necessários para o cálculo de juros e
-         * multa.
-         * Como findAllById não faz fetch automático dos relacionamentos lazy,
-         * precisamos fazer fetch manual usando JPQL com JOIN FETCH e substituir as
-         * contas na lista.
-         * 
-         * @param contasFinanceiras Lista de contas financeiras a serem inicializadas
-         */
-        private void inicializarRelacionamentosParaCalculo(List<ContaFinanceira> contasFinanceiras) {
-                if (contasFinanceiras.isEmpty()) {
-                        return;
-                }
-
-                // Extrair IDs das contas
-                List<Long> idsContas = contasFinanceiras.stream()
-                                .map(ContaFinanceira::getId)
-                                .collect(Collectors.toList());
-
-                // Buscar contas com JOIN FETCH para carregar relacionamentos
-                String jpql = """
-                                SELECT DISTINCT cf
-                                FROM ContaFinanceira cf
-                                LEFT JOIN FETCH cf.carteiraBoleto
-                                LEFT JOIN FETCH cf.empresa
-                                WHERE cf.id IN :ids
-                                """;
-
-                List<ContaFinanceira> contasComRelacionamentos = entityManager.createQuery(jpql, ContaFinanceira.class)
-                                .setParameter("ids", idsContas)
-                                .getResultList();
-
-                // Criar um mapa para acesso rápido
-                java.util.Map<Long, ContaFinanceira> mapaContas = contasComRelacionamentos.stream()
-                                .collect(Collectors.toMap(ContaFinanceira::getId, conta -> conta, (a, b) -> a));
-
-                // Substituir as contas na lista original pelas contas com relacionamentos
-                // carregados
-                for (int i = 0; i < contasFinanceiras.size(); i++) {
-                        ContaFinanceira contaOriginal = contasFinanceiras.get(i);
-                        ContaFinanceira contaComRelacionamentos = mapaContas.get(contaOriginal.getId());
-                        if (contaComRelacionamentos != null) {
-                                contasFinanceiras.set(i, contaComRelacionamentos);
-
-                                // Log para debug
-                                log.debug("Conta ID {} - CarteiraBoleto: {}, Empresa: {}, Status: {}, Juros: {}, Multa: {}",
-                                                contaComRelacionamentos.getId(),
-                                                contaComRelacionamentos.getCarteiraBoleto() != null ? "carregada"
-                                                                : "null",
-                                                contaComRelacionamentos.getEmpresa() != null ? "carregada" : "null",
-                                                contaComRelacionamentos.calcularStatus(),
-                                                contaComRelacionamentos.calcularJuros(),
-                                                contaComRelacionamentos.calcularMulta());
-                        } else {
-                                log.warn("Conta ID {} não foi encontrada no fetch com relacionamentos",
-                                                contaOriginal.getId());
-                        }
-                }
-        }
 
         // ==================== CLASSES INTERNAS ====================
 
