@@ -1,5 +1,7 @@
 package com.sw.tse.api;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -75,7 +77,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     	log.error("Ocorreu um erro inesperado no servidor. Tente novamente mais tarde.", ex);
     	String errorMessage = "Ocorreu um erro inesperado no servidor. Tente novamente mais tarde.";
         ApiResponseDto<?> errorResponse = new ApiResponseDto<>(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(), false, null, errorMessage
+                HttpStatus.INTERNAL_SERVER_ERROR.value(), false, null, errorMessage, getStackTraceAsString(ex)
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -83,7 +85,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(HibernateException.class)
     public ResponseEntity<ApiResponseDto<?>> handleGenericException(HibernateException ex, WebRequest request) {
         ApiResponseDto<?> errorResponse = new ApiResponseDto<>(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(), false, null, ex.getMessage()
+                HttpStatus.INTERNAL_SERVER_ERROR.value(), false, null, ex.getMessage(), getStackTraceAsString(ex)
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -370,5 +372,12 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             ex.getMessage()
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    private String getStackTraceAsString(Exception ex) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        ex.printStackTrace(pw);
+        return sw.toString();
     }
 }
