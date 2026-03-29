@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.sw.tse.api.dto.OperadorSistemaRequestDto;
 import com.sw.tse.api.dto.ResetarSenhaV2RequestDto;
+import com.sw.tse.api.dto.AlterarSenhaServiceRequestDto;
 import com.sw.tse.client.LookupApiClient;
 import com.sw.tse.client.OperadorSistemaApiClient;
 import com.sw.tse.domain.expection.ApiTseException;
@@ -250,6 +251,33 @@ public class OperadorSistemaApiServiceImpl implements OperadorSistemaService {
 		} catch (Exception e) {
 			log.error("Erro inesperado ao resetar senha v2: {}", e.getMessage());
 			throw new ApiTseException("Informações fornecidas inválidas!");
+		}
+	}
+
+	@Override
+	public void alterarSenha(String token, AlterarSenhaServiceRequestDto request) {
+		log.info("Iniciando processo de alteração de senha via API...");
+		try {
+			// Limpa o prefixo 'Bearer ' se estiver presente no token
+			String cleanToken = token;
+			if (token != null && token.startsWith("Bearer ")) {
+				cleanToken = token.substring(7);
+			}
+			
+			operadorSistemaApiClient.alterarSenha(cleanToken, request);
+			log.info("Senha alterada com sucesso na API do TSE.");
+		} catch (FeignException e) {
+			log.error("Erro de API ao alterar senha: Status={}, Body={}", e.status(), e.contentUTF8());
+			String erroMsg = e.contentUTF8();
+			if (e.status() == 400 && erroMsg != null && !erroMsg.isBlank()) {
+				// Remove aspas se o retorno for apenas uma string aspeada
+				erroMsg = erroMsg.replace("\"", "");
+				throw new ApiTseException(erroMsg);
+			}
+			throw new ApiTseException("Erro ao processar a alteração de senha na API externa.", e);
+		} catch (Exception e) {
+			log.error("Erro inesperado ao alterar senha: {}", e.getMessage());
+			throw new ApiTseException("Falha interna ao alterar senha.");
 		}
 	}
 }

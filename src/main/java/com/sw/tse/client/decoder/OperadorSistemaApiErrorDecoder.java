@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.model.api.response.ApiTseErrorResponse;
@@ -43,9 +44,25 @@ public class OperadorSistemaApiErrorDecoder implements ErrorDecoder {
             log.warn("Não foi possível desserializar o corpo do erro: {}", responseBody);
         }
 
-        String errorMessage = (errorResponse != null && errorResponse.message() != null)
-                ? errorResponse.message()
-                : "Erro desconhecido da API.";
+        String errorMessage = null;
+        if (errorResponse != null && errorResponse.message() != null) {
+            errorMessage = errorResponse.message();
+        } else {
+            // Fallback: extração manual se o DTO falhar por conta de nomes de campos variados
+            try {
+                JsonNode root = objectMapper.readTree(responseBody);
+                if (root.has("Message")) errorMessage = root.get("Message").asText();
+                else if (root.has("message")) errorMessage = root.get("message").asText();
+                else if (root.has("mensagem")) errorMessage = root.get("mensagem").asText();
+                else if (root.has("error")) errorMessage = root.get("error").asText();
+            } catch (Exception e) {
+                // Falha total, usa o genérico
+            }
+        }
+
+        if (errorMessage == null || errorMessage.isBlank()) {
+            errorMessage = "Erro desconhecido da API.";
+        }
 
         return new ApiTseException(errorMessage);
     }

@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.sw.tse.api.dto.OperadorSistemaRequestDto;
 import com.sw.tse.api.dto.ResetarSenhaV2RequestDto;
+import com.sw.tse.api.dto.AlterarSenhaServiceRequestDto;
 import com.sw.tse.domain.model.api.response.BuscaOperadorSistemPessoaResponse;
 import com.sw.tse.domain.model.api.response.OperadorSistemaCriadoApiResponse;
 import com.sw.tse.domain.model.api.response.OperadorSistemaListaApiResponse;
@@ -25,4 +26,6 @@ public interface OperadorSistemaService {
 	BuscaOperadorSistemPessoaResponse buscarPorLogin(String login);
 
 	String resetarSenhaV2(ResetarSenhaV2RequestDto request);
+	
+	void alterarSenha(String token, AlterarSenhaServiceRequestDto request);
 }

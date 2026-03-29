@@ -8,18 +8,23 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sw.tse.api.dto.ApiResponseDto;
 import com.sw.tse.api.dto.OperadorSistemaRequestDto;
 import com.sw.tse.api.dto.ResetarSenhaV2RequestDto;
+import com.sw.tse.api.dto.AlterarSenhaServiceRequestDto;
+import com.sw.tse.domain.expection.ApiTseException;
 import com.sw.tse.domain.model.api.response.OperadorSistemaCriadoApiResponse;
 import com.sw.tse.domain.model.api.response.OperadorSistemaListaApiResponse;
 import com.sw.tse.domain.service.interfaces.OperadorSistemaService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/operadorsistema")
 @RequiredArgsConstructor
@@ -79,5 +84,27 @@ public class OperadorSistemaController {
                 "Reset de senha processado");
 
         return ResponseEntity.ok(responseApi);
+    }
+
+    @PostMapping("/AlterarSenha")
+    public ResponseEntity<String> alterarSenha(
+            @RequestHeader(value = "Authorization", required = false) String portalToken,
+            @RequestHeader(value = "X-TSE-Token", required = false) String tseToken,
+            @RequestBody AlterarSenhaServiceRequestDto requestDto) {
+        try {
+            // Se o token TSE estiver presente (enviado pelo Portal como header customizado), usa ele.
+            // Caso contrário, tenta usar o Authorization (portalToken).
+            String finalToken = (tseToken != null && !tseToken.isEmpty()) ? tseToken : portalToken;
+            
+            operadorSistemaService.alterarSenha(finalToken, requestDto);
+            return ResponseEntity.ok().build();
+        } catch (ApiTseException e) {
+            log.error("Erro ao alterar senha: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            log.error("Erro inesperado ao alterar senha", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro interno ao processar a alteração de senha.");
+        }
     }
 }
