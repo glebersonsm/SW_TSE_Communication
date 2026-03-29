@@ -9,5 +9,5 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(content = Include.NON_NULL)
 public record ApiTseErrorResponse(
-	@JsonAlias("Mensagem") @JsonProperty("Message") String message
+	@JsonAlias({"Message", "message", "mensagem", "Mensagem"}) String message
 ) {}

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
 import com.sw.tse.api.dto.ResetarSenhaV2RequestDto;
+import com.sw.tse.api.dto.AlterarSenhaServiceRequestDto;
 import com.sw.tse.client.config.OperadorSistemaClientConfig;
 import com.sw.tse.domain.model.api.request.OperadorSistemaApiRequest;
 import com.sw.tse.domain.model.api.response.OperadorSistemaCriadoApiResponse;
@@ -29,4 +30,9 @@ public interface OperadorSistemaApiClient {
     String resetarSenhaV2(
             @RequestHeader("Authorization") String token,
             @RequestBody ResetarSenhaV2RequestDto request);
+
+    @PostMapping("/api/OperadorSistema/AlterarSenha")
+    void alterarSenha(
+            @RequestHeader("Authorization") String token,
+            @RequestBody AlterarSenhaServiceRequestDto request);
 }
