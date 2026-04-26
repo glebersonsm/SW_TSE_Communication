@@ -24,5 +24,15 @@ public interface PeriodoModeloCotaRepository extends JpaRepository<PeriodoModelo
         @Param("idPeriodoModeloCota") Long idPeriodoModeloCota,
         @Param("idUtilizacaoContratoAtual") Long idUtilizacaoContratoAtual
     );
+
+    boolean existsByPeriodoUtilizacaoIdAndUnidadeHoteleiraIdAndDeletadoFalse(Long idPeriodoUtilizacao, Long idUnidadeHoteleira);
+
+    /**
+     * Adquire uma trava consultiva (advisory lock) no nível de transação do PostgreSQL.
+     * Esta trava é "cirúrgica": bloqueia apenas a combinação de UH e Período, 
+     * impedindo concorrência de frações de segundo sem travar tabelas ou registros físicos.
+     */
+    @Query(value = "SELECT pg_advisory_xact_lock(hashtext(concat('reserva-', :idUh, '-', :idPeriodo)))", nativeQuery = true)
+    void adquirirTravaNegocial(@Param("idUh") Long idUh, @Param("idPeriodo") Long idPeriodo);
 }
 
