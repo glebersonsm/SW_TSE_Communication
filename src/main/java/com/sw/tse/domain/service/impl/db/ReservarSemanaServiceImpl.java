@@ -215,6 +215,21 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         PeriodoUtilizacao periodoUtilizacao = periodoUtilizacaoRepository.findById(request.getIdPeriodoUtilizacao())
                 .orElseThrow(() -> new PeriodoUtilizacaoNotFoundException(request.getIdPeriodoUtilizacao()));
 
+        // 3.1 Adquirir trava cirúrgica (Advisory Lock) e validar duplicidade (overbooking)
+        // Isso garante que cliques simultâneos sejam processados um de cada vez para a mesma UH e Período
+        if (contrato.getCotaUh() != null && contrato.getCotaUh().getUnidadeHoteleira() != null) {
+            Long idUh = contrato.getCotaUh().getUnidadeHoteleira().getId();
+            log.info("Adquirindo trava cirúrgica para UH {} e Período {}", idUh, request.getIdPeriodoUtilizacao());
+            periodoModeloCotaRepository.adquirirTravaNegocial(idUh, request.getIdPeriodoUtilizacao());
+
+            if (periodoModeloCotaRepository.existsByPeriodoUtilizacaoIdAndUnidadeHoteleiraIdAndDeletadoFalse(
+                    request.getIdPeriodoUtilizacao(), idUh)) {
+                log.warn("Tentativa de reserva duplicada (concorrência) detectada - UH: {}, Período: {}", 
+                    idUh, request.getIdPeriodoUtilizacao());
+                throw new ApiTseException("Este período já está reservado para esta unidade hoteleira.");
+            }
+        }
+
         OperadorSistema operadorSistema = operadorSistemaRepository.findByPessoa_IdPessoa(idPessoaCliente)
                 .orElseThrow(() -> new OperadorSistemaNaoEncontradoException(idPessoaCliente));
 
