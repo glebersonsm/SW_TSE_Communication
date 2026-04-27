@@ -1,6 +1,7 @@
 package com.sw.tse.api.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -24,4 +25,12 @@ public class SemanasDisponiveisRequest {
      * FIXO: valor mínimo em reais; PERCENTUAL: percentual (ex: 12 para 12%).
      */
     private BigDecimal valorIntegralizacao;
+    /**
+     * IDs dos grupos de tags que bloqueiam reserva (opcional)
+     * Enviado pela Portal API.
+     */
+    private List<Long> idsGrupoTagBloqueio;
+    
+    private Boolean validarInadimplencia;
+    private Boolean validarInadimplenciaCondominio;
 }

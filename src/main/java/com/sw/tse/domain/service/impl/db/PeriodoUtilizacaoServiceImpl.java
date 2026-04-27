@@ -7,7 +7,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-import com.sw.tse.core.config.DisponibilidadeContratoProperties;
 import com.sw.tse.core.config.PeriodoUtilizacaoParametros;
 import com.sw.tse.domain.expection.ContratoNaoPertenceAoClienteException;
 import com.sw.tse.domain.expection.TokenJwtInvalidoException;
@@ -31,11 +30,11 @@ public class PeriodoUtilizacaoServiceImpl implements PeriodoUtilizacaoService {
     private final PeriodoUtilizacaoParametros parametros;
     private final ContratoRepository contratoRepository;
     private final ContratoDisponibilidadeService contratoDisponibilidadeService;
-    private final DisponibilidadeContratoProperties disponibilidadeProperties;
 
     @Override
     public List<PeriodoUtilizacaoDisponivel> buscarPeriodosDisponiveisParaReserva(Long idContrato, Integer ano,
-            String tipoValidacaoIntegralizacao, BigDecimal valorIntegralizacao) {
+            String tipoValidacaoIntegralizacao, BigDecimal valorIntegralizacao, List<Long> idsGrupoTagBloqueio,
+            Boolean validarInadimplencia, Boolean validarInadimplenciaCondominio) {
        
         Long idPessoaCliente = JwtTokenUtil.getIdPessoaCliente();
         
@@ -57,15 +56,14 @@ public class PeriodoUtilizacaoServiceImpl implements PeriodoUtilizacaoService {
         
         log.info("Contrato {} validado com sucesso para o cliente {}", idContrato, idPessoaCliente);
         
-        // Validar disponibilidade do contrato para reserva (com params de integralização vindos da Portal API)
+        // Validar disponibilidade do contrato para reserva (com params vindo da request)
         log.info("Validando disponibilidade do contrato {} para reserva", idContrato);
         ValidacaoDisponibilidadeParametros validacaoParametros = ValidacaoDisponibilidadeParametros.builder()
-            .idsTipoTagBloqueio(disponibilidadeProperties.getBloqueio().getIdsTipoTag())
-            .sysIdsGrupoBloqueio(disponibilidadeProperties.getBloqueio().getSysidsGrupo())
+            .idsGrupoTagBloqueio(idsGrupoTagBloqueio)
             .tipoValidacaoIntegralizacao(tipoValidacaoIntegralizacao)
             .valorIntegralizacao(valorIntegralizacao)
-            .validarInadimplencia(disponibilidadeProperties.getInadimplencia().getValidarContrato())
-            .validarInadimplenciaCondominio(disponibilidadeProperties.getInadimplencia().getValidarCondominio())
+            .validarInadimplencia(validarInadimplencia != null ? validarInadimplencia : true)
+            .validarInadimplenciaCondominio(validarInadimplenciaCondominio != null ? validarInadimplenciaCondominio : false)
             .build();
         contratoDisponibilidadeService.validarDisponibilidadeParaReserva(idContrato, validacaoParametros);
         

@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 public class LookupController {
 
 	private final TipoDocumentoPessoaService tipoDocumentoPessoaService;
+	private final com.sw.tse.domain.service.interfaces.GrupoTagService grupoTagService;
 	
 
 	@Operation(summary = "Listar tipos de documento", description = "Retorna todos os tipos de documento de pessoa disponíveis")
@@ -37,6 +38,18 @@ public class LookupController {
 	@GetMapping("TiposDocumentoPessoa")
 	public List<TipoDocumentoPessoaApiResponse> listarTiposDocumento(){
 		return tipoDocumentoPessoaService.listarTiposDocumento();
+	}
+
+	@Operation(summary = "Listar grupos de tags", description = "Retorna todos os grupos de tags disponíveis")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Grupos de tags listados com sucesso",
+					content = @Content(schema = @Schema(implementation = com.sw.tse.domain.model.api.response.GrupoTagApiResponse.class))),
+			@ApiResponse(responseCode = "500", description = "Erro interno do servidor",
+					content = @Content)
+	})
+	@GetMapping("GruposTags")
+	public List<com.sw.tse.domain.model.api.response.GrupoTagApiResponse> listarGruposTags(){
+		return grupoTagService.listarGruposDeTags();
 	}
 	
 }
