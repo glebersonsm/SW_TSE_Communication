@@ -18,5 +18,6 @@ public interface PeriodoUtilizacaoService {
      * @return Lista de períodos disponíveis com informações completas
      */
     List<PeriodoUtilizacaoDisponivel> buscarPeriodosDisponiveisParaReserva(Long idContrato, Integer ano,
-            String tipoValidacaoIntegralizacao, BigDecimal valorIntegralizacao);
+            String tipoValidacaoIntegralizacao, BigDecimal valorIntegralizacao, List<Long> idsGrupoTagBloqueio,
+            Boolean validarInadimplencia, Boolean validarInadimplenciaCondominio);
 }

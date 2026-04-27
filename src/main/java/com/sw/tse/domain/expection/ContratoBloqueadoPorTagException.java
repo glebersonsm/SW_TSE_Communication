@@ -13,7 +13,7 @@ public class ContratoBloqueadoPorTagException extends RegraDeNegocioException {
     
     public ContratoBloqueadoPorTagException(Long idContrato, String numeroContrato, 
             String descricaoTag, String tipoBloqueio) {
-        super(String.format("Contrato: %s possui %s. Entre em contato com a central de relacionamento para mais informações.", 
+        super(String.format("Contrato: %s possui Tag(s) de bloqueio: %s. Entre em contato com a central de relacionamento para mais informações.", 
             numeroContrato, descricaoTag));
         this.idContrato = idContrato;
         this.numeroContrato = numeroContrato;

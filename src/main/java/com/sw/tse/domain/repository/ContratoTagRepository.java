@@ -33,33 +33,53 @@ public interface ContratoTagRepository extends JpaRepository<ContratoTag, Long> 
     boolean existsTagAtivaComGrupo(@Param("idContrato") Long idContrato, @Param("sysId") String sysId);
     
     /**
-     * Verifica se existe tag ativa por tipos de tag ou grupos para um contrato
+     * Verifica se existe tag ativa vinculada a grupos específicos para um contrato
      * 
      * @param idContrato ID do contrato
-     * @param idsTipoTag IDs dos tipos de tag que bloqueiam (opcional)
-     * @param sysIdsGrupo SysIds dos grupos que bloqueiam (opcional)
+     * @param idsGrupoTag IDs dos grupos (idconvencaosistema) que bloqueiam
      * @return true se existir tag ativa com os critérios especificados
      */
     @Query("""
         SELECT CASE WHEN COUNT(ct) > 0 THEN true ELSE false END
         FROM ContratoTag ct
+        JOIN ct.tipoTag tt
         WHERE ct.contrato.id = :idContrato
           AND ct.ativo = true
-          AND (
-            (:idsTipoTag IS NULL OR ct.tipoTag.id IN :idsTipoTag)
-            OR 
-            EXISTS (
-              SELECT 1 FROM ContratoTipoTagGrupoTag cttgt 
-              JOIN cttgt.grupoTag cs
-              WHERE cttgt.tipoTag.id = ct.tipoTag.id
-                AND cttgt.deletado = false
-                AND (:sysIdsGrupo IS NULL OR cs.sysId IN :sysIdsGrupo)
-            )
+          AND EXISTS (
+            SELECT 1 FROM ContratoTipoTagGrupoTag cttgt 
+            WHERE cttgt.tipoTag.id = tt.id
+              AND cttgt.deletado = false
+              AND cttgt.grupoTag.id IN :idsGrupoTag
           )
     """)
-    boolean existsTagAtivaPorTiposOuGrupos(
+    boolean existsTagAtivaVincudaAGrupos(
         @Param("idContrato") Long idContrato, 
-        @Param("idsTipoTag") List<Long> idsTipoTag, 
-        @Param("sysIdsGrupo") List<String> sysIdsGrupo
+        @Param("idsGrupoTag") List<Long> idsGrupoTag
+    );
+
+    /**
+     * Busca as descrições das tags ativas vinculadas a grupos específicos para um contrato
+     * 
+     * @param idContrato ID do contrato
+     * @param idsGrupoTag IDs dos grupos (idconvencaosistema) que bloqueiam
+     * @return Lista com as descrições das tags encontradas
+     */
+    @Query("""
+        SELECT DISTINCT tt.descricao
+        FROM ContratoTag ct
+        JOIN ct.tipoTag tt
+        WHERE ct.contrato.id = :idContrato
+          AND ct.ativo = true
+          AND EXISTS (
+            SELECT 1 FROM ContratoTipoTagGrupoTag cttgt 
+            WHERE cttgt.tipoTag.id = tt.id
+              AND cttgt.deletado = false
+              AND cttgt.grupoTag.id IN :idsGrupoTag
+          )
+    """)
+    List<String> findTagsBloqueantes(
+        @Param("idContrato") Long idContrato, 
+        @Param("idsGrupoTag") List<Long> idsGrupoTag
     );
 }
+

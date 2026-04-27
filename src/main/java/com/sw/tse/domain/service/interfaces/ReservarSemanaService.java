@@ -32,6 +32,7 @@ public interface ReservarSemanaService {
      * @throws ContratoInadimplenteException               se contrato inadimplente
      * @throws PeriodoNaoDisponivelException               se período não disponível
      */
+    @Deprecated
     void validarReserva(Long idContrato, Long idPeriodoUtilizacao, Long idPessoaCliente);
 
     /**

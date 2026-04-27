@@ -11,16 +11,10 @@ import lombok.Data;
 public class ValidacaoDisponibilidadeParametros {
     
     /**
-     * IDs dos tipos de tag que bloqueiam reserva (opcional)
-     * Ex: [3L, 10L, 12L]
+     * IDs dos grupos de tags que bloqueiam reserva (opcional)
+     * Corresponde ao idgrupotag na tabela contratotstipotaggrupotag (idconvencaosistema)
      */
-    private List<Long> idsTipoTagBloqueio;
-    
-    /**
-     * SysIds dos grupos que bloqueiam reserva (opcional)
-     * Ex: ["CONTRATOTS_TIPOTAG_GRUPOTAG_PENDENTEUTILIZACAO"]
-     */
-    private List<String> sysIdsGrupoBloqueio;
+    private List<Long> idsGrupoTagBloqueio;
     
     /**
      * Tipo de validação de integralização: "FIXO" ou "PERCENTUAL" (opcional)

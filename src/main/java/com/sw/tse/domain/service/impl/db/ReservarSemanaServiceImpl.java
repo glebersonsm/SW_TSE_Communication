@@ -23,7 +23,6 @@ import com.sw.tse.api.dto.ReservaSemanaResponse;
 import com.sw.tse.api.dto.ReservarSemanaRequest;
 import com.sw.tse.api.dto.TelefoneResponse;
 import com.sw.tse.core.config.CancelamentoParametros;
-import com.sw.tse.core.config.DisponibilidadeContratoProperties;
 import com.sw.tse.core.config.EdicaoParametros;
 import com.sw.tse.core.config.UtilizacaoContratoPropertiesCustom;
 import com.sw.tse.domain.model.dto.ValidacaoDisponibilidadeParametros;
@@ -113,7 +112,6 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
     private final UtilizacaoContratoPropertiesCustom utilizacaoContratoConfig;
     private final CancelamentoParametros cancelamentoParametros;
     private final EdicaoParametros edicaoParametros;
-    private final DisponibilidadeContratoProperties disponibilidadeContratoProperties;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -156,13 +154,11 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         // Este método não recebe request, então não valida integralização (sem
         // parâmetros)
         ValidacaoDisponibilidadeParametros parametros = ValidacaoDisponibilidadeParametros.builder()
-                .idsTipoTagBloqueio(disponibilidadeContratoProperties.getBloqueio().getIdsTipoTag())
-                .sysIdsGrupoBloqueio(disponibilidadeContratoProperties.getBloqueio().getSysidsGrupo())
-                .tipoValidacaoIntegralizacao(null) // Sem parâmetros de integralização neste método
+                .idsGrupoTagBloqueio(null)
+                .tipoValidacaoIntegralizacao(null)
                 .valorIntegralizacao(null)
-                .validarInadimplencia(disponibilidadeContratoProperties.getInadimplencia().getValidarContrato())
-                .validarInadimplenciaCondominio(
-                        disponibilidadeContratoProperties.getInadimplencia().getValidarCondominio())
+                .validarInadimplencia(true) // Default de segurança
+                .validarInadimplenciaCondominio(false)
                 .build();
         contratoDisponibilidadeService.validarDisponibilidadeParaReserva(idContrato, parametros);
 
@@ -215,8 +211,10 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
         PeriodoUtilizacao periodoUtilizacao = periodoUtilizacaoRepository.findById(request.getIdPeriodoUtilizacao())
                 .orElseThrow(() -> new PeriodoUtilizacaoNotFoundException(request.getIdPeriodoUtilizacao()));
 
-        // 3.1 Adquirir trava cirúrgica (Advisory Lock) e validar duplicidade (overbooking)
-        // Isso garante que cliques simultâneos sejam processados um de cada vez para a mesma UH e Período
+        // 3.1 Adquirir trava cirúrgica (Advisory Lock) e validar duplicidade
+        // (overbooking)
+        // Isso garante que cliques simultâneos sejam processados um de cada vez para a
+        // mesma UH e Período
         if (contrato.getCotaUh() != null && contrato.getCotaUh().getUnidadeHoteleira() != null) {
             Long idUh = contrato.getCotaUh().getUnidadeHoteleira().getId();
             log.info("Adquirindo trava cirúrgica para UH {} e Período {}", idUh, request.getIdPeriodoUtilizacao());
@@ -224,8 +222,8 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
 
             if (periodoModeloCotaRepository.existsByPeriodoUtilizacaoIdAndUnidadeHoteleiraIdAndDeletadoFalse(
                     request.getIdPeriodoUtilizacao(), idUh)) {
-                log.warn("Tentativa de reserva duplicada (concorrência) detectada - UH: {}, Período: {}", 
-                    idUh, request.getIdPeriodoUtilizacao());
+                log.warn("Tentativa de reserva duplicada (concorrência) detectada - UH: {}, Período: {}",
+                        idUh, request.getIdPeriodoUtilizacao());
                 throw new ApiTseException("Este período já está reservado para esta unidade hoteleira.");
             }
         }
@@ -356,7 +354,8 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
 
         // Buscar períodos disponíveis para verificar se o período permite RCI
         List<PeriodoUtilizacaoDisponivel> periodosDisponiveis = periodoUtilizacaoService
-                .buscarPeriodosDisponiveisParaReserva(idContrato, periodoUtilizacao.getAnoInicio(), null, null);
+                .buscarPeriodosDisponiveisParaReserva(idContrato, periodoUtilizacao.getAnoInicio(), null, null, null,
+                        true, false);
 
         PeriodoUtilizacaoDisponivel periodoDisponivel = periodosDisponiveis.stream()
                 .filter(p -> p.getIdPeriodoUtilizacao().equals(idPeriodoUtilizacao))
@@ -387,7 +386,8 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
 
         // Buscar períodos disponíveis para verificar se o período permite POOL
         List<PeriodoUtilizacaoDisponivel> periodosDisponiveis = periodoUtilizacaoService
-                .buscarPeriodosDisponiveisParaReserva(idContrato, periodoUtilizacao.getAnoInicio(), null, null);
+                .buscarPeriodosDisponiveisParaReserva(idContrato, periodoUtilizacao.getAnoInicio(), null, null, null,
+                        true, false);
 
         PeriodoUtilizacaoDisponivel periodoDisponivel = periodosDisponiveis.stream()
                 .filter(p -> p.getIdPeriodoUtilizacao().equals(idPeriodoUtilizacao))
@@ -1287,14 +1287,14 @@ public class ReservarSemanaServiceImpl implements ReservarSemanaService {
     private ValidacaoDisponibilidadeParametros construirParametrosValidacao(ReservarSemanaRequest request) {
         ValidacaoDisponibilidadeParametros.ValidacaoDisponibilidadeParametrosBuilder builder = ValidacaoDisponibilidadeParametros
                 .builder()
-                .idsTipoTagBloqueio(disponibilidadeContratoProperties.getBloqueio().getIdsTipoTag())
-                .sysIdsGrupoBloqueio(disponibilidadeContratoProperties.getBloqueio().getSysidsGrupo())
-                .validarInadimplencia(disponibilidadeContratoProperties.getInadimplencia().getValidarContrato())
-                .validarInadimplenciaCondominio(
-                        disponibilidadeContratoProperties.getInadimplencia().getValidarCondominio());
+                .idsGrupoTagBloqueio(request.getIdsGrupoTagBloqueio())
+                .validarInadimplencia(
+                        request.getValidarInadimplencia() != null ? request.getValidarInadimplencia() : false)
+                .validarInadimplenciaCondominio(request.getValidarInadimplenciaCondominio() != null
+                        ? request.getValidarInadimplenciaCondominio()
+                        : false);
 
         // Passar parâmetros de integralização da request para o serviço de validação
-        // O cálculo do percentual será feito no ContratoDisponibilidadeServiceImpl
         builder.tipoValidacaoIntegralizacao(request.getTipoValidacaoIntegralizacao())
                 .valorIntegralizacao(request.getValorIntegralizacao());
 

@@ -53,5 +53,13 @@ public class ReservarSemanaRequest {
      * Canal de atendimento (ex: "Portal Cliente" quando a utilização é criada pelo portal).
      */
     private String canalAtendimento;
+    /**
+     * IDs dos grupos de tags que bloqueiam reserva (opcional)
+     * Enviado pela Portal API.
+     */
+    private List<Long> idsGrupoTagBloqueio;
+    
+    private Boolean validarInadimplencia;
+    private Boolean validarInadimplenciaCondominio;
 }
 

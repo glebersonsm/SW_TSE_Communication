@@ -91,7 +91,10 @@ public class PainelClienteController {
                 List<PeriodoUtilizacaoDisponivel> periodosDisponiveis = periodoUtilizacaoService
                                 .buscarPeriodosDisponiveisParaReserva(request.getIdcontrato(), request.getAno(),
                                                 request.getTipoValidacaoIntegralizacao(),
-                                                request.getValorIntegralizacao());
+                                                request.getValorIntegralizacao(),
+                                                request.getIdsGrupoTagBloqueio(),
+                                                request.getValidarInadimplencia(),
+                                                request.getValidarInadimplenciaCondominio());
 
                 List<SemanasDisponiveisResponse> response = periodosDisponiveis.stream()
                                 .map(this::mapearParaResponse)

@@ -7,7 +7,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
-import com.sw.tse.core.config.DisponibilidadeContratoProperties;
+
 import com.sw.tse.domain.expection.ContratoBloqueadoPorTagException;
 import com.sw.tse.domain.expection.ContratoInadimplenteException;
 import com.sw.tse.domain.expection.ContratoIntegralizacaoInsuficienteException;
@@ -30,7 +30,6 @@ public class ContratoDisponibilidadeServiceImpl implements ContratoDisponibilida
     
     private final ContratoTagRepository contratoTagRepository;
     private final ContaFinanceiraRepository contaFinanceiraRepository;
-    private final DisponibilidadeContratoProperties properties;
     private final ContratoRepository contratoRepository;
     
     @Override
@@ -42,12 +41,11 @@ public class ContratoDisponibilidadeServiceImpl implements ContratoDisponibilida
         log.warn("Método validarDisponibilidadeParaReserva(idContrato) chamado sem parâmetros. Validação de integralização será pulada. Use o método com ValidacaoDisponibilidadeParametros.");
         
         ValidacaoDisponibilidadeParametros parametros = ValidacaoDisponibilidadeParametros.builder()
-            .idsTipoTagBloqueio(properties.getBloqueio().getIdsTipoTag())
-            .sysIdsGrupoBloqueio(properties.getBloqueio().getSysidsGrupo())
-            .tipoValidacaoIntegralizacao(null) // Não valida integralização sem parâmetros da request
+            .idsGrupoTagBloqueio(null) // Sem parâmetros configurados globalmente
+            .tipoValidacaoIntegralizacao(null) 
             .valorIntegralizacao(null)
-            .validarInadimplencia(properties.getInadimplencia().getValidarContrato())
-            .validarInadimplenciaCondominio(properties.getInadimplencia().getValidarCondominio())
+            .validarInadimplencia(true) // Default de segurança
+            .validarInadimplenciaCondominio(false)
             .build();
             
         validarDisponibilidadeParaReserva(idContrato, parametros);
@@ -80,33 +78,31 @@ public class ContratoDisponibilidadeServiceImpl implements ContratoDisponibilida
     private void validarBloqueioPorTags(Long idContrato, ValidacaoDisponibilidadeParametros parametros) 
             throws ContratoBloqueadoPorTagException {
         
-        List<Long> idsTipoTag = parametros.getIdsTipoTagBloqueio();
-        List<String> sysIdsGrupo = parametros.getSysIdsGrupoBloqueio();
+        List<Long> idsGrupoTag = parametros.getIdsGrupoTagBloqueio();
         
         // Se não tem parâmetros de bloqueio, pula validação
-        if ((idsTipoTag == null || idsTipoTag.isEmpty()) && 
-            (sysIdsGrupo == null || sysIdsGrupo.isEmpty())) {
-            log.debug("Nenhum parâmetro de bloqueio por tag configurado - pulando validação");
+        if (idsGrupoTag == null || idsGrupoTag.isEmpty()) {
+            log.debug("Nenhum parâmetro de bloqueio por grupo de tag configurado - pulando validação");
             return;
         }
         
-        log.debug("Validando bloqueio por tags - IDs: {}, SysIds: {}", idsTipoTag, sysIdsGrupo);
+        log.debug("Validando bloqueio por grupos de tags - IDs: {}", idsGrupoTag);
         
-        boolean temBloqueio = contratoTagRepository.existsTagAtivaPorTiposOuGrupos(idContrato, idsTipoTag, sysIdsGrupo);
+        boolean temBloqueio = contratoTagRepository.existsTagAtivaVincudaAGrupos(idContrato, idsGrupoTag);
         
         if (temBloqueio) {
             String numeroContrato = obterNumeroContrato(idContrato);
+            List<String> tags = contratoTagRepository.findTagsBloqueantes(idContrato, idsGrupoTag);
+            String detalheTags = String.join(", ", tags);
             
-            // Log técnico para auditoria (mantém os detalhes)
-            String descricaoTecnica = idsTipoTag != null && !idsTipoTag.isEmpty() 
-                ? "Tipos de tag: " + idsTipoTag 
-                : "Grupos: " + sysIdsGrupo;
-            log.warn("Contrato {} bloqueado por tag: {}", numeroContrato, descricaoTecnica);
+            log.warn("Contrato {} bloqueado por vínculo com grupos de tags: {} (Tags: {})", 
+                numeroContrato, idsGrupoTag, detalheTags);
             
             // Mensagem amigável para o cliente (sem detalhes técnicos)
-            String mensagemCliente = "pendências administrativas que impedem a reserva no momento";
-            throw new ContratoBloqueadoPorTagException(idContrato, numeroContrato, mensagemCliente, "BLOQUEIO_RESERVA");
+            // Mas passamos o detalhe técnico para a exceção para que o log e histórico capturem
+            throw new ContratoBloqueadoPorTagException(idContrato, numeroContrato, detalheTags, "BLOQUEIO_RESERVA");
         }
+
         
         log.debug("Contrato ID {} não possui bloqueio por tags", idContrato);
     }
